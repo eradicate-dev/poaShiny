@@ -32,7 +32,7 @@ from osgeo import osr
 from osgeo import gdalconst
 from numba import njit
 
-from . import params
+from proofofabsence import params
 
 TRAP_PARAM_DTYPE = [('year', 'u4'), ('animal', 'u4'), ('detect', 'u4'), 
     ('easting', 'f8'), ('northing', 'f8'), ('age', 'f8'), ('sex', 'u1'), 

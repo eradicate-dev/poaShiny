@@ -33,7 +33,7 @@ from osgeo import gdalconst
 from rios import calcstats
 from rios.cuiprogress import GDALProgressBar
 
-from . import params
+from proofofabsence import params
 
 # find libpython and extract the locking functions
 # so we can lock access to some arrays from threads
