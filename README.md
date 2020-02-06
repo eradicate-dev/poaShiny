@@ -15,7 +15,7 @@ The next step is to create an Anaconda environment which contains all the progra
 
 From command line run:
 
-`conda create -n r_poa -c conda-forge -c r python==3.7.1 numba==0.48.0 numpy==1.17.5 rios==1.4.10 gdal==2.3.2 rstudio r-leaflet==2.0.3 r-shiny==1.4.0 r-reticulate==1.14 r-rgdal==1.4_7 r-raster==3.0_7 r-sf==0.8_0 r-kableextra==1.1.0`
+`conda create -n r_poa -c conda-forge -c r python=3.7 numba numpy rios gdal rstudio r-leaflet r-shiny r-reticulate r-rgdal r-raster r-sf r-kableextra`
 
 The `-n r_poa` argument gives the name of the environment to be created, **r_poa** and the commands `-c conda-forge` and `-c r` tell Anaconda to look for the packages and libraries in the **conda-forge** and **r** channels. The remaining commands are the package and library names and version numbers.
 
