@@ -341,7 +341,7 @@ server <- function(input, output, session) {
         # addLayersControl(overlayGroups = c("Devices"), options = layersControlOptions(collapsed = FALSE)) %>% 
         clearGroup("Devices") %>% 
         addCircles(data = devs, group = "Devices",
-                   radius = 10, weight = 1, opacity = 1, fillOpacity = 1, color = ~pal.device(devs$Species)) %>%
+                   radius = 20, weight = 1, opacity = 1, fillOpacity = 1, color = ~pal.device(devs$Species)) %>%
         addLegend(layerId = "Devices", pal = pal.device, values = unique(devs$Species), group = "Devices") 
     }
   })
