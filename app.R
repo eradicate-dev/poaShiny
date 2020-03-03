@@ -106,7 +106,7 @@ ui.inputs <- list(
   # Sidebar with a slider input for number of bins 
   
   wellPanel(
-    selectInput(inputId = "namedExample", label = "Select example set", choices = c("None", "Kaitake possums", "Mahia possums"), multiple = FALSE),
+    selectInput(inputId = "namedExample", label = "Select example set", choices = c("None", "Kaitake possums", "Mahia possums", "CK stoats"), multiple = FALSE),
     conditionalPanel(condition = "input.namedExample == 'None'",{
       list(fileInput(inputId = "zonesShapeFName", label = "zonesShapeFName", multiple = TRUE),
            fileInput(inputId = "surveyFName", label = "surveyFName", multiple = FALSE),
@@ -280,6 +280,15 @@ server <- function(input, output, session) {
       
       unlink(".tmp/input/*")
       file.copy(paths, paths.to)
+    } else if(input$namedExample == "CK stoats"){
+      
+      paths <- list.files("app/www/example_data/CK_stoats/", pattern = ".csv$|extent.*|.tif", full.names = T)
+      paths.to <- sub("app/www/example_data/CK_stoats/extent", ".tmp/input/extent", paths)
+      paths.to <- sub("app/www/example_data/CK_stoats/relRisk.tif", ".tmp/input/relRiskRaster.tif", paths.to)
+      paths.to <- sub("app/www/example_data/CK_stoats/devices.csv", ".tmp/input/devices.csv", paths.to)
+      
+      unlink(".tmp/input/*")
+      file.copy(paths, paths.to)
     } else {
       unlink(".tmp/input/*")
     }
@@ -410,7 +419,7 @@ server <- function(input, output, session) {
     path.ext <- paste0(path.tmp, "/input/extent.shp")
     if(file.exists(path.ext)){
       message(paste("loading .shp file:", path.ext))
-      zonesShape.sf <- st_sf(st_read(path.ext), crs = defaults$epsg$value)
+      zonesShape.sf <- st_sf(st_read(path.ext), crs = input$epsg)
       zonesShape(zonesShape.sf)
     }
   })
@@ -429,15 +438,16 @@ server <- function(input, output, session) {
       bb <- as.numeric(st_bbox(zonesShape.4326))
       
       # make popup text
-      zonesShape.4326$poptxt <- 
-        sapply(split(zonesShape.4326, zonesShape.4326$zoneName), 
-               function(x) kableExtra::kable(st_drop_geometry(x), escape = TRUE, format = "html", row.names = FALSE))
-      
+      # try({zonesShape.4326$poptxt <- 
+      #   sapply(split(zonesShape.4326, zonesShape.4326$zoneName), 
+      #          function(x) kableExtra::kable(st_drop_geometry(x), escape = TRUE, format = "html", row.names = FALSE))
+      # })
       # update base map
       leafletProxy(session = session, mapId = "baseMap") %>%
         # leaflet() %>% addProviderTiles(group = "Topo", provider = providers$OpenTopoMap) %>% 
         clearGroup(group = "Zones") %>% 
-        addPolygons(data = zonesShape.4326, fill = T, weight = 2, popup = ~poptxt, group = "Zones") %>% 
+        addPolygons(data = zonesShape.4326, fill = T, weight = 2, # popup = ~poptxt, 
+                    group = "Zones") %>% 
         fitBounds(lng1 = bb[1], lat1 = bb[2], lng2 = bb[3], lat2 = bb[4])
     }
   })
@@ -616,7 +626,7 @@ server <- function(input, output, session) {
               zonesOutFName = ".tmp/output/zones.tif", #defaults$zonesOutFName$value, # "app\\www\\poa\\Kaitake\\Results\\Model_0\\zones.tif",
               relRiskRasterOutFName = ".tmp/output/relRiskRaster.tif", # "app\\www\\poa\\Kaitake\\Results\\Model_0\\relRiskRaster.tif",
               resolution = as.double(valid()$resolution),
-              epsg = as.integer(2193),
+              epsg = as.integer(input$epsg),
               surveyFName = ".tmp/input/devices.csv",
               params = myParams, 
               gridSurveyFname = NULL)
