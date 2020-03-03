@@ -522,10 +522,16 @@ server <- function(input, output, session) {
         addRasterImage(x = RRmap.4326, group = "Relative risk",
                        opacity = 0.95, #input$rasterOpacity,
                        colors = pal) %>%
-        addLegend(layerId = "RRlegend", pal = pal, values = valrng, bins = 5,
-                  title = "Relative risk",
-                  group = "Relative risk") %>%
         fitBounds(lng1 = bb[1], lat1 = bb[3], lng2 = bb[2], lat2 = bb[4])
+        
+      # add legend if relative risk values vary 
+      if(diff(valrng) > 0){
+        leafletProxy(session = session, mapId = "baseMap") %>%  
+          addLegend(layerId = "RRlegend", pal = pal, values = valrng, bins = 5,
+                    title = "Relative risk",
+                    group = "Relative risk")
+      }
+      
     }
   })
   
