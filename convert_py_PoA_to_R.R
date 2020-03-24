@@ -106,3 +106,34 @@ result = # calculation$
                      pickledat$relativeRiskRaster, pickledat$zoneArray, pickledat$zoneCodes,
                      pickledat$match_geotrans, pickledat$wkt, "testdata/output",
                      pickledat$RR_zone, pickledat$Pu_zone, pickledat$Name_zone)
+
+# getSensitivityForCell ---------------------------------------------------
+def getSensitivityForCell(tmpData, dKern, traps, nCurrentTrap, paramArray,
+                          nChewcardTraps):
+  """
+Calls the appropriate function. Numba currently doesn't support passing of
+function as arguments so this appears to be the best way forward.
+"""
+detectCode = traps[nCurrentTrap]['detect']
+dSensitivityTrapCell = 0.0
+if detectCode == params.DETECT_DISEASE_CHEWCARD:
+  dSensitivityTrapCell = detectChewcardFunc(tmpData, dKern, traps,
+                                            nCurrentTrap, paramArray, nChewcardTraps)
+
+elif detectCode == params.DETECT_DISEASE_TRAP:
+  dSensitivityTrapCell = detectTrapFunc(tmpData, dKern, traps,
+                                        nCurrentTrap, paramArray, nChewcardTraps)
+
+elif detectCode == params.DETECT_DISEASE_SENTINEL:
+  dSensitivityTrapCell = detectSentinelFunc(tmpData, dKern, traps,
+                                            nCurrentTrap, paramArray, nChewcardTraps)
+
+elif detectCode == params.DETECT_ANIMAL:
+  dSensitivityTrapCell = detectAnimalFunc(tmpData, dKern, traps,
+                                          nCurrentTrap, paramArray, nChewcardTraps)
+
+else:
+  # we must work out what to do here
+  raise ValueError('Unsupported animal detect code')
+
+return dSensitivityTrapCell
