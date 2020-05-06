@@ -531,7 +531,7 @@ server <- function(input, output, session) {
         clearGroup(group = "Relative risk") %>%
         addRasterImage(x = RRmap.4326, group = "Relative risk",
                        opacity = 0.95, #input$rasterOpacity,
-                       colors = pal) %>%
+                       colors = pal, method = "ngb") %>%
         fitBounds(lng1 = bb[1], lat1 = bb[3], lng2 = bb[2], lat2 = bb[4])
         
       # add legend if relative risk values vary 
