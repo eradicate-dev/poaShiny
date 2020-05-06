@@ -517,7 +517,7 @@ server <- function(input, output, session) {
       bb <- as.vector(extent(RRmap.4326))                 
       
       # set values above MinRR to NA
-      RRmap.4326@data@values[RRmap.4326@data@values < input$setMinRR] <- NA
+      RRmap.4326 <- raster::clamp(RRmap.4326, lower = input$setMinRR, useValues = FALSE)
       valrng <- c(input$setMinRR, max(values(RRmap.4326), na.rm = T))
 
       # make palette
