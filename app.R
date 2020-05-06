@@ -510,7 +510,7 @@ server <- function(input, output, session) {
       
       # get layer and convert to WGS84
       RRmap.4326 <- 
-        projectRaster(relRiskRaster(), crs = st_crs(4326)[["proj4string"]],
+        projectRaster(relRiskRaster(), crs = sp::CRS("+init=epsg:4326"),
                       method = "ngb")
       
       # get bounds
