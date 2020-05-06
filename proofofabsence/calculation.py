@@ -398,7 +398,7 @@ def writeTif(raster, tempTifName, gdt_type, wkt, match_geotrans):
     
     del ds  # Flush
 
-@jit(nopython=True, nogil=True)
+# @jit(nopython=True, nogil=True)
 def doIterations(startItr, endItr, sensitivityRaster, zoneSeResults, 
         proportionSearchedExtent, proportionSearchedZone, 
         SSeMat, PoFMat, RRArray, yearCount,
@@ -443,7 +443,7 @@ def doIterations(startItr, endItr, sensitivityRaster, zoneSeResults,
 
 
         # following lines need lock since the updated arrays are shared between all threads
-        LOCK_LOCK(THREAD_LOCK, 1)
+        # LOCK_LOCK(THREAD_LOCK, 1)
         # keep a total of the searchedCells for now - will divide later
         
         # ProportionSearchedZone is 2D. We are setting all zones
@@ -455,7 +455,7 @@ def doIterations(startItr, endItr, sensitivityRaster, zoneSeResults,
         # One is produced for each year.
         sensitivityRaster += thisSensitivity
 
-        LOCK_UNLOCK(THREAD_LOCK)
+        # LOCK_UNLOCK(THREAD_LOCK)
         # Condition on presence or absence of surveillance in year
         # Sum() across all zones of number of searched cells.
         zoneSensitivity = np.zeros(zoneCodes.shape)
@@ -491,11 +491,12 @@ def doIterations(startItr, endItr, sensitivityRaster, zoneSeResults,
 
         # Equation 1 
         # no lock needed since currentIteration unique to thread
+        
         PrOfFreedom = PrPrior / ( 1.0 - systemSensitivity * ( 1.0 - PrPrior ) )
         SSeMat[yearCount, currentIteration] = systemSensitivity
         PoFMat[yearCount, currentIteration] = PrOfFreedom
 
-@jit(nopython=True, nogil=True)
+# @jit(nopython=True, nogil=True)
 def applyGridSurveillance(gridSurveyParams, gridSurveyData, thisSensitivity, 
         currentYear):
     """
@@ -530,7 +531,7 @@ def applyGridSurveillance(gridSurveyParams, gridSurveyData, thisSensitivity,
             nApplied += 1
 
 
-@jit(nopython=True, nogil=True)
+# @jit(nopython=True, nogil=True)
 def processAllTrapsForYear(currentYear, parameterArray, trapArray, thisSensitivity, 
             transform, zoneArray, zoneCodes, RRArray, sumRRWeights, nChewcardTraps):
     """
@@ -577,7 +578,7 @@ def processAllTrapsForYear(currentYear, parameterArray, trapArray, thisSensitivi
     
     return seWeighted, weightedAveSensitivity, nSearchedCells
 
-@jit(nopython=True, nogil=True)
+# @jit(nopython=True, nogil=True)
 def convertSensitivityIntoProbOfDetecting(thisSensitivity, RRArray,
                         zoneArray, zoneCodes, sumRRWeights):
     """
@@ -614,7 +615,7 @@ def convertSensitivityIntoProbOfDetecting(thisSensitivity, RRArray,
     
     return seWeighted, weightedSensitivity, nSearchedCells
 
-@jit(nopython=True, nogil=True)
+# @jit(nopython=True, nogil=True)
 def doBetaPert(a, b, min, max, range):
     """
     Helper function. Does a Pert distribution which is basically a Beta with a multiplier 
@@ -640,7 +641,7 @@ def doBetaPertArray(a, b, min, max, range, size):
     dVal = np.random.beta(a, b, size) * range + min
     return np.clip(dVal, min, max)
 
-@jit(nopython=True, nogil=True)
+# @jit(nopython=True, nogil=True)
 def circleFunction(dSigma, traps, nCurrentTrap, paramArray, 
         transform, thisSensitivity, zoneArray,  nChewcardTraps):
     """
@@ -714,7 +715,7 @@ def circleFunction(dSigma, traps, nCurrentTrap, paramArray,
             testEast += transform[1]
         testNorth -= transform[1]
 
-@jit(nopython=True, nogil=True)
+# @jit(nopython=True, nogil=True)
 def getSensitivityForCell(tmpData, dKern, traps, nCurrentTrap, paramArray, 
                 nChewcardTraps):
     """
@@ -745,7 +746,7 @@ def getSensitivityForCell(tmpData, dKern, traps, nCurrentTrap, paramArray,
         
     return dSensitivityTrapCell
 
-@jit(nopython=True, nogil=True)
+# @jit(nopython=True, nogil=True)
 def detectChewcardFunc(tmpData, dKern, traps, nCurrentTrap, paramArray, 
                 nChewcardTraps):
     """
@@ -781,7 +782,7 @@ def detectChewcardFunc(tmpData, dKern, traps, nCurrentTrap, paramArray,
     ## New Equation 11 
     return dpCap * dTest
 
-@jit(nopython=True, nogil=True)
+# @jit(nopython=True, nogil=True)
 def detectTrapFunc(tmpData, dKern, traps, nCurrentTrap, paramArray, 
                 nChewcardTraps):
     """
@@ -810,7 +811,7 @@ def detectTrapFunc(tmpData, dKern, traps, nCurrentTrap, paramArray,
     # Probability of detecting TB in cell i from device j 
     return dpCap * dTest
 
-@jit(nopython=True, nogil=True)
+# @jit(nopython=True, nogil=True)
 def detectSentinelFunc(tmpData, dKern, traps, nCurrentTrap, paramArray, 
                 nChewcardTraps):
     """
@@ -837,7 +838,7 @@ def detectSentinelFunc(tmpData, dKern, traps, nCurrentTrap, paramArray,
     # Probability of detecting TB in cell i from device j 
     return (1.0 - np.power( 1.0 - dLambda * dKern, traps[nCurrentTrap]['age'])) * dTest
 
-@jit(nopython=True, nogil=True)
+# @jit(nopython=True, nogil=True)
 def detectAnimalFunc(tmpData, dKern, traps, nCurrentTrap, paramArray, 
                 nChewcardTraps):
     """
@@ -864,7 +865,7 @@ def detectAnimalFunc(tmpData, dKern, traps, nCurrentTrap, paramArray,
     # Probability of detecting the target in cell i from device j 
     return dpCap
 
-@jit(nopython=True, nogil=True)
+# @jit(nopython=True, nogil=True)
 def findIn1DArray(inArray, value):
     """
     Returns index if value in inArray, -1 otherwise
@@ -879,7 +880,7 @@ def findIn1DArray(inArray, value):
             break
     return idx
 
-@jit(nopython=True, nogil=True)
+# @jit(nopython=True, nogil=True)
 def addRRBufferAroundTraps(traps, RRBufferAnimals, years, RRarray, zoneRaster, 
                 origZoneRaster, RRTrapDistance, minRR, maxRR, transform):
     """
@@ -935,7 +936,7 @@ def addRRBufferAroundTraps(traps, RRBufferAnimals, years, RRarray, zoneRaster,
                     testEast += transform[1]
                 testNorth -= transform[1]
 
-@jit(nopython=True, nogil=True)
+# @jit(nopython=True, nogil=True)
 def getSumRRWeights(RRArray, zoneArray, zoneCodes, RR_zone):
     """
     Get the sum of RR weights within each zone
