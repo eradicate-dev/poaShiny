@@ -1,261 +1,346 @@
 
-"""
-Contains the main calcProofOfAbsence() function and supporting
-functions for doing the calculations.
-"""
+# """
+# Contains the main calcProofOfAbsence() function and supporting
+# functions for doing the calculations.
+# """
+# 
+# # This file is part of Proof of Absence
+# # Copyright (C) 2016 Dean Anderson and Sam Gillingham
+# #
+# # This program is free software: you can redistribute it and/or modify
+# # it under the terms of the GNU General Public License as published by
+# # the Free Software Foundation, either version 3 of the License, or
+# # (at your option) any later version.
+# #
+# # This program is distributed in the hope that it will be useful,
+# # but WITHOUT ANY WARRANTY; without even the implied warranty of
+# # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# # GNU General Public License for more details.
+# #
+# # You should have received a copy of the GNU General Public License
+# # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# 
+# from __future__ import print_function, division
+# import numpy as np
+# import ctypes
+# import threading
+# import os
+# import sys
+# import copy
+# from numba import jit
+# from osgeo import gdal
+# from osgeo import gdalconst
+# from rios import calcstats
+# from rios.cuiprogress import GDALProgressBar
+# 
+# from proofofabsence import params
+# 
+# # find libpython and extract the locking functions
+# # so we can lock access to some arrays from threads
+# LOCK_INIT = ctypes.pythonapi.PyThread_allocate_lock
+# LOCK_INIT.argtypes = None
+# LOCK_INIT.restype = ctypes.c_void_p
+# 
+# LOCK_DESTROY = ctypes.pythonapi.PyThread_free_lock
+# LOCK_DESTROY.argtypes = [ctypes.c_void_p]
+# LOCK_DESTROY.restype = ctypes.c_int
+# 
+# LOCK_LOCK = ctypes.pythonapi.PyThread_acquire_lock
+# LOCK_LOCK.argtypes = [ctypes.c_void_p, ctypes.c_int]
+# LOCK_LOCK.restype = ctypes.c_int
+# 
+# LOCK_UNLOCK = ctypes.pythonapi.PyThread_release_lock
+# LOCK_UNLOCK.argtypes = [ctypes.c_void_p]
+# LOCK_UNLOCK.restype = None
+# 
+# # global locking for tricky sections
+# THREAD_LOCK = None
+# 
+# class POAException(Exception):
+#     "Base class for POA exceptions"
+# 
+# class InputParameterError(POAException):
+#     "There was something wrong with the input parameters"
+# 
+# class Results(object):
+#     "An instance of this class is returned from calcProofOfAbsence()"
+#     # sensitivity per year and per iteration
+#     sensitivityMatrix = None
+#     # Proof of Freedom per year and per iteration
+#     poFMatrix = None
+#     # params that were passed in 
+#     params = None
+#     # sensitivity per zone and per iteration
+#     zoneSeMatrix = None
+#     # number of zones processed
+#     numberZones = None
+#     # names of the zones for plotting
+#     Name_zone = None
+#     # the initial priors for each iteration; for plotting
+#     priorStore = None
+#     # proportion searched for each year in full extent
+#     proportionSearchedExtent = None
+#     # proportion searched for each zone
+#     proportionSearchedZone = None
+#     # output mean sensitivity raster - one layer per year
+#     meanSeuTifPathName = None
+#     # output relative risk raster (may have been modified from input due to buffering)
+#     relRiskTifName = None
+#     # output updated zone raster
+#     extZoneTifName = None
+#     # number of rows in cols in the above rasters
+#     rows = None
+#     cols = None
+#     # GDAL geotranform array used by the rasters
+#     match_geoTrans = None
 
-# This file is part of Proof of Absence
-# Copyright (C) 2016 Dean Anderson and Sam Gillingham
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import print_function, division
-import numpy as np
-import ctypes
-import threading
-import os
-import sys
-import copy
-from numba import jit
-from osgeo import gdal
-from osgeo import gdalconst
-from rios import calcstats
-from rios.cuiprogress import GDALProgressBar
-
-from proofofabsence import params
-
-# find libpython and extract the locking functions
-# so we can lock access to some arrays from threads
-LOCK_INIT = ctypes.pythonapi.PyThread_allocate_lock
-LOCK_INIT.argtypes = None
-LOCK_INIT.restype = ctypes.c_void_p
-
-LOCK_DESTROY = ctypes.pythonapi.PyThread_free_lock
-LOCK_DESTROY.argtypes = [ctypes.c_void_p]
-LOCK_DESTROY.restype = ctypes.c_int
-
-LOCK_LOCK = ctypes.pythonapi.PyThread_acquire_lock
-LOCK_LOCK.argtypes = [ctypes.c_void_p, ctypes.c_int]
-LOCK_LOCK.restype = ctypes.c_int
-
-LOCK_UNLOCK = ctypes.pythonapi.PyThread_release_lock
-LOCK_UNLOCK.argtypes = [ctypes.c_void_p]
-LOCK_UNLOCK.restype = None
-
-# global locking for tricky sections
-THREAD_LOCK = None
-
-class POAException(Exception):
-    "Base class for POA exceptions"
-
-class InputParameterError(POAException):
-    "There was something wrong with the input parameters"
-
-class Results(object):
-    "An instance of this class is returned from calcProofOfAbsence()"
-    # sensitivity per year and per iteration
-    sensitivityMatrix = None
-    # Proof of Freedom per year and per iteration
-    poFMatrix = None
-    # params that were passed in 
-    params = None
-    # sensitivity per zone and per iteration
-    zoneSeMatrix = None
-    # number of zones processed
-    numberZones = None
-    # names of the zones for plotting
-    Name_zone = None
-    # the initial priors for each iteration; for plotting
-    priorStore = None
-    # proportion searched for each year in full extent
-    proportionSearchedExtent = None
-    # proportion searched for each zone
-    proportionSearchedZone = None
-    # output mean sensitivity raster - one layer per year
-    meanSeuTifPathName = None
-    # output relative risk raster (may have been modified from input due to buffering)
-    relRiskTifName = None
-    # output updated zone raster
-    extZoneTifName = None
-    # number of rows in cols in the above rasters
-    rows = None
-    cols = None
-    # GDAL geotranform array used by the rasters
-    match_geoTrans = None
-
-def calcProofOfAbsence(poaparams, trapArray, RRArray, zoneArray, zoneCodes, match_geotrans, 
-        wkt, outputDataPath, RR_zone, Pu_zone, Name_zone):
-    """
-    Main function. Parameters are:
-        * an instance of params.POAParameters
-        * a 1d trap array
-        * a 2d array with the Relative Risk values.
-        * a 2d array, != 0 where processing is to take place. Contains zone values
-        * a 1d array containing the unique values for zones in the previous array
-        * a GDAL style geotransform array to use when finding traps on the raster
-        * a string with the WKT to use when writing out rasters
-        * The path to use when outputting the result rasters
-        * a 1d array containing RR_zone values for each zone (same order as zoneCodes)
-        * a 1d array containing Pu_zone values for each zone (same order as zoneCodes)
-        * a 1d array containing the names of the zones for presentation to the user (same order as zoneCodes).
-
-    Returns a Results object. See above.
+# calcProofOfAbsence <-  function(poaparams, trapArray, RRArray, zoneArray, zoneCodes, match_geotrans, 
+#         wkt, outputDataPath, RR_zone, Pu_zone, Name_zone){
+    # """
+    # Main function. Parameters are:
+    #     * an instance of params.POAParameters
+    #     * a 1d trap array
+    #     * a 2d array with the Relative Risk values.
+    #     * a 2d array, != 0 where processing is to take place. Contains zone values
+    #     * a 1d array containing the unique values for zones in the previous array
+    #     * a GDAL style geotransform array to use when finding traps on the raster
+    #     * a string with the WKT to use when writing out rasters
+    #     * The path to use when outputting the result rasters
+    #     * a 1d array containing RR_zone values for each zone (same order as zoneCodes)
+    #     * a 1d array containing Pu_zone values for each zone (same order as zoneCodes)
+    #     * a 1d array containing the names of the zones for presentation to the user (same order as zoneCodes).
+    # 
+    # Returns a Results object. See above.
+    # 
+    # """
+    #-------------------------------------------------------------------------#
+    # test inputs
+    source("convert_py_PoA_to_R.R")
+    np <- import("numpy")  
+    poaparams <- myParams
+    trapArray <- pickledat$survey
+    RRArray <- pickledat$relativeRiskRaster
+    zoneArray <- pickledat$zoneArray
+    zoneArray <- pickledat$zoneArray
+    zoneCodes <- pickledat$zoneCodes
+    match_geotrans <- pickledat$match_geotrans
+    wkt <- pickledat$wkt
+    outputDataPath <- "testdata/output"
+    RR_zone <-  pickledat$RR_zone
+    Pu_zone <- pickledat$Pu_zone
+    Name_zone <- pickledat$Name_zone
+    #-------------------------------------------------------------------------#
     
-    """
-    transform = np.array(match_geotrans) # ensure array to keep numba happy
-    nZones = zoneCodes.size
+    #"""
+    transform = np$array(match_geotrans) # ensure array to keep numba happy
+    nZones = zoneCodes$size
 
     # some basic checking
-    if poaparams.prior_min is None or poaparams.intro_min is None or poaparams.years is None:
-        msg = 'Parameter object has not been completely filled in'
-        raise InputParameterError(msg)
-
-    if RRArray.shape != zoneArray.shape:
-        msg = 'Input arrays must be the same shape'
-        raise InputParameterError(msg)
+    # if poaparams.prior_min is None or poaparams.intro_min is None or poaparams.years is None:
+    #     msg = 'Parameter object has not been completely filled in'
+    #     raise InputParameterError(msg)
+    # 
+    # if RRArray.shape != zoneArray.shape:
+    #     msg = 'Input arrays must be the same shape'
+    #     raise InputParameterError(msg)
 
     # do masking by minimum RR
     # keep original for addKBufferAroundTraps()
-    origZoneArray = zoneArray.copy()
+    origZoneArray = zoneArray$copy()
 
     # set zone to 0 where RR less than minRR - will be ignored
-    zoneArray[RRArray < poaparams.minRR] = 0
-
-    if poaparams.RRTrapDistance > 0.0:
+    zoneArray <- py_to_r(zoneArray)
+    zoneArray[py_to_r(RRArray) < py_to_r(poaparams$minRR)] <- 0
+    zoneArray <- np_array(zoneArray, dtype = "uint8")
+    
+    if(poaparams$RRTrapDistance > 0.0){
         # need to mask around traps within that distance
         # find the value of K to fill in with
-        maxRR = RRArray[zoneArray != 0].max() / 2.0
-        if poaparams.minRR > maxRR:
-            maxRR = poaparams.minRR
+        maxRR = py_to_r(RRArray[py_to_r(zoneArray) != 0]$max()) / 2.0
+        if(poaparams$minRR > maxRR){
+            maxRR = poaparams$minRR
+        }
 
         # keep Numba happy
-        years = np.array(poaparams.years)
+        years = r_to_py(np$array(poaparams$years))
         # converting a set to an array requires going via a list.
-        RRBufferAnimals = np.array(list(poaparams.RRBufferAnimals))
+        RRBufferAnimals = np_array(py$list(poaparams$RRBufferAnimals), dtype = "int32")
         # do the buffering
-        addRRBufferAroundTraps(trapArray, RRBufferAnimals, years, 
-                RRArray, zoneArray, origZoneArray, poaparams.RRTrapDistance, 
-                poaparams.minRR, maxRR, transform)
-
+        calculation$addRRBufferAroundTraps(trapArray, RRBufferAnimals, years, 
+                RRArray, zoneArray, origZoneArray, poaparams$RRTrapDistance, 
+                poaparams$minRR, maxRR, transform)
+    }
 
     # Do here as operations above may have changed it
-    nTotalCells = (zoneArray != 0).sum()
-
+    nTotalCells = r_to_py(as.integer(sum(py_to_r(zoneArray) != 0)))
+    
     # get the sum of the k to use for weighted averages
-    (sumRRWeights, rrHxZoneWeights, nCellsInZones) = getSumRRWeights(RRArray, 
-                zoneArray, zoneCodes, RR_zone)
+    # c(sumRRWeights, rrHxZoneWeights, nCellsInZones) = calculation$getSumRRWeights(RRArray, 
+    #             zoneArray, zoneCodes, RR_zone)
+    sumRRWeights <- calculation$getSumRRWeights(RRArray, zoneArray, zoneCodes, RR_zone)[[0]]
+    rrHxZoneWeights <- calculation$getSumRRWeights(RRArray, zoneArray, zoneCodes, RR_zone)[[1]]
+    nCellsInZones <- calculation$getSumRRWeights(RRArray, zoneArray, zoneCodes, RR_zone)[[2]]
+    
 
-    if (transform[1] + transform[5]) > (transform[1] * 0.1):
-        msg = 'input pixels must be square'
-        raise InputParameterError(msg)
+    if((py_to_r(transform[1]) + py_to_r(transform[5])) > (py_to_r(transform[1]) * 0.1)){
+        message('input pixels must be square')
+        # raise InputParameterError(msg)
+    }
 
     # initialise result arrays
-    sensitivityList = []
-    nTotalYears = poaparams.years[-1] - poaparams.years[0] + 1
-    SSeMat = np.zeros((nTotalYears, poaparams.nIter))
-    PoFMat = np.zeros((nTotalYears, poaparams.nIter))
-    priorStore = np.zeros(poaparams.nIter, dtype = float)
+    sensitivityList = py$list()
+    nTotalYears = r_to_py(as.integer(py_to_r(poaparams$years[-1]) - py_to_r(poaparams$years[0]) + 1))
+    SSeMat = r_to_py(np$zeros(c(nTotalYears, poaparams$nIter)))$copy()
+    PoFMat = r_to_py(np$zeros(c(nTotalYears, poaparams$nIter)))$copy()
+    priorStore = r_to_py(np$zeros(poaparams$nIter, dtype = "float"))$copy()
     ## FOR STORING ZONE-SPECIFIC RESULTS
-    zoneSeResults = np.zeros((nTotalYears, poaparams.nIter, nZones))
+    zoneSeResults = r_to_py(np$zeros(c(nTotalYears, poaparams$nIter, nZones)))$copy()
 
     ## THIS IS FOR THE ENTIRE AREA PROPORTION SEARCHED
-    proportionSearchedExtent = np.zeros(nTotalYears)
+    proportionSearchedExtent = np_array(np$zeros(nTotalYears), dtype = "float64")$copy()
     ## PROPORTION SEARCHED FOR EACH ZONE
-    proportionSearchedZone = np.zeros((nTotalYears, nZones))
+    proportionSearchedZone = r_to_py(np$zeros(c(nTotalYears, nZones)))$copy()
 
-    prior_range = poaparams.prior_max - poaparams.prior_min
-    intro_range = poaparams.intro_max - poaparams.intro_min
+    prior_range = r_to_py(py_to_r(poaparams$prior_max) - py_to_r(poaparams$prior_min))
+    intro_range = r_to_py(py_to_r(poaparams$intro_max) - py_to_r(poaparams$intro_min))
 
-    gridSurveyParams = poaparams.gridSurveyParams
-    gridSurveyData = poaparams.gridSurveyData
+    gridSurveyParams = poaparams$gridSurveyParams
+    gridSurveyData = poaparams$gridSurveyData
     
-    print('Grid Survey Data', gridSurveyData)
+    # print('Grid Survey Data', gridSurveyData)
 
     # work out the iterations for each thread
-    if poaparams.nthreads > 1:
-        nItersPerThread = int(np.ceil(poaparams.nIter / poaparams.nthreads))
-        nIterList = []  # tuple of (start, end)
-        for n in range(poaparams.nthreads):
-            start = n * nItersPerThread
-            end = start + nItersPerThread
-            if end > poaparams.nIter:
-                end = poaparams.nIter
-
-            nIterList.append((start, end))
+    # if poaparams.nthreads > 1:
+    #     nItersPerThread = int(np.ceil(poaparams.nIter / poaparams.nthreads))
+    #     nIterList = []  # tuple of (start, end)
+    #     for n in range(poaparams.nthreads):
+    #         start = n * nItersPerThread
+    #         end = start + nItersPerThread
+    #         if end > poaparams.nIter:
+    #             end = poaparams.nIter
+    # 
+    #         nIterList.append((start, end))
 
     # create the locks, we do this even if nthreads=1 to make it easier
-    global THREAD_LOCK 
-    THREAD_LOCK = LOCK_INIT()
+    # global THREAD_LOCK
+    # THREAD_LOCK = LOCK_INIT()
 
-    Pz = poaparams.Pz       ## ZONE DESIGN PREVALENCE
+    Pz = poaparams$Pz       ## ZONE DESIGN PREVALENCE
     # with all the missing years filled in
-    yearSeq = range(poaparams.years[0], poaparams.years[-1] + 1)
+    yearSeq = r_to_py(py_to_r(poaparams$years[0]):(py_to_r(poaparams$years[-1])+1))
 
-    print('yearSeq', yearSeq, 'ntotalyears', nTotalYears, 
-        'paramyears',poaparams.years)
+    print(paste('yearSeq', yearSeq, 'ntotalyears', nTotalYears, 
+        'paramyears',poaparams$years))
 
-    for yearCount in range(nTotalYears):
+    # for yearCount in range(nTotalYears):
+        yearCount <- as.integer(0)
         # probability of not detecting = 1
-        sensitivityRaster = np.zeros_like(zoneArray, dtype=np.float)
+        sensitivityRaster = r_to_py(np$zeros_like(zoneArray, dtype=np$float))$copy()
         currentYear = yearSeq[yearCount]
         # calc PStar for year
-        PStar = Pu_zone + (float(yearCount) * poaparams.puRate) ## EITHER SCALAR OR ARRAY
-        print('year = ', currentYear, 'PuYear = ', PStar, 'RR_zone', RR_zone)
+        PStar = py_to_r(Pu_zone) + (as.double(yearCount) * py_to_r(poaparams$puRate)) ## EITHER SCALAR OR ARRAY
+        PStar <- r_to_py(PStar)
+        print(paste('year = ', currentYear, 'PuYear = ', PStar, 'RR_zone', RR_zone))
 
-        if currentYear in poaparams.years:
-            # is a surveillance year
-
-            # do the iterations - under this level is all numba
-            if poaparams.nthreads == 1:
-                # single thread. Do all the iterations for this year.
-                doIterations(0, poaparams.nIter, sensitivityRaster, zoneSeResults, 
+        # if currentYear in poaparams.years:
+        #     # is a surveillance year
+        # 
+        #     # do the iterations - under this level is all numba
+        #     if poaparams.nthreads == 1:
+        #         # single thread. Do all the iterations for this year.
+          
+        startItr <- r_to_py(as.integer(0))
+        
+        # doIterations.ls <- list(startItr = startItr, 
+        #                             endItr = poaparams$nIter, 
+        #                             sensitivityRaster = sensitivityRaster, 
+        #                             zoneSeResults = zoneSeResults, 
+        #                             proportionSearchedExtent = proportionSearchedExtent, 
+        #                             proportionSearchedZone = proportionSearchedZone, 
+        #                             SSeMat = SSeMat, 
+        #                             PoFMat = PoFMat, 
+        #                             RRArray = RRArray, 
+        #                             yearCount = yearCount,
+        #                             currentYear = currentYear, 
+        #                             gridSurveyParams = gridSurveyParams, 
+        #                             gridSurveyData = gridSurveyData, 
+        #                             parameterArray = poaparams$parameterArray, 
+        #                             trapArray = trapArray, 
+        #                             zoneArray = zoneArray, 
+        #                             zoneCodes = zoneCodes, 
+        #                             sumRRWeights = sumRRWeights, 
+        #                             rrHxZoneWeights = rrHxZoneWeights, 
+        #                             Pu_zone = Pu_zone, 
+        #                             transform = transform, 
+        #                             nChewcardTraps = poaparams$nChewcardTraps,
+        #                             PStar = PStar, 
+        #                             Pz = Pz, 
+        #                             nTotalCells = nTotalCells, 
+        #                             prior_a = poaparams$prior_a, 
+        #                             prior_b = poaparams$prior_b, 
+        #                             prior_min = poaparams$prior_min, 
+        #                             prior_max = poaparams$prior_max, 
+        #                             prior_range = prior_range, 
+        #                             intro_a = poaparams$intro_a, 
+        #                             intro_b = poaparams$intro_b, 
+        #                             intro_min = poaparams$intro_min, 
+        #                             intro_max = poaparams$intro_max, 
+        #                             intro_range = intro_range, 
+        #                             priorStore = priorStore)
+        
+        
+        
+        
+                calculation$doIterations(startItr, poaparams$nIter, sensitivityRaster, zoneSeResults, 
                     proportionSearchedExtent, proportionSearchedZone, SSeMat, 
                     PoFMat, RRArray, yearCount,
                     currentYear, gridSurveyParams, gridSurveyData, 
-                    poaparams.parameterArray, trapArray, zoneArray, zoneCodes,
+                    poaparams$parameterArray, trapArray, zoneArray, zoneCodes,
                     sumRRWeights, rrHxZoneWeights, Pu_zone,
-                    transform, poaparams.nChewcardTraps, PStar, Pz, nTotalCells,
-                    poaparams.prior_a, poaparams.prior_b, poaparams.prior_min, 
-                    poaparams.prior_max, prior_range, poaparams.intro_a, poaparams.intro_b,
-                    poaparams.intro_min, poaparams.intro_max, intro_range, priorStore)
-            else:
-                # multithreaded option - start a thread for each start, end in nIterList
-                # for this year.
-                threads = []
-                for start, end in nIterList:
-                    thread = threading.Thread(target=doIterations, args=(start, end, 
-                            sensitivityRaster, zoneSeResults, proportionSearchedExtent,
-                            proportionSearchedZone, SSeMat, PoFMat, RRArray, yearCount, currentYear,
-                            gridSurveyParams, gridSurveyData,  
-                            poaparams.parameterArray, trapArray, zoneArray, zoneCodes,
-                            sumRRWeights, rrHxZoneWeights, Pu_zone, 
-                            transform, poaparams.nChewcardTraps, PStar, Pz, nTotalCells,
-                            poaparams.prior_a, poaparams.prior_b, poaparams.prior_min, 
-                            poaparams.prior_max, prior_range, poaparams.intro_a, poaparams.intro_b,
-                            poaparams.intro_min, poaparams.intro_max, intro_range, priorStore))
-                    threads.append(thread)
-
-                # start them
-                for thread in threads:
-                    thread.start()
-                # wait for them to finish
-                for thread in threads:
-                    thread.join()
+                    transform, poaparams$nChewcardTraps, PStar, Pz, nTotalCells,
+                    poaparams$prior_a, poaparams$prior_b, poaparams$prior_min, 
+                    poaparams$prior_max, prior_range, poaparams$intro_a, poaparams$intro_b,
+                    poaparams$intro_min, poaparams$intro_max, intro_range, priorStore)
+                
+                doIterations(py_to_r(startItr), py_to_r(poaparams$nIter), sensitivityRaster, zoneSeResults, 
+                             proportionSearchedExtent, proportionSearchedZone, SSeMat, 
+                             PoFMat, RRArray, yearCount,
+                             currentYear, gridSurveyParams, gridSurveyData, 
+                             poaparams$parameterArray, trapArray, zoneArray, zoneCodes,
+                             sumRRWeights, rrHxZoneWeights, Pu_zone,
+                             transform, poaparams$nChewcardTraps, PStar, Pz, nTotalCells,
+                             poaparams$prior_a, poaparams$prior_b, poaparams$prior_min, 
+                             poaparams$prior_max, prior_range, poaparams$intro_a, poaparams$intro_b,
+                             poaparams$intro_min, poaparams$intro_max, intro_range, priorStore)
+            
+                
+            # else:
+            #     # multithreaded option - start a thread for each start, end in nIterList
+            #     # for this year.
+            #     threads = []
+            #     for start, end in nIterList:
+            #         thread = threading.Thread(target=doIterations, args=(start, end,
+            #                 sensitivityRaster, zoneSeResults, proportionSearchedExtent,
+            #                 proportionSearchedZone, SSeMat, PoFMat, RRArray, yearCount, currentYear,
+            #                 gridSurveyParams, gridSurveyData,
+            #                 poaparams.parameterArray, trapArray, zoneArray, zoneCodes,
+            #                 sumRRWeights, rrHxZoneWeights, Pu_zone,
+            #                 transform, poaparams.nChewcardTraps, PStar, Pz, nTotalCells,
+            #                 poaparams.prior_a, poaparams.prior_b, poaparams.prior_min,
+            #                 poaparams.prior_max, prior_range, poaparams.intro_a, poaparams.intro_b,
+            #                 poaparams.intro_min, poaparams.intro_max, intro_range, priorStore))
+            #         threads.append(thread)
+            # 
+            #     # start them
+            #     for thread in threads:
+            #         thread.start()
+            #     # wait for them to finish
+            #     for thread in threads:
+            #         thread.join()
 
             # we have just been adding things to sensitivityRaster so divide 
             # it by the total number of iterations to get the average for this year 
-            sensitivityRaster = sensitivityRaster / poaparams.nIter
+            sensitivityRaster = py_to_r(sensitivityRaster) / py_to_r(poaparams$nIter)
             
             # reset to zero where we aren't using it (zone==0)
             # set to one every above
@@ -361,7 +446,7 @@ def calcProofOfAbsence(poaparams, trapArray, RRArray, zoneArray, zoneCodes, matc
     print('got to return result')
 
     return result
-
+}
 
 def writeTif(raster, tempTifName, gdt_type, wkt, match_geotrans):
     """
@@ -398,49 +483,92 @@ def writeTif(raster, tempTifName, gdt_type, wkt, match_geotrans):
     
     del ds  # Flush
 
-# @jit(nopython=True, nogil=True)
-def doIterations(startItr, endItr, sensitivityRaster, zoneSeResults, 
+doIterations <- function(startItr, endItr, sensitivityRaster, zoneSeResults, 
         proportionSearchedExtent, proportionSearchedZone, 
         SSeMat, PoFMat, RRArray, yearCount,
         currentYear, gridSurveyParams, gridSurveyData, 
         parameterArray, trapArray, zoneArray, zoneCodes, sumRRWeights, rrHxZoneWeights, 
         Pu_zone, transform, nChewcardTraps,
         PStar, Pz, nTotalCells, prior_a, prior_b, prior_min, prior_max, 
-        prior_range, intro_a, intro_b, intro_min, intro_max, intro_range, priorStore):
-    """
-    Does one iteration of the processing from startItr to endItr-1.
-      * Also takes the sensitivityRaster and updates it with the sum of 
-        all the individual 'thisSensitivities' calculated for each iteration
-      * zoneSeResults are filled in for each year and iteration
-      * proportionSearchedExtent and proportionSearchedZone which is updated for each year/iteration
-      * SSeMat and PoFMat which is filled in for each year and iteration
-      * RRArray has relative risk
-      * The index of the year and the actual year we are processing. yearCount is index into zoneSeResults etc
-      * gridSurveyParams, gridSurveyData are from the params
-      * parameterArray is from the POAParameters class
-      * trapArray, zoneArray, zoneCodes and transform are the parameters to calcProofOfAbsence()
-      * sumRRWeights, rrHxZoneWeights come from getSumRRWeights()
-      * Pu_zone and transform are passed into calcProofOfAbsence()
-      * PStar is for the given year
-      * priorStore (?)
-      * Other parameters come from POAParameters
-    """
-    for currentIteration in range(startItr, endItr):
+        prior_range, intro_a, intro_b, intro_min, intro_max, intro_range, priorStore){
+    # Does one iteration of the processing from startItr to endItr-1.
+    #   * Also takes the sensitivityRaster and updates it with the sum of 
+    #     all the individual 'thisSensitivities' calculated for each iteration
+    #   * zoneSeResults are filled in for each year and iteration
+    #   * proportionSearchedExtent and proportionSearchedZone which is updated for each year/iteration
+    #   * SSeMat and PoFMat which is filled in for each year and iteration
+    #   * RRArray has relative risk
+    #   * The index of the year and the actual year we are processing. yearCount is index into zoneSeResults etc
+    #   * gridSurveyParams, gridSurveyData are from the params
+    #   * parameterArray is from the POAParameters class
+    #   * trapArray, zoneArray, zoneCodes and transform are the parameters to calcProofOfAbsence()
+    #   * sumRRWeights, rrHxZoneWeights come from getSumRRWeights()
+    #   * Pu_zone and transform are passed into calcProofOfAbsence()
+    #   * PStar is for the given year
+    #   * priorStore (?)
+    #   * Other parameters come from POAParameters
+    
+  #-------------------------------------------------------------------------#
+  # test inputs
+  
+  # startItr<- py_to_r(startItr)
+  # endItr<- py_to_r(poaparams$nIter)
+  # sensitivityRaster<- sensitivityRaster
+  # zoneSeResults<- r_to_py(zoneSeResults)
+  # proportionSearchedExtent<- proportionSearchedExtent
+  # proportionSearchedZone<- proportionSearchedZone
+  # SSeMat<- SSeMat
+  # PoFMat<- PoFMat
+  # RRArray<- RRArray
+  # yearCount <- yearCount
+  # currentYear<- currentYear
+  # gridSurveyParams<- gridSurveyParams
+  # gridSurveyData<- gridSurveyData
+  # parameterArray<- poaparams$parameterArray
+  # trapArray<- trapArray
+  # zoneArray<- zoneArray
+  # zoneCodes<- zoneCodes
+  # sumRRWeights<- sumRRWeights
+  # rrHxZoneWeights<- rrHxZoneWeights
+  # Pu_zone<- Pu_zone
+  # transform<- transform
+  # nChewcardTraps <- poaparams$nChewcardTraps
+  # PStar<- PStar
+  # Pz<- Pz
+  # nTotalCells<- nTotalCells
+  # prior_a <- poaparams$prior_a
+  # prior_b <- poaparams$prior_b
+  # prior_min <- poaparams$prior_min
+  # prior_max <- poaparams$prior_max
+  # prior_range <- r_to_py(py_to_r(poaparams$prior_max) - py_to_r(poaparams$prior_min))
+  # intro_a <- poaparams$intro_a
+  # intro_b <- poaparams$intro_b
+  # intro_min <- poaparams$intro_min
+  # intro_max <- poaparams$intro_max
+  # intro_range <- r_to_py(py_to_r(poaparams$intro_max) - py_to_r(poaparams$intro_min))
+  # priorStore <- priorStore
+  
+  #-------------------------------------------------------------------------#
+  
+  for(currentIteration in startItr:(endItr-1)){
+    print(currentIteration)
         # thisSensitivity starts with p(non-detect) = 1 everywhere:
-        thisSensitivity = np.ones_like(sensitivityRaster)
-        if gridSurveyParams is not None:
+        thisSensitivity = r_to_py(np$ones_like(sensitivityRaster))$copy()
+        if(!is.null(py_to_r(gridSurveyParams))){
             # thisSensitivity output is a p(non-detect)
-            applyGridSurveillance(gridSurveyParams,
-                                gridSurveyData, thisSensitivity, 
-                                currentYear)
+          calculation$applyGridSurveillance(gridSurveyParams,
+                                            gridSurveyData, thisSensitivity, 
+                                            r_to_py(currentYear))
+        }
         # process all traps
         # update thisSensitivity as p(non-detect), but after this function
         # and its nested functions, we are working p(detection)
-        seWeighted, weightedAveSensitivity, nSearchedCells = (
-                processAllTrapsForYear(currentYear, parameterArray, 
+        .res <- calculation$processAllTrapsForYear(currentYear, parameterArray, 
                     trapArray, thisSensitivity, transform, zoneArray, zoneCodes, 
-                    RRArray, sumRRWeights, nChewcardTraps))
-
+                    RRArray, sumRRWeights, nChewcardTraps)
+        seWeighted <- .res[[0]]
+        weightedAveSensitivity <- .res[[1]]
+        nSearchedCells <- .res[[2]]
 
         # following lines need lock since the updated arrays are shared between all threads
         # LOCK_LOCK(THREAD_LOCK, 1)
@@ -453,47 +581,59 @@ def doIterations(startItr, endItr, sensitivityRaster, zoneSeResults,
         # update the sensitivity raster - we dived by nIter later
         # sensitivityRaster is used to make *.png of meanSeU across iterations
         # One is produced for each year.
-        sensitivityRaster += thisSensitivity
+        sensitivityRaster <- r_to_py(py_to_r(sensitivityRaster) + py_to_r(thisSensitivity))$copy()
 
         # LOCK_UNLOCK(THREAD_LOCK)
         # Condition on presence or absence of surveillance in year
         # Sum() across all zones of number of searched cells.
-        zoneSensitivity = np.zeros(zoneCodes.shape)
-        if nSearchedCells.sum() == 0:
-            systemSensitivity = 0.0
-        else:
+        zoneSensitivity = r_to_py(np$zeros(zoneCodes$shape))$copy()
+        if(py_to_r(nSearchedCells$sum()) == 0){
+            systemSensitivity = r_to_py(as.double(0.0))
+        } else {
             # New - Equation 6
             wtAveAcrossZones = 0.0
-            zoneSensitivity = (1.0 - np.power((1.0 - weightedAveSensitivity), Pu_zone)) 
+            zoneSensitivity = (1.0 - np$power((1.0 - py_to_r(weightedAveSensitivity)), Pu_zone)) 
             ## Calculate the system sensitivity
             ## Ave zone se weighted by rr and hx (history) = SSe with P*zone = 1
             # New - Equation 4  
-            wtAveAcrossZones = np.sum(zoneSensitivity * rrHxZoneWeights)
+            wtAveAcrossZones = sum(zoneSensitivity * py_to_r(rrHxZoneWeights))
             # New - Equation 3
-            systemSensitivity = (1.0 - np.power((1.0 - wtAveAcrossZones), Pz))
+            systemSensitivity = (1.0 - np$power((1.0 - wtAveAcrossZones), Pz))
+        }
         # lock not needed since currentIteration is unique to thread
         # zoneSeResults is 3D so we set all the zones
-        for zoneIdx in range(zoneCodes.size):
-            zoneSeResults[yearCount, currentIteration, zoneIdx] = zoneSensitivity[zoneIdx]
+        zoneSeResults <- py_to_r(zoneSeResults)
+        for(zoneIdx in seq_len(py_to_r(zoneCodes$size))-1){
+          zoneSeResults[yearCount+1,currentIteration+1,zoneIdx+1] <- zoneSensitivity[zoneIdx+1]
+        }
 
-        if yearCount == 0:
+        if(yearCount == 0){
             # Probability of Introduction in the first year
-            PrPrior = doBetaPert(prior_a, prior_b, 
+            PrPrior = calculation$doBetaPert(prior_a, prior_b, 
                     prior_min, prior_max, prior_range)
             # priorStore[currentIteration] = PrPrior
-        else:
-            PrIntro = doBetaPert(intro_a, intro_b,
+        } else {
+            PrIntro = calculation$doBetaPert(intro_a, intro_b,
                     intro_min, intro_max, intro_range)
             # Equation 2
-            PoFLastYear = PoFMat[yearCount - 1, currentIteration]
-            PrPrior = (1.0 - ((( 1.0 - PoFLastYear ) + PrIntro ) - 
-                ( ( 1.0 - PoFLastYear ) * PrIntro )))
+            PoFLastYear = py_to_r(PoFMat[yearCount - 1][currentIteration])
+            PrPrior = (1.0 - ((( 1.0 - PoFLastYear ) + py_to_r(PrIntro) ) - 
+                ( ( 1.0 - PoFLastYear ) * py_to_r(PrIntro) )))
+        }
 
         # Equation 1 
         # no lock needed since currentIteration unique to thread
-        PrOfFreedom = PrPrior / ( 1.0 - systemSensitivity * ( 1.0 - PrPrior ) )
-        SSeMat[yearCount, currentIteration] = systemSensitivity
-        PoFMat[yearCount, currentIteration] = PrOfFreedom
+        PrOfFreedom = r_to_py(py_to_r(PrPrior) / ( 1.0 - systemSensitivity * ( 1.0 - py_to_r(PrPrior) ) ))
+
+        SSeMat <- py_to_r(SSeMat)
+        PoFMat <- py_to_r(PoFMat)
+        SSeMat[c(yearCount+1,currentIteration+1)] = systemSensitivity
+        PoFMat[c(yearCount+1,currentIteration+1)] = py_to_r(PrOfFreedom)
+        SSeMat <- r_to_py(SSeMat)
+        PoFMat <- r_to_py(PoFMat)
+        zoneSeResults <- r_to_py(zoneSeResults)
+        }
+}
 
 # @jit(nopython=True, nogil=True)
 def applyGridSurveillance(gridSurveyParams, gridSurveyData, thisSensitivity, 
@@ -530,30 +670,91 @@ def applyGridSurveillance(gridSurveyParams, gridSurveyData, thisSensitivity,
             nApplied += 1
 
 
-# @jit(nopython=True, nogil=True)
-def processAllTrapsForYear(currentYear, parameterArray, trapArray, thisSensitivity, 
-            transform, zoneArray, zoneCodes, RRArray, sumRRWeights, nChewcardTraps):
-    """
-    Goes through an process all traps for given year. Parameters:
-        * the current year
-        * POFParameters
-        * the traps
-        * the initialised sensitivity raster for this iteration (may have had grid survey applied)
-        * geo transform of the rasters
-        * zone raster - use where != 0 (see zoneCodes)
-        * zoneCodes to use in zoneArray
-        * the RR raster and sumRRWeights
+processAllTrapsForYear(currentYear, parameterArray, trapArray, thisSensitivity, 
+            transform, zoneArray, zoneCodes, RRArray, sumRRWeights, nChewcardTraps){
+    # Goes through an process all traps for given year. Parameters:
+    #     * the current year
+    #     * POFParameters
+    #     * the traps
+    #     * the initialised sensitivity raster for this iteration (may have had grid survey applied)
+    #     * geo transform of the rasters
+    #     * zone raster - use where != 0 (see zoneCodes)
+    #     * zoneCodes to use in zoneArray
+    #     * the RR raster and sumRRWeights
+    # 
+    # Returns (arrays - value for each zone in zoneCodes):
+    #     * seWeighted
+    #     * weightedAveSensitivity
+    #     * nSearchedCells
+   
+  #-------------------------------------------------------------------------#
+  # test inputs
+  startItr <- r_to_py(as.integer(0))
+  endItr <- py_to_r(poaparams$nIter)
+  sensitivityRaster = .sensitivityRaster
+  zoneSeResults = zoneSeResults
+  proportionSearchedExtent = proportionSearchedExtent
+  proportionSearchedZone = proportionSearchedZone
+  SSeMat = SSeMat
+  PoFMat = PoFMat
+  RRArray = RRArray
+  yearCount = r_to_py(as.integer(1)) # r_to_py(as.integer(yearCount))
+  currentYear = r_to_py(as.integer(currentYear))
+  gridSurveyParams = gridSurveyParams
+  gridSurveyData = gridSurveyData
+  parameterArray = poaparams$parameterArray
+  trapArray = trapArray
+  zoneArray = zoneArray
+  zoneCodes = zoneCodes
+  sumRRWeights = sumRRWeights
+  rrHxZoneWeights = rrHxZoneWeights
+  Pu_zone = Pu_zone
+  transform = transform
+  nChewcardTraps = poaparams$nChewcardTraps
+  PStar = np_array(PStar, dtype = "float64")
+  Pz = Pz
+  nTotalCells = r_to_py(as.integer(nTotalCells))
+  prior_a = poaparams$prior_a
+  prior_b = poaparams$prior_b
+  prior_min = poaparams$prior_min
+  prior_max = poaparams$prior_max
+  prior_range = r_to_py(as.double(prior_range))
+  intro_a = poaparams$intro_a
+  intro_b = poaparams$intro_b
+  intro_min = poaparams$intro_min
+  intro_max = poaparams$intro_max 
+  intro_range = r_to_py(as.double(intro_range))
+  priorStore = priorStore
+  
+  np <- reticulate::import(module = "numpy")
+  
+  calculation$processAllTrapsForYear(currentYear = r_to_py(as.integer(1)),
+                                     parameterArray = parameterArray,
+                                     trapArray = trapArray,
+                                     thisSensitivity = thisSensitivity,
+                                     transform = np_array(transform, dtype = "float64"),
+                                     zoneArray = zoneArray,
+                                     zoneCodes = zoneCodes, 
+                                     RRArray = RRArray, 
+                                     sumRRWeights = sumRRWeights, 
+                                     nChewcardTraps = nChewcardTraps)
+                                     
+                                     
+  
+  
+  #-------------------------------------------------------------------------#
+  
+    nTraps = trapArray$shape[0]
+    nZones = zoneCodes$shape[0]
 
-    Returns (arrays - value for each zone in zoneCodes):
-        * seWeighted
-        * weightedAveSensitivity
-        * nSearchedCells
-    """
-    nTraps = trapArray.shape[0]
-    nZones = zoneCodes.shape[0]
-
-    for nCurrentTrap in range(nTraps):
-        currentTrap = trapArray[nCurrentTrap]
+    for (nCurrentTrap in (1:py_to_r(nTraps))-1){
+      
+      nCurrentTrap <- 0  
+      
+      
+      currentTrap = trapArray[[nCurrentTrap]]
+      currentTrap
+        
         if currentTrap['year'] == currentYear:
             animalCode = currentTrap['animal']
             currentParam = parameterArray[animalCode]
@@ -569,6 +770,7 @@ def processAllTrapsForYear(currentYear, parameterArray, trapArray, thisSensitivi
             # the updated thisSensitivity in 'circleFunction' is still a p(non-detect)
             circleFunction(dSigma, trapArray, nCurrentTrap, parameterArray, 
                         transform, thisSensitivity, zoneArray, nChewcardTraps)
+    }
                         
     # After the following function, working with p(detection)
     seWeighted, weightedAveSensitivity, nSearchedCells = (
@@ -576,7 +778,8 @@ def processAllTrapsForYear(currentYear, parameterArray, trapArray, thisSensitivi
                         RRArray, zoneArray, zoneCodes, sumRRWeights))
     
     return seWeighted, weightedAveSensitivity, nSearchedCells
-
+}
+    
 # @jit(nopython=True, nogil=True)
 def convertSensitivityIntoProbOfDetecting(thisSensitivity, RRArray,
                         zoneArray, zoneCodes, sumRRWeights):
@@ -643,41 +846,50 @@ def doBetaPertArray(a, b, min, max, range, size):
 # @jit(nopython=True, nogil=True)
 def circleFunction(dSigma, traps, nCurrentTrap, paramArray, 
         transform, thisSensitivity, zoneArray,  nChewcardTraps):
-    """
-    Calculates the pixels that are within 4*dSigma radius of the animal/trap
-    and calls getSensitivityForCell() upon them.
+    # Calculates the pixels that are within 4*dSigma radius of the animal/trap
+    # and calls getSensitivityForCell() upon them.
+    # 
+    # In future when Numba supports passing of functions as arguments
+    # we will change this so the appropriate function is passed in.
+    
+    #-------------------------------------------------------------------------#
+    # test inputs
+  
+    dSigma = np.random.normal(currentParam['mean_sig'], currentParam['sd_sig'])
+    dSigma <- r_to_py(38.45405766297981)
+    traps <- trapArray
+    transform <- r_to_py(transform)
+    #-------------------------------------------------------------------------#
+  
+    rows = thisSensitivity$shape[0]
+    cols = thisSensitivity$shape[1]
 
-    In future when Numba supports passing of functions as arguments
-    we will change this so the appropriate function is passed in.
-    """
-    rows, cols = thisSensitivity.shape
-
-    dFourSigma = 4.0 * dSigma
+    dFourSigma = 4.0 * py_to_r(dSigma)
     # add another pixel to search just to be safe 
-    dSearchDistance = dFourSigma + transform[1]
+    dSearchDistance = dFourSigma + py_to_r(transform[1])
 
     # work out our search area 
-    dSearchTLX = traps[nCurrentTrap]['easting'] - dSearchDistance
-    dSearchTLY = traps[nCurrentTrap]['northing'] + dSearchDistance
-    dSearchBRX = traps[nCurrentTrap]['easting'] + dSearchDistance
-    dSearchBRY = traps[nCurrentTrap]['northing'] - dSearchDistance
+    dSearchTLX = py_to_r(traps[nCurrentTrap]['easting']) - dSearchDistance
+    dSearchTLY = py_to_r(traps[nCurrentTrap]['northing']) + dSearchDistance
+    dSearchBRX = py_to_r(traps[nCurrentTrap]['easting']) + dSearchDistance
+    dSearchBRY = py_to_r(traps[nCurrentTrap]['northing']) - dSearchDistance
 
     # Convert to pixel coords 
     # Both could be outside the raster, but we need to search 
     # anyway in case the search area intersects with the raster 
-    halfRes = transform[1] / 2
-    nTLX = int(np.round((dSearchTLX - transform[0] - halfRes) / transform[1]))
-    nTLY = int(np.round((dSearchTLY - transform[3] - halfRes) / transform[5]))
-    nBRX = int(np.round((dSearchBRX - transform[0] - halfRes) / transform[1]))
-    nBRY = int(np.round((dSearchBRY - transform[3] - halfRes) / transform[5]))
+    halfRes = py_to_r(transform[1]) / 2
+    nTLX = as.integer(np$round((dSearchTLX - py_to_r(transform[0]) - halfRes) / py_to_r(transform[1])))
+    nTLY = as.integer(np$round((dSearchTLY - py_to_r(transform[3]) - halfRes) / py_to_r(transform[5])))
+    nBRX = as.integer(np$round((dSearchBRX - py_to_r(transform[0]) - halfRes) / py_to_r(transform[1])))
+    nBRY = as.integer(np$round((dSearchBRY - py_to_r(transform[3]) - halfRes) / py_to_r(transform[5])))
 
     # Correct back to coords on the grid 
-    dSearchTLX = transform[0] + nTLX * transform[1] + halfRes
-    dSearchTLY = transform[3] - nTLY * transform[1] - halfRes
+    dSearchTLX = py_to_r(transform[0]) + nTLX * py_to_r(transform[1]) + halfRes
+    dSearchTLY = py_to_r(transform[3]) - nTLY * py_to_r(transform[1]) - halfRes
     
     # All random draws outside of pixel looping 
     # by creating an empty array that calcFunction can put stuff into
-    tmpData = np.zeros(10)
+    tmpData = np$zeros(as.integer(10))
 
     # go through each pixel in the search area 
     testNorth = dSearchTLY

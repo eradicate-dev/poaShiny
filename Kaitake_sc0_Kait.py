@@ -24,8 +24,9 @@ import os
 import pickle
 import numpy as np
 
-os.environ['PROJ_LIB'] = "C:\\ProgramData\\Anaconda3\\envs\\poa_20191008\\Library\\share\\proj"
-os.chdir("C:\\Users\\howards\\OneDrive - MWLR\\Projects\\Kaitake Possum Eradication\\deanpa-dean_poa")
+os.environ['PROJ_LIB'] = "C:\\ProgramData\\Anaconda3\\envs\\r_poa\\Library\\share\\proj"
+# os.chdir("D:\\Users\\Si\\OneDrive - MWLR\\Projects\\Kaitake Possum Eradication\\deanpa-dean_poa")
+os.chdir("D:\\Users\\Si\\OneDrive - MWLR\\Projects\\795208-0091 Ctr for Inv Spec Res-Erad Tool\\shiny_PoA")
 
 from proofofabsence import preProcessing
 from proofofabsence import params
@@ -38,18 +39,16 @@ def main():
     ###################################### USER MODIFY HERE ONLY
     #################################
     # set paths to scripts and data
-    inputDataPath = os.path.join(os.getenv('POFPROJDIR', default = '.'), 'poa', 'Kaitake', 
-            'Data')
+    inputDataPath = os.path.join(os.getenv('POFPROJDIR', default = '.'), 'testdata', 'input')
     if not os.path.isdir(inputDataPath):
         os.mkdir(inputDataPath)
         
-    outputDataPath = os.path.join(os.getenv('POFPROJDIR', default = '.'), 'poa', 'Kaitake', 
-            'Results', 'Model_0')
+    outputDataPath = os.path.join(os.getenv('POFPROJDIR', default = '.'), 'testdata', 'output')
     if not os.path.isdir(outputDataPath):
         os.mkdir(outputDataPath)
 
     # set INPUT extent and relative risk file names
-    zoneShapeFName = os.path.join(inputDataPath, 'extent_Kait.shp') 
+    zoneShapeFName = os.path.join(inputDataPath, 'extent.shp') 
         #'extentOnly.shp')    #'extent_block1.shp')    
         #'extent_gradient.shp')
     relativeRiskFName = os.path.join(inputDataPath, 'relRiskRaster.tif') 
@@ -107,7 +106,7 @@ def main():
     myParams = params.POAParameters(animals)
 
     ## USE MULTIPLE ZONES
-    myParams.setMultipleZones(False)
+    myParams.setMultipleZones(True)
 
     #############################################################################
     # ADD TRAP PARAMETERS                                                       #
@@ -144,7 +143,7 @@ def main():
     print('ncpus', ncpus)
 
     # number of iterations
-    myParams.setNumIterations(1000)
+    myParams.setNumIterations(10)
 #    myParams.setNumChewcardTraps(3)
     myParams.setRRTrapDistance(100.0)
 
