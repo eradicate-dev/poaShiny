@@ -36,14 +36,14 @@ library(shiny)
 
 # file paths --------------------------------------------------------------
 
-path.tmp <- ".tmp"
-path.tmp.input <- paste0(path.tmp, "\\input\\")
-path.tmp.output <- paste0(path.tmp, "\\output\\")
+path.tmp <- paste0(getwd(), "/.tmp")
+path.tmp.input <- paste0(path.tmp, "/input")
+path.tmp.output <- paste0(path.tmp, "/output")
 dir.create(path.tmp.input, recursive = T)
 dir.create(path.tmp.output, recursive = T)
 
-unlink(paste0(path.tmp, "\\input\\*"))
-unlink(paste0(path.tmp, "\\output\\*"))
+unlink(paste0(path.tmp.input, "/*"))
+unlink(paste0(path.tmp.output, "/*"))
 
 
 # manage python environments ----------------------------------------------
@@ -266,14 +266,14 @@ server <- function(input, output, session) {
   observe({
     if(input$namedExample == "Kaitake possums"){
       
-      paths <- list.files("app/www/example_data/Kaitake_possums/", pattern = "devices.csv|extent\\..*|relRiskRaster.tif", full.names = T)
+      paths <- list.files("app/www/example_data/Kaitake_possums", pattern = "devices.csv|extent\\..*|relRiskRaster.tif", full.names = T)
       paths.to <- sub("app/www/example_data/Kaitake_possums/", ".tmp/input/", paths)
       
       unlink(".tmp/input/*")
       file.copy(paths, paths.to)
     } else if(input$namedExample == "Mahia possums"){
       
-      paths <- list.files("app/www/example_data/Mahia_Audrey/", pattern = ".csv$|extent.*|.tif", full.names = T)
+      paths <- list.files("app/www/example_data/Mahia_Audrey", pattern = ".csv$|extent.*|.tif", full.names = T)
       paths.to <- sub("app/www/example_data/Mahia_Audrey/extent_block1ABCD", ".tmp/input/extent", paths)
       paths.to <- sub("app/www/example_data/Mahia_Audrey/habDistRR_block1ABCD.tif", ".tmp/input/relRiskRaster.tif", paths.to)
       paths.to <- sub("app/www/example_data/Mahia_Audrey/Surveillance_location.csv", ".tmp/input/devices.csv", paths.to)
@@ -282,7 +282,7 @@ server <- function(input, output, session) {
       file.copy(paths, paths.to)
     } else if(input$namedExample == "CK stoats"){
       
-      paths <- list.files("app/www/example_data/CK_stoats/", pattern = ".csv$|extent.*|.tif", full.names = T)
+      paths <- list.files("app/www/example_data/CK_stoats", pattern = ".csv$|extent.*|.tif", full.names = T)
       paths.to <- sub("app/www/example_data/CK_stoats/extent", ".tmp/input/extent", paths)
       paths.to <- sub("app/www/example_data/CK_stoats/relRisk.tif", ".tmp/input/relRiskRaster.tif", paths.to)
       paths.to <- sub("app/www/example_data/CK_stoats/devices.csv", ".tmp/input/devices.csv", paths.to)
