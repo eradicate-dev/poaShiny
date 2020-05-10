@@ -50,7 +50,26 @@ unlink(paste0(path.tmp.output, "/*"))
 
 # conda_list()                               # list conda envts
 
-use_condaenv("r_poa", required = TRUE)     # select conda envt
+# use_condaenv("r_poa", required = TRUE)     # select conda envt
+
+# ------------------ App virtualenv setup (Do not edit) ------------------- #
+
+# PYTHON_DEPENDENCIES = c("numpy", "numba", "gdal")
+# 
+# # virtualenv_dir = Sys.getenv('VIRTUALENV_NAME')
+# virtualenv_dir = "r_poa"
+# # python_path = Sys.getenv('PYTHON_PATH')
+# python_path = "python3"
+# 
+# # Create virtual env and install dependencies
+# reticulate::virtualenv_create(envname = virtualenv_dir, python = python_path)
+# reticulate::virtualenv_install(virtualenv_dir, packages = PYTHON_DEPENDENCIES)
+# reticulate::use_virtualenv(virtualenv_dir, required = T)
+# py_config()
+
+reticulate::use_python(python = "/usr/bin/python3")
+py_config()
+# ------------------ App server logic (Edit anything below) --------------- #
 
 #-------------------------------------------------------------------------#
 # source working Kaitake script
