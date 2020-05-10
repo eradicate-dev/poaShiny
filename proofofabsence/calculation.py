@@ -30,8 +30,8 @@ import copy
 from numba import jit
 from osgeo import gdal
 from osgeo import gdalconst
-from rios import calcstats
-from rios.cuiprogress import GDALProgressBar
+# from rios import calcstats
+# from rios.cuiprogress import GDALProgressBar
 
 from proofofabsence import params
 
@@ -392,9 +392,9 @@ def writeTif(raster, tempTifName, gdt_type, wkt, match_geotrans):
             band.WriteArray(raster[n])
             
     # calculate stats so we have the overviews
-    progress = GDALProgressBar()
+    # progress = GDALProgressBar()
     # should we be ignoring zero in the stats??
-    calcstats.calcStats(ds, progress, ignore=0)
+    # calcstats.calcStats(ds, progress, ignore=0)
     
     del ds  # Flush
 
