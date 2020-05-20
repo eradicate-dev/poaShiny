@@ -176,6 +176,7 @@ RawData_R <- function(self = list(), zonesShapeFName,
     if(!is.null(relativeRiskFName)){
         RR_src = raster(relativeRiskFName)
         in_im <- as.matrix(RR_src)
+        in_im[is.na(in_im)] <- 0
         
         # select rows and columns based on x-y min/max and resolution
         maxCol <- (self$xmax - self$xmin) / xres(RR_src)
