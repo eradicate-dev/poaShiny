@@ -12,7 +12,7 @@
 library(reticulate)
 library(raster)
 
-use_condaenv("r_poa", required = TRUE)     # select conda envt
+reticulate::use_condaenv("r_poa", required = TRUE)     # select conda envt
 
 # file paths --------------------------------------------------------------
 
@@ -44,9 +44,9 @@ unpickleWrapper <- function(picklePath){
 py <- reticulate::import_builtins(convert = FALSE)
 
 # load PoA modules
-params <- py_run_file(file = "proofofabsence/params.py", convert = FALSE)
-preProcessing <- py_run_file("proofofabsence/preProcessing.py", convert = FALSE)
-calculation <- py_run_file("proofofabsence/calculation.py", convert = FALSE)
+params <- reticulate::py_run_file(file = "proofofabsence/params.py", convert = FALSE)
+preProcessing <- reticulate::py_run_file("proofofabsence/preProcessing.py", convert = FALSE)
+calculation <- reticulate::py_run_file("proofofabsence/calculation.py", convert = FALSE)
 
 
 # create parameter objects ------------------------------------------------
@@ -85,7 +85,7 @@ myParams$setNumIterations(as.integer(10))
 #    myParams.setNumChewcardTraps(3)
 myParams$setRRTrapDistance(100)
 
-myParams$setYears(r_to_py(as.integer(1)), r_to_py(as.integer(1)))
+myParams$setYears(reticulate::r_to_py(as.integer(1)), reticulate::r_to_py(as.integer(1)))
 
 ## THE startPu WILL NOT BE USED IF USE zoneData FILE - TURN OFF
 # starting Pu (GRID CELL PREVALENCE) and period rate of Pu increase
@@ -115,6 +115,19 @@ rawdata <- # preProcessing$
                         params = myParams, 
                         gridSurveyFname = NULL)
 
+source("proofofabsence/preProcessing.R")
+rawdataR <- 
+  RawData(zonesShapeFName = "test_data/Input/extent.shp", # "app\\www\\poa\\Kaitake\\Data\\extent_Kait.shp",
+                        relativeRiskFName = "test_data/Input/relRiskRaster.tif", # "app\\www\\poa\\Kaitake\\Data\\relRiskRaster.tif",
+                        zonesOutFName = "test_data/Results/zones.tif", #defaults$zonesOutFName$value, # "app\\www\\poa\\Kaitake\\Results\\Model_0\\zones.tif",
+                        relRiskRasterOutFName = "test_data/Results/relRiskRaster.tif", # "app\\www\\poa\\Kaitake\\Results\\Model_0\\relRiskRaster.tif",
+                        resolution = as.double(100),
+                        epsg = as.integer(2193),
+                        surveyFName = "test_data/Input/devices.csv",
+                        params = myParams, 
+                        gridSurveyFname = NULL)
+
+
 
 # pickle rawdata using preprocessing.PickleDat() --------------------------
 
@@ -122,10 +135,10 @@ rawdata <- # preProcessing$
 pickledat = preProcessing$PickleDat(rawdata)
 
 # pickle to output directory
-pickleName = "test_data/Results/spatialData.pkl"
-fileobj = py$open(pickleName, 'wb')
-preProcessing$pickle$dump(pickledat, fileobj, protocol=4)
-fileobj$close()
+# pickleName = "test_data/Results/spatialData.pkl"
+# fileobj = py$open(pickleName, 'wb')
+# preProcessing$pickle$dump(pickledat, fileobj, protocol=4)
+# fileobj$close()
 
 
 # compare scenarios run using calculation.calcProofOfAbsence() ------------
@@ -136,6 +149,16 @@ res_calc <- calculation$calcProofOfAbsence(myParams, pickledat$survey,
                                            pickledat$relativeRiskRaster, pickledat$zoneArray, pickledat$zoneCodes,
                                            pickledat$match_geotrans, pickledat$wkt, "test_data/Results",
                                            pickledat$RR_zone, pickledat$Pu_zone, pickledat$Name_zone)
+# py_save_object(res_calc, filename = "res_calc.pkl")
+
+# res_calcR <- calculation$calcProofOfAbsence(myParams, rawdataR$survey,
+#                                            rawdataR$RelRiskExtent, rawdataR$zoneArray, rawdataR$zoneCodes,
+#                                            rawdataR$match_geotrans, rawdataR$wkt, "test_data/Results",
+#                                            rawdataR$RR_zone, rawdataR$Pu_zone, rawdataR$Name_zone)
+# py_save_object(res_calcR, filename = "res_calcR.pkl")
+
+res_calc <- py_load_object("res_calc.pkl")
+res_calcR <- py_load_object("res_calcR.pkl")
 
 # run main() on same scenario files as above
 py_run_file(file = "CopyOfKaitake_sc0_Farm.py")
@@ -146,14 +169,15 @@ res_calc$proportionSearchedExtent
 res_main$proportionSearchedExtent
 
 # compare posterior quantiles
-quantile(py_to_r(res_calc$poFMatrix))
+quantile(res_calc$poFMatrix)
+quantile(res_calcR$poFMatrix)
 quantile(py_to_r(res_main$poFMatrix))
 
 # compare posterior densities
 res_poFMatrix <- rbind(data.frame(method = "calculation.calcProofOfAbsence", 
-                                  x = as.vector(py_to_r(res_calc$poFMatrix))),
-                       data.frame(method = "CopyOfKaitake_sc0_Farm.py", 
-                                  x = as.vector(py_to_r(res_main$poFMatrix))))
+                                  x = as.vector(res_calc$poFMatrix)),
+                       data.frame(method = "calculation.calcProofOfAbsenceR", 
+                                  x = as.vector(res_calcR$poFMatrix)))
 lattice::densityplot(x = ~x, groups = method, data = res_poFMatrix, bw = 0.01)
 
 
