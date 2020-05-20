@@ -58,9 +58,9 @@ animal.params <-
   list(TYPENUM = as.integer(12:17),    # start IDs at arbritary number
        TYPECHAR = c("Leghold", "Sentinel", "PossMaster", "Camera", "CHEWDETECT", "AT220"),
        g0mean = c(0.06, 0.04, 0.04, 0.075, 0.06, 0.05),
-       g0sd = rep(0.03, 6),
+       g0sd = rep(0.0001, 6),
        sigmean = rep(30, 6),
-       sigsd = rep(10, 6))
+       sigsd = rep(0.0001, 6))
 for(i in seq_along(animal.params$TYPENUM)){
   print(i)
   animals$addAnimal(animal = animal.params$TYPENUM[i],
@@ -98,7 +98,7 @@ myParams$setPu(startPu, PuIncreaseRate)
 # minimum RR value
 myParams$setMinRR(as.double(1.0))
 
-myParams$setPrior(0.7, 0.8, 0.899999)
+myParams$setPrior(0.7999, 0.8, 0.80001)
 myParams$setIntro(0.00001, 0.00002, 0.00003)        # (min, mode, max)
 
 
@@ -109,24 +109,25 @@ rawdata <- # preProcessing$
                         relativeRiskFName = "test_data/Input/relRiskRaster.tif", # "app\\www\\poa\\Kaitake\\Data\\relRiskRaster.tif",
                         zonesOutFName = "test_data/Results/zones.tif", #defaults$zonesOutFName$value, # "app\\www\\poa\\Kaitake\\Results\\Model_0\\zones.tif",
                         relRiskRasterOutFName = "test_data/Results/relRiskRaster.tif", # "app\\www\\poa\\Kaitake\\Results\\Model_0\\relRiskRaster.tif",
-                        resolution = as.double(100),
+                        resolution = as.double(34),
                         epsg = as.integer(2193),
                         surveyFName = "test_data/Input/devices.csv",
-                        params = myParams, 
+                        params = myParams,
                         gridSurveyFname = NULL)
 
 source("proofofabsence/preProcessing.R")
-rawdataR <- 
+rawdataR <-
   RawData(zonesShapeFName = "test_data/Input/extent.shp", # "app\\www\\poa\\Kaitake\\Data\\extent_Kait.shp",
-                        relativeRiskFName = "test_data/Input/relRiskRaster.tif", # "app\\www\\poa\\Kaitake\\Data\\relRiskRaster.tif",
-                        zonesOutFName = "test_data/Results/zones.tif", #defaults$zonesOutFName$value, # "app\\www\\poa\\Kaitake\\Results\\Model_0\\zones.tif",
-                        relRiskRasterOutFName = "test_data/Results/relRiskRaster.tif", # "app\\www\\poa\\Kaitake\\Results\\Model_0\\relRiskRaster.tif",
-                        resolution = as.double(100),
-                        epsg = as.integer(2193),
-                        surveyFName = "test_data/Input/devices.csv",
-                        params = myParams, 
-                        gridSurveyFname = NULL)
+          relativeRiskFName = "test_data/Input/relRiskRaster.tif", # "app\\www\\poa\\Kaitake\\Data\\relRiskRaster.tif",
+          zonesOutFName = "test_data/Results/zones.tif", #defaults$zonesOutFName$value, # "app\\www\\poa\\Kaitake\\Results\\Model_0\\zones.tif",
+          relRiskRasterOutFName = "test_data/Results/relRiskRaster.tif", # "app\\www\\poa\\Kaitake\\Results\\Model_0\\relRiskRaster.tif",
+          resolution = as.double(34),
+          epsg = as.integer(2193),
+          surveyFName = "test_data/Input/devices.csv",
+          params = myParams,
+          gridSurveyFname = NULL)
 
+# all(py_to_r(rawdata$RelRiskExtent) == py_to_r(rawdataR$RelRiskExtent))
 
 
 # pickle rawdata using preprocessing.PickleDat() --------------------------
@@ -143,26 +144,28 @@ pickledat = preProcessing$PickleDat(rawdata)
 
 # compare scenarios run using calculation.calcProofOfAbsence() ------------
 
+unlink("test_data/Results/*", recursive = T)
+
 # run /test_data scenario files
-myParams$nIter <- r_to_py(as.integer(1000))                                       # set to 1000 iterations
+myParams$nIter <- r_to_py(as.integer(5000))                                       # set to 1000 iterations
 res_calc <- calculation$calcProofOfAbsence(myParams, pickledat$survey,
                                            pickledat$relativeRiskRaster, pickledat$zoneArray, pickledat$zoneCodes,
                                            pickledat$match_geotrans, pickledat$wkt, "test_data/Results",
                                            pickledat$RR_zone, pickledat$Pu_zone, pickledat$Name_zone)
-# py_save_object(res_calc, filename = "res_calc.pkl")
+py_save_object(res_calc, filename = "res_calc.pkl")
 
-# res_calcR <- calculation$calcProofOfAbsence(myParams, rawdataR$survey,
-#                                            rawdataR$RelRiskExtent, rawdataR$zoneArray, rawdataR$zoneCodes,
-#                                            rawdataR$match_geotrans, rawdataR$wkt, "test_data/Results",
-#                                            rawdataR$RR_zone, rawdataR$Pu_zone, rawdataR$Name_zone)
-# py_save_object(res_calcR, filename = "res_calcR.pkl")
+res_calcR <- calculation$calcProofOfAbsence(myParams, rawdataR$survey,
+                                           rawdataR$RelRiskExtent, rawdataR$zoneArray, rawdataR$zoneCodes,
+                                           rawdataR$match_geotrans, rawdataR$wkt, "test_data/Results",
+                                           rawdataR$RR_zone, rawdataR$Pu_zone, rawdataR$Name_zone)
+py_save_object(res_calcR, filename = "res_calcR.pkl")
 
 res_calc <- py_load_object("res_calc.pkl")
 res_calcR <- py_load_object("res_calcR.pkl")
 
 # run main() on same scenario files as above
-py_run_file(file = "CopyOfKaitake_sc0_Farm.py")
-res_main <- unpickleWrapper("test_data/Results/resultData.pkl")
+# py_run_file(file = "CopyOfKaitake_sc0_Farm.py")
+# res_main <- unpickleWrapper("test_data/Results/resultData.pkl")
 
 # compare proportions searched
 res_calc$proportionSearchedExtent
@@ -178,7 +181,7 @@ res_poFMatrix <- rbind(data.frame(method = "calculation.calcProofOfAbsence",
                                   x = as.vector(res_calc$poFMatrix)),
                        data.frame(method = "calculation.calcProofOfAbsenceR", 
                                   x = as.vector(res_calcR$poFMatrix)))
-lattice::densityplot(x = ~x, groups = method, data = res_poFMatrix, bw = 0.01)
+lattice::densityplot(x = ~x, groups = method, data = res_poFMatrix, bw = 0.0001)
 
 
 # trial R version of relative risk processing -----------------------------
