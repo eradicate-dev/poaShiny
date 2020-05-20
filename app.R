@@ -134,18 +134,18 @@ ui.output <-
   # list(
     # verbatimTextOutput(outputId = "table2"),
     fluidRow(column(width = 6, 
-                    list(h3("Probability of absence"),
-    plotOutput("PoAtimeplot"))),
+                    list(h3("Probability of absence")),
+    plotOutput("PoAtimeplot")),
     # h3("validTable"),
     # verbatimTextOutput("validTable"),
     column(width = 6, list(h3("baseMap"),
-    leafletOutput("baseMap"))) #,
+    leafletOutput("baseMap")),
     # h3("result"),
     # verbatimTextOutput("result"), 
     # h3("runpypress"),
     # verbatimTextOutput("runpypress"), 
-    # h3("inputTable"),
-    # htmlOutput("inputTable")
+    h3("inputTable"),
+    htmlOutput("inputTable"))
   )
 
 
