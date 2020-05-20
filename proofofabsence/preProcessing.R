@@ -51,7 +51,8 @@ RRZONE_CODE_ATTRIBUTE = "RR_zone"
 NAMEZONE_CODE_ATTRIBUTE = "zoneName"
 
 
-EXPECTED_SHP_ATTRIBUTES = list("integer", c("numeric", "integer"), c("numeric", "integer"), "character")
+EXPECTED_SHP_ATTRIBUTES = list(c("integer","character"), c("character","numeric", "integer"), 
+                               c("character","numeric", "integer"), "character")
 names(EXPECTED_SHP_ATTRIBUTES) <- c(ZONE_CODE_ATTRIBUTE, PU_CODE_ATTRIBUTE, RRZONE_CODE_ATTRIBUTE, NAMEZONE_CODE_ATTRIBUTE)
 # "Check that these attributes exist as the correct types"
 
@@ -119,6 +120,18 @@ RawData_R <- function(self = list(), zonesShapeFName,
       }
     }
     
+    # int64 values get imported as floating point using st_read
+    # - st_read() has option to import these as strings
+    # - following checks for numeric strings and converts to integer of fails w/error
+    for(j in c(PU_CODE_ATTRIBUTE,RRZONE_CODE_ATTRIBUTE)){
+      fieldvals <- self$zonesShape.sf[[j]]
+      if(is.character(fieldvals) & all(grepl("^\\d*$", fieldvals))){
+        self$zonesShape.sf[[j]] <- as.integer(self$zonesShape.sf[[j]])
+      } else {
+        sprintf('zoneID is a non-integer. Expected: integer')
+      }
+    }
+      
     # Rasterize Extent and write to directory
     
     # make target raster using stored xy min-max and rows and columns
@@ -200,8 +213,9 @@ RawData_R <- function(self = list(), zonesShapeFName,
   # self$wkt = sr$ExportToWkt()
   
   # load zone shape file
-  self$zonesShape.sf <- sf::st_read(self$zonesShapeFName, quiet = TRUE, crs = self$epsg, stringsAsFactors = F)
   
+  self$zonesShape.sf <- sf::st_read(self$zonesShapeFName, crs = self$epsg, 
+                                    int64_as_string = TRUE, stringsAsFactors = F, quiet = TRUE)
   # Get layer dimensions of extent shapefile
   # self[c("xmin","xmax","ymin","ymax")] = self$getShapefileDimensions(self, definition=FALSE)
   self[c("xmin","ymin","xmax","ymax")] = as.list(sf::st_bbox(self$zonesShape.sf))
