@@ -561,6 +561,14 @@ server <- function(input, output, session) {
     
   # server: run py code -----------------------------------------------------
   pyPOA <- eventReactive(input$runpy, {
+    
+    # import proofofabsence package
+    params <- reticulate::py_run_file(file = "proofofabsence/params.py", convert = FALSE)
+    preProcessing <- reticulate::py_run_file("proofofabsence/preProcessing.py", convert = FALSE)
+    calculation <- reticulate::py_run_file("proofofabsence/calculation.py", convert = FALSE)
+    
+    source("proofofabsence/preProcessing.R")
+    
     print("runpy press detected")
     
     # import proofofabsence package
@@ -572,6 +580,7 @@ server <- function(input, output, session) {
     source_python("proofofabsence/calculation.py", convert = FALSE)
 
     animals = AnimalTypes()                                              #
+    # create parameter objects ------------------------------------------------
 
     # animal.params <-
     #    list(TYPENUM = as.integer(12:17),
@@ -595,17 +604,17 @@ server <- function(input, output, session) {
       print(i)
       animals$addAnimal(animal = animal.params$TYPENUM[i],
                         name = animal.params$TYPECHAR[i],
-                        detect = DETECT_ANIMAL)
+                        detect = params$DETECT_ANIMAL)
     }
 
-    myParams = POAParameters(animals)
+    myParams = params$POAParameters(animals)
 
     ## USE MULTIPLE ZONES
     myParams$setMultipleZones(TRUE)
 
     for(i in seq_along(animal.params$TYPENUM)){
-      TYPE <- animal.params$TYPENUM[i]
 
+      TYPE <- as.integer(animal.params$TYPENUM[i])
       myParams$setCapture(TYPE, animal.params$g0mean[i], animal.params$g0sd[i])
       myParams$setSigma(TYPE, animal.params$sigmean[i], animal.params$sigsd[i])
       myParams$addRRBufferAnimal(animalCode = TYPE)
@@ -633,8 +642,12 @@ server <- function(input, output, session) {
     myParams$setPrior(valid()$prior_min, valid()$prior_mode, valid()$prior_max)
     myParams$setIntro(0.00001, 0.00002, 0.00003)        # (min, mode, max)
 
-    rawdata <- # preProcessing$
-      RawData(zonesShapeFName = ".tmp/input/extent.shp", # "app\\www\\poa\\Kaitake\\Data\\extent_Kait.shp",
+
+    # create rawdata using preProcessing.RawData() ----------------------------
+    
+    # debugonce(RawData_R)
+    rawdata <- 
+      RawData_R(zonesShapeFName = ".tmp/input/extent.shp", # "app\\www\\poa\\Kaitake\\Data\\extent_Kait.shp",
               relativeRiskFName = ".tmp/input/relRiskRaster.tif", # "app\\www\\poa\\Kaitake\\Data\\relRiskRaster.tif",
               zonesOutFName = ".tmp/output/zones.tif", #defaults$zonesOutFName$value, # "app\\www\\poa\\Kaitake\\Results\\Model_0\\zones.tif",
               relRiskRasterOutFName = ".tmp/output/relRiskRaster.tif", # "app\\www\\poa\\Kaitake\\Results\\Model_0\\relRiskRaster.tif",
@@ -644,44 +657,11 @@ server <- function(input, output, session) {
               params = myParams, 
               gridSurveyFname = NULL)
 
-    # load builtin py functions (required for open() below)
-    py <- reticulate::import_builtins()
-    # make object for pickling spatial data
-    pickledat = PickleDat(rawdata)
+    result <- calculation$calcProofOfAbsence(myParams, rawdata$survey,
+                                               rawdata$RelRiskExtent, rawdata$zoneArray, rawdata$zoneCodes,
+                                               rawdata$match_geotrans, rawdata$wkt, "test_data/Results",
+                                               rawdata$RR_zone, rawdata$Pu_zone, rawdata$Name_zone)
 
-    # pickle to output directory
-    pickleName = ".tmp/output/spatialData.pkl"
-    fileobj = py$open(pickleName, 'wb')
-    pickle$dump(pickledat, fileobj, protocol=4)
-    fileobj$close()
-    
-    
-    result = # calculation$
-      calcProofOfAbsence(myParams, pickledat$survey,
-                         pickledat$relativeRiskRaster, pickledat$zoneArray, pickledat$zoneCodes,
-                         pickledat$match_geotrans, pickledat$wkt, ".tmp/output",
-                         pickledat$RR_zone, pickledat$Pu_zone, pickledat$Name_zone)
-
-    # pickle results
-    # pickleName = ".tmp/output/resultData.pkl"
-    # fileobj <- py$open(pickleName, "wb")
-    # pickle$dump(result, fileobj)
-    # fileobj$close()
-    
-    
-    # source_python("proofofabsence/postProcessing.py", convert = FALSE)
-    # results = ResultsProcessing(".tmp/input", ".tmp/output", 
-    #                             "spatialData.pkl", "resultData.pkl", ".tmp/input/extent.shp",
-    #                             "PofSseResultTable.txt", 'PoF_SSe_Graph.png', 'zoneSeResultTable.txt')
-    #  
-    # results$makeTableFX("Sessions")
-    # results$writeToFileFX('PofSseResultTable.txt', "Sessions")
-    #  
-    # try({
-    #   results$makeZoneTableFX()
-    #   results$writeZoneTableToFileFX("zoneSeResultTable.txt", "Sessions")
-    # })
-    
     return(result)
 
   })
