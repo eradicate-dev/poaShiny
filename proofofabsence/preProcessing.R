@@ -25,10 +25,10 @@ os        <- reticulate::import("os", convert = FALSE)
 np        <- reticulate::import("numpy", convert = FALSE)
 pickle    <- reticulate::import("pickle", convert = FALSE)
 tempfile  <- reticulate::import("tempfile", convert = FALSE)
-gdal      <- reticulate::import("gdal", convert = FALSE)
-ogr       <- reticulate::import("ogr", convert = FALSE)
-osr       <- reticulate::import("osr", convert = FALSE)
-gdalconst <- reticulate::import("gdalconst", convert = FALSE)
+# gdal      <- reticulate::import("gdal", convert = FALSE)
+# ogr       <- reticulate::import("ogr", convert = FALSE)
+# osr       <- reticulate::import("osr", convert = FALSE)
+# gdalconst <- reticulate::import("gdalconst", convert = FALSE)
 # from numba import njit
 bt <- reticulate::import_builtins(convert = FALSE)
 
@@ -51,10 +51,8 @@ RRZONE_CODE_ATTRIBUTE = "RR_zone"
 NAMEZONE_CODE_ATTRIBUTE = "zoneName"
 
 
-EXPECTED_SHP_ATTRIBUTES = bt$list(list(tuple(ZONE_CODE_ATTRIBUTE, bt$list(list(ogr$OFTInteger, ogr$OFTInteger64))),
-                                             tuple(RRZONE_CODE_ATTRIBUTE, bt$list(list(ogr$OFTReal))),
-                                             tuple(PU_CODE_ATTRIBUTE, bt$list(list(ogr$OFTInteger, ogr$OFTInteger64))),
-                                             tuple(NAMEZONE_CODE_ATTRIBUTE, bt$list(list(ogr$OFTString)))))
+EXPECTED_SHP_ATTRIBUTES = list("integer", c("numeric", "integer"), c("numeric", "integer"), "character")
+names(EXPECTED_SHP_ATTRIBUTES) <- c(ZONE_CODE_ATTRIBUTE, PU_CODE_ATTRIBUTE, RRZONE_CODE_ATTRIBUTE, NAMEZONE_CODE_ATTRIBUTE)
 # "Check that these attributes exist as the correct types"
 
 RawData <- function(self = list(), zonesShapeFName,
@@ -100,176 +98,88 @@ RawData <- function(self = list(), zonesShapeFName,
   }
   
   self$makeMaskAndZones <-  function(self, multipleZones, params){
-    # create extent raster tiff
-    dataset = ogr$Open(self$zonesShapeFName)
-    zones_layer = dataset$GetLayer()
     
-    # OK now check all the expected attributes are in the shape file
-    # if we are doing the multiple zones thing
-    if(py_to_r(multipleZones)){
-      featDefn = zones_layer$GetLayerDefn()
-      for(i in seq_along(EXPECTED_SHP_ATTRIBUTES)-1){
-        name <- EXPECTED_SHP_ATTRIBUTES[i][0]
-        types <- EXPECTED_SHP_ATTRIBUTES[i][1]
-        idx = py_to_r(featDefn$GetFieldIndex(name))
-        if(idx == -1){
-          stop(sprintf('Required Field \'%s\' not found in shape file', name))
-        }
-        
-        fieldDefn = featDefn$GetFieldDefn(bt$int(idx))
-        ogrType = py_to_r(fieldDefn$GetType())
-        if(!ogrType %in% py_to_r(types)){
-          foundName = fieldDefn$GetTypeName()
-          expectedNames = sapply(lapply(py_to_r(types), ogr$GetFieldTypeName), py_to_r)
-          stop(sprintf('%s is of type %s. Expected: %s', name, foundName, 
-                       paste0(expectedNames, collapse = ", ")))
-        }
+    # check required fields present
+    reqFields <- names(EXPECTED_SHP_ATTRIBUTES)
+    missingShpFields <- setdiff(reqFields,  names(self$zonesShape.sf))
+    if(length(missingShpFields) > 0){
+      stop(sprintf('Required Field \'%s\' not found in shape file\n', missingShpFields))
+    }
+    # check required fields
+    reqClasses <- EXPECTED_SHP_ATTRIBUTES
+    matchClasses <- sapply(self$zonesShape.sf, class)[names(reqClasses)]
+    for(i in names(reqClasses)){
+      if(!any(reqClasses[[i]] %in% matchClasses[[i]])){
+        stop(
+          sprintf('%s is of type %s. Expected: %s', i, matchClasses[[i]], paste(reqClasses[[i]], collapse = " or "))
+        )
+             
       }
     }
     
-    zones_ds = gdal$GetDriverByName('GTiff')$Create(self$zonesOutFName, self$cols,
-                                                    self$rows, bt$int(1), gdal$GDT_Byte)
-    zones_ds$SetGeoTransform(self$match_geotrans)
-    zones_ds$SetProjection(self$wkt)
-    band = zones_ds$GetRasterBand(bt$int(1))
-    NoData_value = bt$int(0)    #-9999
-    band$SetNoDataValue(NoData_value)
     # Rasterize Extent and write to directory
     
-    if(py_to_r(multipleZones)){
-      # burn the value of the ZONE_CODE_ATTRIBUTE
-      gdal$RasterizeLayer(zones_ds, bt$list(list(bt$int(1))), zones_layer, 
-                          options=bt$list(list(sprintf('ATTRIBUTE=%s', ZONE_CODE_ATTRIBUTE))))
+    # make target raster using stored xy min-max and rows and columns
+    rast.target <- 
+      raster(raster::extent(self$xmin, self$xmax, self$ymin, self$ymax), 
+             nrows = py_to_r(self$rows), ncols = py_to_r(self$cols),
+             crs = sp::CRS(paste0("+init=epsg:", self$epsg)))
+    
+    # rasterise zone shapefile to target raster
+    rast.zones <- rasterize(as(self$zonesShape.sf, "Spatial"), rast.target, background = 0)
+    
+    zoneCodes <- np_array(self$zonesShape.sf$zoneID, dtype = "int")
+    Pu_zone <- np_array(self$zonesShape.sf$Pu_zone, dtype = "float")
+    RR_zone <- np_array(self$zonesShape.sf$RR_zone, dtype = "float")
+    Name_zone <- np_array(self$zonesShape.sf$zoneName, dtype = "str")
+    
+    if(!py_to_r(multipleZones)){
       
-      # get the unique zones 
-      # and create a mapping between the zone and RR_zone, Pu_zone
-      zones = bt$set()
-      zoneToRRDict = bt$dict()
-      zoneToPuDict = bt$dict()
-      ## GET NAME OF ZONE - FOR USE IN RESULTS TABLE
-      zoneToNameDict = bt$dict()
-      zones_layer$ResetReading()
-      for(i in seq_along(zones_layer)-1){
-        feature <- zones_layer[i]
-        zone = feature$GetFieldAsInteger(ZONE_CODE_ATTRIBUTE)
-        if(py_to_r(zone) == 0){
-          stop("Can't use zero as a zone code")
-        }
-        zones$add(zone)
-        pu = feature$GetFieldAsDouble(PU_CODE_ATTRIBUTE)
-        zoneToPuDict[zone] = pu
-        rr = feature$GetFieldAsDouble(RRZONE_CODE_ATTRIBUTE)
-        zoneToRRDict[zone] = rr
-        ## GET NAMES OF ZONES FOR RESULTS TABLE:
-        nn = feature$GetFieldAsString(NAMEZONE_CODE_ATTRIBUTE)
-        zoneToNameDict[zone] = nn
-      }
-      
-      # ok turn zones into an array of unique values
-      zoneCodes = np$array(bt$list(zones))
-      zoneCodes$sort()
-      rrlist = bt$list()
-      pulist = bt$list()
-      namelist = bt$list()
-      # now ensure RR and Pu are in the same order as zoneCodes
-      for(i in seq_along(zoneCodes)-1){
-        zone <- zoneCodes[i]
-        rrlist$append(zoneToRRDict[zone])
-        pulist$append(zoneToPuDict[zone])
-        namelist$append(zoneToNameDict[zone])
-      }
-      Pu_zone = np$array(pulist)
-      RR_zone = np$array(rrlist)
-      Name_zone = np$array(namelist)
-      
-    } else {
       # just burn 1 inside the polygon(s)
-      gdal$RasterizeLayer(zones_ds, bt$list(list(bt$int(1))), zones_layer, burn_values=bt$list(list(bt$int(1))))
+      rast.zones <- raster::clamp(rast.zones, upper = 1)
       zoneCodes = np$array(bt$list(list(bt$int(1))))
       Pu_zone = np$array(bt$list(list(params$pu)))
       RR_zone = np$array(bt$list(list(bt$int(1))))
       Name_zone = np$array(bt$list(list('oneZone')))
     }
     
-    zones_ds$FlushCache()
-    
     # read in the data so we can return it
-    zoneArray = zones_ds$GetRasterBand(bt$int(1))$ReadAsArray()
+    # zoneArray = zones_ds$GetRasterBand(bt$int(1))$ReadAsArray()
+    zoneArray <- np_array(as.matrix(rast.zones))
     
-    rm(dataset)
-    rm(zones_ds)
+    rm(rast.target)
+    rm(rast.zones)
     return(list(zoneArray, zoneCodes, Pu_zone, RR_zone, Name_zone))
+    
   }
-
+  
   self$makeRelativeRiskTif <- function(self, relativeRiskFName, relRiskRasterOutFName){
-    # relativeRiskFName <- self.relativeRiskFName
-    # relRiskRasterOutFName <- self.relRiskRasterOutFName
     
     # read in rel risk ascii, and write relative risk Tiff to directory
     # if RR not given, then it is derived from the zones data
     
-    print(paste('rr name:', relativeRiskFName))
-    
-    dst = gdal$GetDriverByName('GTiff')$Create(relRiskRasterOutFName, self$cols, self$rows,
-                                               bt$int(1), gdalconst$GDT_Float32)
-    dst$SetGeoTransform(self$match_geotrans)
-    # spatial reference from making extent mask
-    dst$SetProjection(self$wkt)
-    
     if(!is.null(relativeRiskFName)){
-      # Source - Kmap
-      RR_src = gdal$Open(relativeRiskFName, gdalconst$GA_ReadOnly)
-      
-      if(!py_to_r(preProcessing$equalProjection(self$wkt, RR_src$GetProjection()))){
-        stop("Projection of relative risk raster not the same as EPSG given")
-      }
-      
-      # write kmap array to tif in directory
-      # temp kmap tif name and directory
-      # Reproject the kmap to the dimensions of the extent
-      if(USE_GDAL_FOR_BILINEAR){
-        gdal$ReprojectImage(RR_src, dst, self$wkt, self$wkt, gdalconst$GRA_Bilinear)
-        RelRiskExtent = dst$GetRasterBand(bt$int(1))$ReadAsArray()
-      } else {
-        inband = RR_src$GetRasterBand(bt$int(1))
-        inband$SetNoDataValue(bt$int(0))
-        in_im = inband$ReadAsArray()
+        RR_src = raster(relativeRiskFName)
+        in_im <- as.matrix(RR_src)
         
-        # subset to extent of shape file
-        geoTrans = RR_src$GetGeoTransform()
-        invGeoTrans = gdal$InvGeoTransform(geoTrans)
-        tl = gdal$ApplyGeoTransform(invGeoTrans, self$xmin, self$ymax)
-        br = gdal$ApplyGeoTransform(invGeoTrans, 
-                                      self$xmin + (self$resol * py_to_r(self$cols)),
-                                      self$ymax - (self$resol * py_to_r(self$rows)))
-        tlx = bt$int(np$round(tl[0]))
-        tly = bt$int(np$round(tl[1]))
-        brx = bt$int(np$round(br[0]))
-        bry = bt$int(np$round(br[1]))
-        in_im = np_array(py_to_r(in_im)[py_to_r(tly):py_to_r(bry), py_to_r(tlx):py_to_r(brx)], "float32")
+        # select rows and columns based on x-y min/max and resolution
+        maxCol <- (self$xmax - self$xmin) / xres(RR_src)
+        maxRow <- (self$ymax - self$ymin) / yres(RR_src)
+        in_im <- as.matrix(in_im)[1:maxRow,1:maxCol]
+        in_im = np_array(in_im, "float32")
         
-        nodata = inband$GetNoDataValue()
-        if(is.null(py_to_r(nodata))){
-          stop("No Data value must be set on RR raster")
-        }
         RelRiskExtent = np$empty(bt$tuple(list(self$rows, self$cols)), dtype=np$float32)
         
-        preProcessing$bilinear(in_im, RelRiskExtent, nodata)
+        preProcessing$bilinear(in_im, RelRiskExtent, bt$int(0))
         
-        outband = dst$GetRasterBand(bt$int(1))
-        outband$WriteArray(RelRiskExtent)
-      }
-      
-      rm(dst)  # Flush
-      rm(RR_src)
     } else {
-      # Source - zonecodes - RR=1 where zone>0
-      zoneArray = gdal$Open(self$zonesOutFName)$ReadAsArray()
-      RelRiskExtent = np$where(py_to_r(zoneArray) > 0, bt$int(1), bt$int(0))$astype(np$float32)
-      outband = dst$GetRasterBand(bt$int(1))
-      outband$WriteArray(RelRiskExtent)
+        
+      rast.zones <- raster::raster(zonesOutFName)
+      rast.zero <- raster::clamp(rast.zones, lower = -Inf, upper = 1, useValues = TRUE)
+      
+      RelRiskExtent <- np_array(as.matrix(!is.na(rast.zero)), dtype=np$float32)
     }
-    
+
     print('finish makeRRTif')
     return(RelRiskExtent)
   }
@@ -283,12 +193,16 @@ RawData <- function(self = list(), zonesShapeFName,
   self$epsg = epsg
 
   # get spatial reference
-  sr = osr$SpatialReference()
-  sr$ImportFromEPSG(self$epsg)
-  self$wkt = sr$ExportToWkt()
-
+  # sr = osr$SpatialReference()
+  # sr$ImportFromEPSG(self$epsg)
+  # self$wkt = sr$ExportToWkt()
+  
+  # load zone shape file
+  self$zonesShape.sf <- sf::st_read(self$zonesShapeFName, quiet = TRUE, crs = self$epsg, stringsAsFactors = F)
+  
   # Get layer dimensions of extent shapefile
-  self[c("xmin","xmax","ymin","ymax")] = self$getShapefileDimensions(self, definition=FALSE)
+  # self[c("xmin","xmax","ymin","ymax")] = self$getShapefileDimensions(self, definition=FALSE)
+  self[c("xmin","ymin","xmax","ymax")] = as.list(sf::st_bbox(self$zonesShape.sf))
   # get number of columns and rows and set transformation
   self[c("cols", "rows", "match_geotrans")] = self$getGeoTrans(self)
         
@@ -300,9 +214,8 @@ RawData <- function(self = list(), zonesShapeFName,
   
   print(paste('Name_zone', self$Name_zone))
   
-  self$RelRiskExtent = self$makeRelativeRiskTif(self, relativeRiskFName, 
-                                                relRiskRasterOutFName)
-
+  self$RelRiskExtent = self$makeRelativeRiskTif(self, relativeRiskFName, relRiskRasterOutFName)
+  
   print(paste('surveyFName:', surveyFName))
 
   # condition to use point survey data or not
