@@ -33,6 +33,8 @@ library(sf)
 
 library(shiny)
 
+# Define any Python packages needed for the app here:
+PYTHON_DEPENDENCIES = c("numpy==1.18.4", "llvmlite==0.31.0", "numba==0.47.0")
 
 # file paths --------------------------------------------------------------
 
@@ -44,44 +46,6 @@ dir.create(path.tmp.output, recursive = T)
 
 unlink(paste0(path.tmp.input, "/*"))
 unlink(paste0(path.tmp.output, "/*"))
-
-
-# manage python environments ----------------------------------------------
-
-# conda_list()                               # list conda envts
-
-# use_condaenv("r_poa", required = TRUE)     # select conda envt
-
-# ------------------ App virtualenv setup (Do not edit) ------------------- #
-
-# PYTHON_DEPENDENCIES = c("numpy", "numba", "gdal")
-# 
-# # virtualenv_dir = Sys.getenv('VIRTUALENV_NAME')
-# virtualenv_dir = "r_poa"
-# # python_path = Sys.getenv('PYTHON_PATH')
-# python_path = "python3"
-# 
-# # Create virtual env and install dependencies
-# reticulate::virtualenv_create(envname = virtualenv_dir, python = python_path)
-# reticulate::virtualenv_install(virtualenv_dir, packages = PYTHON_DEPENDENCIES)
-# reticulate::use_virtualenv(virtualenv_dir, required = T)
-# py_config()
-
-reticulate::use_python(python = "/usr/bin/python3")
-py_config()
-# ------------------ App server logic (Edit anything below) --------------- #
-
-#-------------------------------------------------------------------------#
-# source working Kaitake script
-# source_python(file = "C:/Users/howards/OneDrive - MWLR/Projects/795208-0091 Ctr for Inv Spec Res-Erad Tool/shiny_PoA/Kaitake_sc0_Farm_app_paths.py",
-#               convert = FALSE)
-#-------------------------------------------------------------------------#
-
-# import python packages
-os <- reticulate::import("os", delay_load = TRUE)
-pickle <- reticulate::import("pickle", delay_load = TRUE)
-
-
 
 # app defaults ------------------------------------------------------------
 defaults <- 
@@ -218,6 +182,34 @@ server <- function(input, output, session) {
 
   
   
+  # manage python versions and modules --------------------------------------
+  
+  # import python packages
+  os <- reticulate::import("os", delay_load = TRUE)
+  pickle <- reticulate::import("pickle", delay_load = TRUE)
+  
+  # ------------------ App virtualenv setup (Do not edit) ------------------- #
+  # adapted from - 'https://github.com/ranikay/shiny-reticulate-app'
+  
+  # check if on shiny server and install modules in 'PYTHON_DEPENDENCIES'
+  if(Sys.info()[['user']] == 'shiny'){
+    
+    virtualenv_dir = Sys.getenv('VIRTUALENV_NAME')
+    python_path = Sys.getenv('PYTHON_PATH')
+  
+    # Create virtual env and install dependencies
+    reticulate::virtualenv_create(envname = virtualenv_dir, python = python_path)
+    reticulate::virtualenv_install(virtualenv_dir, packages = PYTHON_DEPENDENCIES)
+    reticulate::use_virtualenv(virtualenv_dir, required = T)
+    
+  } else if(grepl("conda.exe", Sys.getenv("CONDA_EXE"))){ 
+    # check if conda available and use 'r_poa' environment
+    use_condaenv(condaenv = "r_poa", required = TRUE)
+  } else {
+    # use python on system path
+    if(Sys.getenv("PYTHON_PATH") != "") use_python(Sys.getenv("PYTHON_PATH"))
+  }
+  # ------------------ App server logic (Edit anything below) --------------- #
   
   # server: valid() ---------------------------------------------------------
   
