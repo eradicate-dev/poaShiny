@@ -55,7 +55,7 @@ EXPECTED_SHP_ATTRIBUTES = list("integer", c("numeric", "integer"), c("numeric", 
 names(EXPECTED_SHP_ATTRIBUTES) <- c(ZONE_CODE_ATTRIBUTE, PU_CODE_ATTRIBUTE, RRZONE_CODE_ATTRIBUTE, NAMEZONE_CODE_ATTRIBUTE)
 # "Check that these attributes exist as the correct types"
 
-RawData <- function(self = list(), zonesShapeFName,
+RawData_R <- function(self = list(), zonesShapeFName,
                     relativeRiskFName,
                     zonesOutFName,
                     relRiskRasterOutFName,
@@ -67,6 +67,8 @@ RawData <- function(self = list(), zonesShapeFName,
   
   # functions ---------------------------------------------------------------
 
+  preProcessing <- reticulate::py_run_file("proofofabsence/preProcessing.py", convert = FALSE)
+  
   self$getShapefileDimensions <- function(self, definition=bt$bool(0)){            
     
     # get x and y min and max from shapefile
@@ -210,7 +212,7 @@ RawData <- function(self = list(), zonesShapeFName,
   # RUN FUNCTIONS
   #----------------------------------------#
   self[c("zoneArray", "zoneCodes", "Pu_zone", "RR_zone", "Name_zone")] <-
-    self$makeMaskAndZones(self = self, multipleZones = myParams$multipleZones, params)
+    self$makeMaskAndZones(self = self, multipleZones = params$multipleZones, params)
   
   print(paste('Name_zone', self$Name_zone))
   
@@ -221,7 +223,7 @@ RawData <- function(self = list(), zonesShapeFName,
   # condition to use point survey data or not
   if(!is.null(surveyFName)){
     print(paste('params.animals', params$animals))
-    self$survey = preProcessing$RawData$readSurveyData(self, surveyFName, myParams$animals)
+    self$survey = preProcessing$RawData$readSurveyData(self, surveyFName, params$animals)
   } else {
     # not present, but need an empty array for processing
     self$survey = np$empty(tuple(bt$int(0)), dtype=TRAP_PARAM_DTYPE)
