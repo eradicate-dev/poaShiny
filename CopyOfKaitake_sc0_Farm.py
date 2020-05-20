@@ -25,7 +25,8 @@ import pickle
 import numpy as np
 
 # os.environ['PROJ_LIB'] = "C:\\ProgramData\\Anaconda3\\envs\\poa_20191008\\Library\\share\\proj"
-os.chdir("/home/si/poaShiny")
+# os.chdir("/home/si/poaShiny")
+os.chdir("D:\\Users\\Si\\Desktop\\tmp\\poaShiny")
 
 from proofofabsence import preProcessing
 from proofofabsence import params
