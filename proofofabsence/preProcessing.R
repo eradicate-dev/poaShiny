@@ -51,11 +51,12 @@ RRZONE_CODE_ATTRIBUTE = "RR_zone"
 NAMEZONE_CODE_ATTRIBUTE = "zoneName"
 
 
-EXPECTED_SHP_ATTRIBUTES = list("integer", c("numeric", "integer"), c("numeric", "integer"), "character")
+EXPECTED_SHP_ATTRIBUTES = list(c("integer","character"), c("character","numeric", "integer"), 
+                               c("character","numeric", "integer"), "character")
 names(EXPECTED_SHP_ATTRIBUTES) <- c(ZONE_CODE_ATTRIBUTE, PU_CODE_ATTRIBUTE, RRZONE_CODE_ATTRIBUTE, NAMEZONE_CODE_ATTRIBUTE)
 # "Check that these attributes exist as the correct types"
 
-RawData <- function(self = list(), zonesShapeFName,
+RawData_R <- function(self = list(), zonesShapeFName,
                     relativeRiskFName,
                     zonesOutFName,
                     relRiskRasterOutFName,
@@ -67,6 +68,8 @@ RawData <- function(self = list(), zonesShapeFName,
   
   # functions ---------------------------------------------------------------
 
+  preProcessing <- reticulate::py_run_file("proofofabsence/preProcessing.py", convert = FALSE)
+  
   self$getShapefileDimensions <- function(self, definition=bt$bool(0)){            
     
     # get x and y min and max from shapefile
@@ -117,6 +120,18 @@ RawData <- function(self = list(), zonesShapeFName,
       }
     }
     
+    # int64 values get imported as floating point using st_read
+    # - st_read() has option to import these as strings
+    # - following checks for numeric strings and converts to integer of fails w/error
+    for(j in c(PU_CODE_ATTRIBUTE,RRZONE_CODE_ATTRIBUTE)){
+      fieldvals <- self$zonesShape.sf[[j]]
+      if(is.character(fieldvals) & all(grepl("^\\d*$", fieldvals))){
+        self$zonesShape.sf[[j]] <- as.integer(self$zonesShape.sf[[j]])
+      } else {
+        sprintf('zoneID is a non-integer. Expected: integer')
+      }
+    }
+      
     # Rasterize Extent and write to directory
     
     # make target raster using stored xy min-max and rows and columns
@@ -161,6 +176,7 @@ RawData <- function(self = list(), zonesShapeFName,
     if(!is.null(relativeRiskFName)){
         RR_src = raster(relativeRiskFName)
         in_im <- as.matrix(RR_src)
+        in_im[is.na(in_im)] <- 0
         
         # select rows and columns based on x-y min/max and resolution
         maxCol <- (self$xmax - self$xmin) / xres(RR_src)
@@ -198,8 +214,9 @@ RawData <- function(self = list(), zonesShapeFName,
   # self$wkt = sr$ExportToWkt()
   
   # load zone shape file
-  self$zonesShape.sf <- sf::st_read(self$zonesShapeFName, quiet = TRUE, crs = self$epsg, stringsAsFactors = F)
   
+  self$zonesShape.sf <- sf::st_read(self$zonesShapeFName, crs = self$epsg, 
+                                    int64_as_string = TRUE, stringsAsFactors = F, quiet = TRUE)
   # Get layer dimensions of extent shapefile
   # self[c("xmin","xmax","ymin","ymax")] = self$getShapefileDimensions(self, definition=FALSE)
   self[c("xmin","ymin","xmax","ymax")] = as.list(sf::st_bbox(self$zonesShape.sf))
@@ -210,7 +227,7 @@ RawData <- function(self = list(), zonesShapeFName,
   # RUN FUNCTIONS
   #----------------------------------------#
   self[c("zoneArray", "zoneCodes", "Pu_zone", "RR_zone", "Name_zone")] <-
-    self$makeMaskAndZones(self = self, multipleZones = myParams$multipleZones, params)
+    self$makeMaskAndZones(self = self, multipleZones = params$multipleZones, params)
   
   print(paste('Name_zone', self$Name_zone))
   
@@ -221,7 +238,7 @@ RawData <- function(self = list(), zonesShapeFName,
   # condition to use point survey data or not
   if(!is.null(surveyFName)){
     print(paste('params.animals', params$animals))
-    self$survey = preProcessing$RawData$readSurveyData(self, surveyFName, myParams$animals)
+    self$survey = preProcessing$RawData$readSurveyData(self, surveyFName, params$animals)
   } else {
     # not present, but need an empty array for processing
     self$survey = np$empty(tuple(bt$int(0)), dtype=TRAP_PARAM_DTYPE)

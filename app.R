@@ -23,6 +23,8 @@
 # devtools::install_github("rstudio/reticulate")
 library(reticulate)
 
+library(rgdal)
+
 library(raster)
 
 library(kableExtra)
@@ -33,6 +35,8 @@ library(sf)
 
 library(shiny)
 
+# Define any Python packages needed for the app here:
+PYTHON_DEPENDENCIES = c("numpy==1.18.4", "llvmlite==0.31.0", "numba==0.47.0")
 
 # file paths --------------------------------------------------------------
 
@@ -44,44 +48,6 @@ dir.create(path.tmp.output, recursive = T)
 
 unlink(paste0(path.tmp.input, "/*"))
 unlink(paste0(path.tmp.output, "/*"))
-
-
-# manage python environments ----------------------------------------------
-
-# conda_list()                               # list conda envts
-
-# use_condaenv("r_poa", required = TRUE)     # select conda envt
-
-# ------------------ App virtualenv setup (Do not edit) ------------------- #
-
-# PYTHON_DEPENDENCIES = c("numpy", "numba", "gdal")
-# 
-# # virtualenv_dir = Sys.getenv('VIRTUALENV_NAME')
-# virtualenv_dir = "r_poa"
-# # python_path = Sys.getenv('PYTHON_PATH')
-# python_path = "python3"
-# 
-# # Create virtual env and install dependencies
-# reticulate::virtualenv_create(envname = virtualenv_dir, python = python_path)
-# reticulate::virtualenv_install(virtualenv_dir, packages = PYTHON_DEPENDENCIES)
-# reticulate::use_virtualenv(virtualenv_dir, required = T)
-# py_config()
-
-reticulate::use_python(python = "/usr/bin/python3")
-py_config()
-# ------------------ App server logic (Edit anything below) --------------- #
-
-#-------------------------------------------------------------------------#
-# source working Kaitake script
-# source_python(file = "C:/Users/howards/OneDrive - MWLR/Projects/795208-0091 Ctr for Inv Spec Res-Erad Tool/shiny_PoA/Kaitake_sc0_Farm_app_paths.py",
-#               convert = FALSE)
-#-------------------------------------------------------------------------#
-
-# import python packages
-os <- reticulate::import("os", delay_load = TRUE)
-pickle <- reticulate::import("pickle", delay_load = TRUE)
-
-
 
 # app defaults ------------------------------------------------------------
 defaults <- 
@@ -168,18 +134,18 @@ ui.output <-
   # list(
     # verbatimTextOutput(outputId = "table2"),
     fluidRow(column(width = 6, 
-                    list(h3("Probability of absence"),
-    plotOutput("PoAtimeplot"))),
+                    list(h3("Probability of absence")),
+    plotOutput("PoAtimeplot")),
     # h3("validTable"),
     # verbatimTextOutput("validTable"),
     column(width = 6, list(h3("baseMap"),
-    leafletOutput("baseMap"))) #,
+    leafletOutput("baseMap")),
     # h3("result"),
     # verbatimTextOutput("result"), 
     # h3("runpypress"),
     # verbatimTextOutput("runpypress"), 
-    # h3("inputTable"),
-    # htmlOutput("inputTable")
+    h3("inputTable"),
+    htmlOutput("inputTable"))
   )
 
 
@@ -218,6 +184,34 @@ server <- function(input, output, session) {
 
   
   
+  # manage python versions and modules --------------------------------------
+  
+  # import python packages
+  os <- reticulate::import("os", delay_load = TRUE)
+  pickle <- reticulate::import("pickle", delay_load = TRUE)
+  
+  # ------------------ App virtualenv setup (Do not edit) ------------------- #
+  # adapted from - 'https://github.com/ranikay/shiny-reticulate-app'
+  
+  # check if on shiny server and install modules in 'PYTHON_DEPENDENCIES'
+  if(Sys.info()[['user']] == 'shiny'){
+    
+    virtualenv_dir = Sys.getenv('VIRTUALENV_NAME')
+    python_path = Sys.getenv('PYTHON_PATH')
+  
+    # Create virtual env and install dependencies
+    reticulate::virtualenv_create(envname = virtualenv_dir, python = python_path)
+    reticulate::virtualenv_install(virtualenv_dir, packages = PYTHON_DEPENDENCIES)
+    reticulate::use_virtualenv(virtualenv_dir, required = T)
+    
+  } else if(grepl("conda.exe", Sys.getenv("CONDA_EXE"))){ 
+    # check if conda available and use 'r_poa' environment
+    use_condaenv(condaenv = "r_poa", required = TRUE)
+  } else {
+    # use python on system path
+    if(Sys.getenv("PYTHON_PATH") != "") use_python(Sys.getenv("PYTHON_PATH"))
+  }
+  # ------------------ App server logic (Edit anything below) --------------- #
   
   # server: valid() ---------------------------------------------------------
   
@@ -567,6 +561,14 @@ server <- function(input, output, session) {
     
   # server: run py code -----------------------------------------------------
   pyPOA <- eventReactive(input$runpy, {
+    
+    # import proofofabsence package
+    params <- reticulate::py_run_file(file = "proofofabsence/params.py", convert = FALSE)
+    preProcessing <- reticulate::py_run_file("proofofabsence/preProcessing.py", convert = FALSE)
+    calculation <- reticulate::py_run_file("proofofabsence/calculation.py", convert = FALSE)
+    
+    source("proofofabsence/preProcessing.R")
+    
     print("runpy press detected")
     
     # import proofofabsence package
@@ -578,6 +580,7 @@ server <- function(input, output, session) {
     source_python("proofofabsence/calculation.py", convert = FALSE)
 
     animals = AnimalTypes()                                              #
+    # create parameter objects ------------------------------------------------
 
     # animal.params <-
     #    list(TYPENUM = as.integer(12:17),
@@ -601,17 +604,17 @@ server <- function(input, output, session) {
       print(i)
       animals$addAnimal(animal = animal.params$TYPENUM[i],
                         name = animal.params$TYPECHAR[i],
-                        detect = DETECT_ANIMAL)
+                        detect = params$DETECT_ANIMAL)
     }
 
-    myParams = POAParameters(animals)
+    myParams = params$POAParameters(animals)
 
     ## USE MULTIPLE ZONES
     myParams$setMultipleZones(TRUE)
 
     for(i in seq_along(animal.params$TYPENUM)){
-      TYPE <- animal.params$TYPENUM[i]
 
+      TYPE <- as.integer(animal.params$TYPENUM[i])
       myParams$setCapture(TYPE, animal.params$g0mean[i], animal.params$g0sd[i])
       myParams$setSigma(TYPE, animal.params$sigmean[i], animal.params$sigsd[i])
       myParams$addRRBufferAnimal(animalCode = TYPE)
@@ -639,8 +642,12 @@ server <- function(input, output, session) {
     myParams$setPrior(valid()$prior_min, valid()$prior_mode, valid()$prior_max)
     myParams$setIntro(0.00001, 0.00002, 0.00003)        # (min, mode, max)
 
-    rawdata <- # preProcessing$
-      RawData(zonesShapeFName = ".tmp/input/extent.shp", # "app\\www\\poa\\Kaitake\\Data\\extent_Kait.shp",
+
+    # create rawdata using preProcessing.RawData() ----------------------------
+    
+    # debugonce(RawData_R)
+    rawdata <- 
+      RawData_R(zonesShapeFName = ".tmp/input/extent.shp", # "app\\www\\poa\\Kaitake\\Data\\extent_Kait.shp",
               relativeRiskFName = ".tmp/input/relRiskRaster.tif", # "app\\www\\poa\\Kaitake\\Data\\relRiskRaster.tif",
               zonesOutFName = ".tmp/output/zones.tif", #defaults$zonesOutFName$value, # "app\\www\\poa\\Kaitake\\Results\\Model_0\\zones.tif",
               relRiskRasterOutFName = ".tmp/output/relRiskRaster.tif", # "app\\www\\poa\\Kaitake\\Results\\Model_0\\relRiskRaster.tif",
@@ -650,44 +657,11 @@ server <- function(input, output, session) {
               params = myParams, 
               gridSurveyFname = NULL)
 
-    # load builtin py functions (required for open() below)
-    py <- reticulate::import_builtins()
-    # make object for pickling spatial data
-    pickledat = PickleDat(rawdata)
+    result <- calculation$calcProofOfAbsence(myParams, rawdata$survey,
+                                               rawdata$RelRiskExtent, rawdata$zoneArray, rawdata$zoneCodes,
+                                               rawdata$match_geotrans, rawdata$wkt, "test_data/Results",
+                                               rawdata$RR_zone, rawdata$Pu_zone, rawdata$Name_zone)
 
-    # pickle to output directory
-    pickleName = ".tmp/output/spatialData.pkl"
-    fileobj = py$open(pickleName, 'wb')
-    pickle$dump(pickledat, fileobj, protocol=4)
-    fileobj$close()
-    
-    
-    result = # calculation$
-      calcProofOfAbsence(myParams, pickledat$survey,
-                         pickledat$relativeRiskRaster, pickledat$zoneArray, pickledat$zoneCodes,
-                         pickledat$match_geotrans, pickledat$wkt, ".tmp/output",
-                         pickledat$RR_zone, pickledat$Pu_zone, pickledat$Name_zone)
-
-    # pickle results
-    # pickleName = ".tmp/output/resultData.pkl"
-    # fileobj <- py$open(pickleName, "wb")
-    # pickle$dump(result, fileobj)
-    # fileobj$close()
-    
-    
-    # source_python("proofofabsence/postProcessing.py", convert = FALSE)
-    # results = ResultsProcessing(".tmp/input", ".tmp/output", 
-    #                             "spatialData.pkl", "resultData.pkl", ".tmp/input/extent.shp",
-    #                             "PofSseResultTable.txt", 'PoF_SSe_Graph.png', 'zoneSeResultTable.txt')
-    #  
-    # results$makeTableFX("Sessions")
-    # results$writeToFileFX('PofSseResultTable.txt', "Sessions")
-    #  
-    # try({
-    #   results$makeZoneTableFX()
-    #   results$writeZoneTableToFileFX("zoneSeResultTable.txt", "Sessions")
-    # })
-    
     return(result)
 
   })
@@ -722,32 +696,32 @@ server <- function(input, output, session) {
   })
   
 
-# server: add SSe raster --------------------------------------------------
+  # server: add SSe raster --------------------------------------------------
 
     
-  observe({
-    input$GO
-    pyPOA()
-    
-    library(raster)
-    meanSeu <- raster(".tmp/output/meanSeuAllYears.tif")
-
-    pal <- colorNumeric(palette = "viridis", domain = c(0,1.1),  # add 0.1 to upper limit
-                        na.color = "transparent")
-    
-    leafletProxy(session = session, mapId = "baseMap") %>%
-      
-      # debugonce(pal); leaflet() %>%
-      clearGroup(group = "SeU") %>% 
-      addRasterImage(x = meanSeu, layerId = "SeU", group = "SeU", 
-                     opacity = input$rasterOpacity, colors = pal) %>%
-      addLegend(pal = pal, values = c(0,1), labels = c(0,1), layerId = "SeU") # %>%
-      # addLayersControl(overlayGroups = c("SeU"), position = "bottomleft",
-      #                  options = layersControlOptions(collapsed = FALSE))
-    
-    
-
-  })
+  # observe({
+  #   input$GO
+  #   pyPOA()
+  #   
+  #   library(raster)
+  #   meanSeu <- raster(".tmp/output/meanSeuAllYears.tif")
+  # 
+  #   pal <- colorNumeric(palette = "viridis", domain = c(0,1.1),  # add 0.1 to upper limit
+  #                       na.color = "transparent")
+  #   
+  #   leafletProxy(session = session, mapId = "baseMap") %>%
+  #     
+  #     # debugonce(pal); leaflet() %>%
+  #     clearGroup(group = "SeU") %>% 
+  #     addRasterImage(x = meanSeu, layerId = "SeU", group = "SeU", 
+  #                    opacity = input$rasterOpacity, colors = pal) %>%
+  #     addLegend(pal = pal, values = c(0,1), labels = c(0,1), layerId = "SeU") # %>%
+  #     # addLayersControl(overlayGroups = c("SeU"), position = "bottomleft",
+  #     #                  options = layersControlOptions(collapsed = FALSE))
+  #   
+  #   
+  # 
+  # })
   
   
   # server: inputTable() ----------------------------------------------------
