@@ -131,7 +131,8 @@ ui.output <-
     # verbatimTextOutput(outputId = "table2"),
     fluidRow(column(width = 6, 
                     list(h3("Probability of absence")),
-    plotOutput("PoAtimeplot")),
+    plotOutput("PoAtimeplot"),
+    plotOutput("PoAdensplot")),
     # h3("validTable"),
     # verbatimTextOutput("validTable"),
     column(width = 6, list(h3("baseMap"),
@@ -700,6 +701,21 @@ server <- function(input, output, session) {
     arrows(y0 = c(prior_low, poa_low), x0 = c(0, years), y1 = c(prior_upp, poa_upp), x1 = c(0, years), code = 3, angle = 90)
   })
   
+
+  # server: PoA density plot ------------------------------------------------
+
+  output$PoAdensplot <- renderPlot({
+    
+    res <- pyPOA()
+    # browser()
+    PoFmat <- py_to_r(res$poFMatrix)
+    row.names(PoFmat) <- paste("Year", 1:nrow(PoFmat))
+    prior <- py_to_r(res$priorStore)
+    PoFmat <- rbind(prior, PoFmat)
+    
+    lattice::densityplot(~val, group = d1, arr2df(PoFmat), auto.key = T, 
+                xlab = "Probability of absence", ylab = "density")
+  })
 
   # server: add SSe raster --------------------------------------------------
 
