@@ -709,7 +709,7 @@ server <- function(input, output, session) {
     res <- pyPOA()
     # browser()
     PoFmat <- py_to_r(res$poFMatrix)
-    row.names(PoFmat) <- paste("Year", 1:nrow(PoFmat))
+    row.names(PoFmat) <- paste("Session", 1:nrow(PoFmat))
     prior <- py_to_r(res$priorStore)
     PoFmat <- rbind(prior, PoFmat)
     
