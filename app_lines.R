@@ -61,7 +61,7 @@ defaults <-
        gridSurveyFname = list(desc = "", label = "gridSurveyFname", value = NULL),
        prior_min = list(desc = "", label = "Prior min", value = 0.2),
        prior_mode = list(desc = "", label = "Prior mode", value = 0.4),
-       prior_max = list(desc = "", label = "Prior max", value = 0.85),
+       prior_max = list(desc = "", label = "Prior max", value = 0.6),
        setNumIterations = list(desc = "", label = "Number of iterations", value = 100),
        setRRTrapDistance = list(desc = "", label = "Relative risk distance", value = 1),
        setMinRR = list(desc = "", label = "Minimum relative risk value", value = 1),
