@@ -162,6 +162,11 @@ RawData_R <- function(self = list(), zonesShapeFName,
     # zoneArray = zones_ds$GetRasterBand(bt$int(1))$ReadAsArray()
     zoneArray <- np_array(as.matrix(rast.zones))
     
+    # write to file
+    print(self$zonesOutFName)
+    print(class(self$zonesOutFName))
+    raster::writeRaster(rast.zones, self$zonesOutFName, overwrite = TRUE)
+    
     rm(rast.target)
     rm(rast.zones)
     return(list(zoneArray, zoneCodes, Pu_zone, RR_zone, Name_zone))
@@ -175,6 +180,10 @@ RawData_R <- function(self = list(), zonesShapeFName,
     
     if(!is.null(relativeRiskFName)){
         RR_src = raster(relativeRiskFName)
+        
+        # copy to output folder 
+        file.copy(relativeRiskFName, relRiskRasterOutFName)
+        
         in_im <- as.matrix(RR_src)
         in_im[is.na(in_im)] <- 0
         
@@ -195,7 +204,7 @@ RawData_R <- function(self = list(), zonesShapeFName,
       
       RelRiskExtent <- np_array(as.matrix(!is.na(rast.zero)), dtype=np$float32)
     }
-
+    
     print('finish makeRRTif')
     return(RelRiskExtent)
   }
@@ -203,7 +212,7 @@ RawData_R <- function(self = list(), zonesShapeFName,
   # Read in data and do one-time manipulations
   self$zonesShapeFName = bt$str(zonesShapeFName)
   self$relativeRiskFName = bt$str(relativeRiskFName)
-  self$zonesOutFName = bt$str(zonesOutFName)
+  self$zonesOutFName = zonesOutFName
   self$relRiskRasterOutFName = bt$str(relRiskRasterOutFName)
   self$resol = resolution
   self$epsg = epsg

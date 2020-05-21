@@ -662,6 +662,14 @@ server <- function(input, output, session) {
                                                rawdata$match_geotrans, rawdata$wkt, "test_data/Results",
                                                rawdata$RR_zone, rawdata$Pu_zone, rawdata$Name_zone)
 
+    # browser()    # <- break into reactive object
+    
+    SeU.rast <- zone.rast <- raster(".tmp/output/zones.tif")
+    raster::values(SeU.rast) <- as.matrix(result$sensitivityList[0])
+    SeU.rast <- mask(SeU.rast, zone.rast, maskvalue=0)
+    
+    writeRaster(SeU.rast, ".tmp/output/meanSeuAllYears.tif", overwrite = TRUE)
+    
     return(result)
 
   })
@@ -699,29 +707,29 @@ server <- function(input, output, session) {
   # server: add SSe raster --------------------------------------------------
 
     
-  # observe({
-  #   input$GO
-  #   pyPOA()
-  #   
-  #   library(raster)
-  #   meanSeu <- raster(".tmp/output/meanSeuAllYears.tif")
-  # 
-  #   pal <- colorNumeric(palette = "viridis", domain = c(0,1.1),  # add 0.1 to upper limit
-  #                       na.color = "transparent")
-  #   
-  #   leafletProxy(session = session, mapId = "baseMap") %>%
-  #     
-  #     # debugonce(pal); leaflet() %>%
-  #     clearGroup(group = "SeU") %>% 
-  #     addRasterImage(x = meanSeu, layerId = "SeU", group = "SeU", 
-  #                    opacity = input$rasterOpacity, colors = pal) %>%
-  #     addLegend(pal = pal, values = c(0,1), labels = c(0,1), layerId = "SeU") # %>%
-  #     # addLayersControl(overlayGroups = c("SeU"), position = "bottomleft",
-  #     #                  options = layersControlOptions(collapsed = FALSE))
-  #   
-  #   
-  # 
-  # })
+  observe({
+    input$GO
+    pyPOA()
+
+    library(raster)
+    meanSeu <- raster(".tmp/output/meanSeuAllYears.tif")
+
+    pal <- colorNumeric(palette = "viridis", domain = c(0,1.1),  # add 0.1 to upper limit
+                        na.color = "transparent")
+
+    leafletProxy(session = session, mapId = "baseMap") %>%
+
+      # debugonce(pal); leaflet() %>%
+      clearGroup(group = "SeU") %>%
+      addRasterImage(x = meanSeu, layerId = "SeU", group = "SeU",
+                     opacity = input$rasterOpacity, colors = pal) %>%
+      addLegend(pal = pal, values = c(0,1), labels = c(0,1), layerId = "SeU") # %>%
+      # addLayersControl(overlayGroups = c("SeU"), position = "bottomleft",
+      #                  options = layersControlOptions(collapsed = FALSE))
+
+
+
+  })
   
   
   # server: inputTable() ----------------------------------------------------

@@ -329,6 +329,8 @@ def calcProofOfAbsence(poaparams, trapArray, RRArray, zoneArray, zoneCodes, matc
     result.sensitivityMatrix = SSeMat
     print('r.seMat size', SSeMat.nbytes / (1024 * 1024 * 1024))
 
+    result.sensitivityList = sensitivityList
+
     result.poFMatrix = PoFMat
     print('PofMat size', PoFMat.nbytes / (1024 * 1024 * 1024))
 
