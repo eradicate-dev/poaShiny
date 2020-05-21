@@ -328,10 +328,10 @@ def findBetaPert(min, mode, max, shape=PERT_SHAPE):
     see http://rgm2.lab.nig.ac.jp/RGM2/func.php?rd_id=mc2d:pert 
     """
     mu = (min + max + shape * mode)/(shape + 2.0);
-    if mu == mode:
-        shape1 = 1.0 + shape / 2.0
+    if np.round(mu,8) == mode:
+        shape1 = int(1) + shape / int(2)
     else:
-        shape1 = (mu - min) * (2.0 * mode - min - max)/((mode-mu)*(max - min))
+        shape1 = (mu - min) * (int(2) * mode - min - max)/((mode-mu)*(max - min))
     shape2 = shape1 * (max - mu)/(mu - min)
     return shape1, shape2
 
