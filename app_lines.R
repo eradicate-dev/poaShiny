@@ -93,7 +93,7 @@ ui.inputs <- list(
     conditionalPanel(condition = "input.namedExample == 'None'",{
       list(fileInput(inputId = "zonesShapeFName", label = "zonesShapeFName", multiple = TRUE),
            fileInput(inputId = "surveyFName", label = "surveyFName", multiple = FALSE),
-           fileInput(inputId = "relRiskRasterOutFName", label = "relRiskRasterOutFName", multiple = FALSE))
+           fileInput(inputId = "relativeRiskFName", label = "relativeRiskFName", multiple = FALSE))
     }),
     numericInput(inputId = "setMinRR", label = defaults$setMinRR$label, value = defaults$setMinRR$value, min = 0, max = 1000),
     numericInput(inputId = "epsg", label = defaults$epsg$label, value = defaults$epsg$value)
@@ -311,11 +311,10 @@ server <- function(input, output, session) {
   
   # copy loaded device file to .tmp folder
   observe({
-    if(input$namedExample == "None"){
+    if(!is.null(input$surveyFName) & input$namedExample == "None"){
       paths <- input$surveyFName
-      print(paths)
-      paths.to <- paste0(path.tmp, "/input/", sub(".*(?=\\..*$)", "devices", paths$name, perl = TRUE))
-      file.copy(from = paths$datapath, to = paths.to, overwrite = TRUE)
+      paths.to <- paste0(path.tmp, "/input/", sub(".*(?=\\..*$)", "devices", normalizePath(paths$name), perl = TRUE))
+      file.copy(from = paths$datapath, to = normalizePath(paths.to), overwrite = TRUE)
     } 
     
     if(file.exists(".tmp/input/devices.csv")){
@@ -418,12 +417,11 @@ server <- function(input, output, session) {
   # copy loaded extent file to .tmp folder
   observe({
     
-    if(input$namedExample == "None"){
-      
+    if(!is.null(input$zonesShapeFName) & input$namedExample == "None"){
       paths <- input$zonesShapeFName
-      paths.to <- paste0(path.tmp, "\\input\\", sub(".*(?=\\..*$)", "extent", paths$name, perl = TRUE))
-      
-      file.copy(from = paths$datapath, to = paths.to, overwrite = T)
+      # renames shapefile to extent.*
+      paths.to <- paste0(path.tmp, "/input/", sub(".*(?=\\..*$)", "extent", normalizePath(paths$datapath), perl = TRUE))
+      file.copy(from = paths$datapath, to = normalizePath(paths.to), overwrite = T)
     }
     
     path.ext <- paste0(path.tmp, "/input/extent.shp")
@@ -469,12 +467,12 @@ server <- function(input, output, session) {
   # copy loaded relative risk raster file to .tmp folder
   observe({
     
-    if(input$namedExample == "None"){
+    if(!is.null(input$relativeRiskFName) & input$namedExample == "None"){
       
-      paths <- input$relRiskRasterOutFName
-      paths.to <- paste0(path.tmp, "\\input\\", sub(".*(?=\\..*$)", "relRiskRaster", paths$name, perl = TRUE))
-      
-      file.copy(from = paths$datapath, to = paths.to, overwrite = T)
+      paths <- input$relativeRiskFName
+      paths.to <- paste0(path.tmp, "/input/", 
+                         sub(".*(?=\\..*$)", "relRiskRaster", normalizePath(paths$name), perl = TRUE))
+      file.copy(from = paths$datapath, to = normalizePath(paths.to), overwrite = T)
     }
     
     path.RRmap <- paste0(path.tmp, "/input/relRiskRaster.tif")
