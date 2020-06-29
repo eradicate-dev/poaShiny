@@ -466,7 +466,8 @@ def doIterations(startItr, endItr, sensitivityRaster, zoneSeResults,
         else:
             # New - Equation 6
             wtAveAcrossZones = 0.0
-            zoneSensitivity = (1.0 - np.power((1.0 - weightedAveSensitivity), Pu_zone)) 
+            zoneSensitivity = (1.0 - np.power((1.0 - weightedAveSensitivity), PStar)) 
+#            zoneSensitivity = (1.0 - np.power((1.0 - weightedAveSensitivity), Pu_zone)) 
             ## Calculate the system sensitivity
             ## Ave zone se weighted by rr and hx (history) = SSe with P*zone = 1
             # New - Equation 4  
