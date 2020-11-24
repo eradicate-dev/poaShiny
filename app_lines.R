@@ -391,7 +391,7 @@ server <- function(input, output, session) {
   
   
   deviceUI <- reactive({
-    dtOut <- DT::datatable(set.animal.params(), editable = TRUE)
+    dtOut <- DT::datatable(set.animal.params(), editable = TRUE, options = list(ordering=F, searching = F, paging = F))
     return(dtOut)
   })
   
