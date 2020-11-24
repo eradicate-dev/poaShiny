@@ -132,7 +132,9 @@ ui.output <-
     fluidRow(column(width = 6, 
                     list(h3("Probability of absence")),
     plotOutput("PoAtimeplot"),
-    plotOutput("PoAdensplot")),
+    plotOutput("PoAdensplot"),
+    h3("valsTable"),
+    htmlOutput("valsTable")),
     # h3("validTable"),
     # verbatimTextOutput("validTable"),
     column(width = 6, list(h3("baseMap"),
@@ -211,6 +213,10 @@ server <- function(input, output, session) {
     if(Sys.getenv("PYTHON_PATH") != "") use_python(Sys.getenv("PYTHON_PATH"))
   }
   # ------------------ App server logic (Edit anything below) --------------- #
+  
+
+  # server: non-input values ------------------------------------------------
+  vals <- reactiveValues(path.RRmap = paste0(path.tmp, "/input/relRiskRaster.tif"))
   
   # server: valid() ---------------------------------------------------------
   
@@ -475,15 +481,17 @@ server <- function(input, output, session) {
       paths.to <- paste0(path.tmp, "/input/", 
                          sub(".*(?=\\..*$)", "relRiskRaster", normalizePath(paths$name), perl = TRUE))
       file.copy(from = paths$datapath, to = normalizePath(paths.to), overwrite = T)
+      vals$path.RRmap <- paths.to
     }
     
-    path.RRmap <- paste0(path.tmp, "/input/relRiskRaster.tif")
     
     # load any relative risk files in .tmp folder
-    if(file.exists(path.RRmap)){
-      message(paste("loading relative risk .tif file:", path.RRmap))
-      RRmap <- raster(path.RRmap)
-      relRiskRaster(RRmap)
+    if(!is.null(vals$path.RRmap)){
+      if(file.exists(vals$path.RRmap)){
+        message(paste("loading relative risk raster file:", vals$path.RRmap))
+        RRmap <- raster(normalizePath(vals$path.RRmap))
+        relRiskRaster(RRmap)
+      }
     }
   })
   
@@ -645,7 +653,7 @@ server <- function(input, output, session) {
     # debugonce(RawData_R)
     rawdata <- 
       RawData_R(zonesShapeFName = ".tmp/input/extent.shp", # "app\\www\\poa\\Kaitake\\Data\\extent_Kait.shp",
-              relativeRiskFName = ".tmp/input/relRiskRaster.tif", # "app\\www\\poa\\Kaitake\\Data\\relRiskRaster.tif",
+              relativeRiskFName = vals$path.RRmap, # ".tmp/input/relRiskRaster.tif", # "app\\www\\poa\\Kaitake\\Data\\relRiskRaster.tif",
               zonesOutFName = ".tmp/output/zones.tif", #defaults$zonesOutFName$value, # "app\\www\\poa\\Kaitake\\Results\\Model_0\\zones.tif",
               relRiskRasterOutFName = ".tmp/output/relRiskRaster.tif", # "app\\www\\poa\\Kaitake\\Results\\Model_0\\relRiskRaster.tif",
               resolution = as.double(valid()$resolution),
@@ -758,10 +766,24 @@ server <- function(input, output, session) {
     return(kable(inputs.df, row.names = FALSE))
   })
   
+  valsTable <- reactive({
+    
+    vals.ls <- reactiveValuesToList(vals)
+    vals.ls <- unlist(vals.ls)
+    
+    # print(lapply(input.ls, as.character))
+    
+    vals.df <- data.frame(Description = names(vals.ls),
+                            Value = vals.ls)
+    return(kable(vals.df, row.names = FALSE))
+  })
+  
+  
 
   
   # server: output$inputTable -----------------------------------------------
   output$inputTable <- renderText(inputTable())
+  output$valsTable <- renderText(valsTable())
   
   validTable <- reactive({
     # return(valid())
