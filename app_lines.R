@@ -141,6 +141,8 @@ ui.output <-
     # verbatimTextOutput("result"), 
     # h3("runpypress"),
     # verbatimTextOutput("runpypress"), 
+    checkboxInput(inputId = "renderPts", label = "render map points", value = FALSE),
+    checkboxInput(inputId = "renderRasts", label = "render map rasters", value = FALSE),
     h3("inputTable"),
     htmlOutput("inputTable"))
   )
@@ -348,7 +350,7 @@ server <- function(input, output, session) {
   # server: add devices to map ----------------------------------------------
   observe({
     
-    if("sf" %in% class(devices())){
+    if("sf" %in% class(devices()) & input$renderPts){
       
       devs <- st_transform(devices(), crs = 4326)
       # set color palette
@@ -514,7 +516,7 @@ server <- function(input, output, session) {
   
   # server: add relative risk layer to map ----------------------------------
   observe({
-    if("RasterLayer" %in% class(relRiskRaster())){
+    if("RasterLayer" %in% class(relRiskRaster()) & input$renderRasts){
       
       # get layer and convert to WGS84
       RRmap.4326 <- 
