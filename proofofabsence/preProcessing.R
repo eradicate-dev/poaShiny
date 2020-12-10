@@ -178,31 +178,52 @@ RawData_R <- function(self = list(), zonesShapeFName,
     # read in rel risk ascii, and write relative risk Tiff to directory
     # if RR not given, then it is derived from the zones data
     
+    # make extent object using x/y min/max in self
+    ext <- raster::extent(self$xmin, self$xmax, self$ymin, self$ymax)
+    
     if(!is.null(relativeRiskFName)){
-        RR_src = raster(relativeRiskFName)
-        
-        # copy to output folder 
-        file.copy(relativeRiskFName, relRiskRasterOutFName)
-        
-        in_im <- as.matrix(RR_src)
-        in_im[is.na(in_im)] <- 0
-        
-        # select rows and columns based on x-y min/max and resolution
-        maxCol <- (self$xmax - self$xmin) / xres(RR_src)
-        maxRow <- (self$ymax - self$ymin) / yres(RR_src)
-        in_im <- as.matrix(in_im)[1:maxRow,1:maxCol]
-        in_im = np_array(in_im, "float32")
-        
-        RelRiskExtent = np$empty(bt$tuple(list(self$rows, self$cols)), dtype=np$float32)
-        
-        preProcessing$bilinear(in_im, RelRiskExtent, bt$int(0))
-        
+      
+      # import relative risk raster
+      RR_src = raster(relativeRiskFName)
+      # crop raster to extent
+      RR_src <- raster::crop(RR_src, ext)
+      
+      # convert raster values to matrix
+      in_im <- as.matrix(RR_src)
+      # set missing values to zero
+      in_im[is.na(in_im)] <- 0
+      # convert to numpy array
+      in_im = np_array(in_im, "float32")
+      
+      # make empty numpy array with rows:columns from self
+      RelRiskExtent = np$empty(bt$tuple(list(self$rows, self$cols)), dtype=np$float32)
+      
+      # use bilinear() from preProcessing.py (updates RelRiskExtent)
+      preProcessing$bilinear(in_im, RelRiskExtent, bt$int(0))
+      
+      # convert numpy array back to R
+      RRmat <- reticulate::py_to_r(RelRiskExtent)
+      # create re-projected raster
+      rast_bilinear <- 
+        raster(RRmat, 
+               xmn = self$xmin, xmx = self$xmin + ncol(RRmat) * self$resol, 
+               ymn = self$ymax - nrow(RRmat) * self$resol, ymx = self$ymax,
+               crs = sf::st_crs(self$epsg)[["wkt"]])
+      # write out to relRiskRasterOutFName path
+      print(paste0("writing processed relative risk raster to ", relRiskRasterOutFName))
+      raster::writeRaster(rast_bilinear, relRiskRasterOutFName, overwrite = T)
+      
     } else {
         
       rast.zones <- raster::raster(zonesOutFName)
       rast.zero <- raster::clamp(rast.zones, lower = -Inf, upper = 1, useValues = TRUE)
       
       RelRiskExtent <- np_array(as.matrix(!is.na(rast.zero)), dtype=np$float32)
+      
+      # write out to relRiskRasterOutFName path
+      values(rast.zero) <- reticulate::py_to_r(RelRiskExtent)
+      print(paste0("writing processed relative risk raster to ", relRiskRasterOutFName))
+      raster::writeRaster(rast.zero, relRiskRasterOutFName, overwrite = T)
     }
     
     print('finish makeRRTif')
