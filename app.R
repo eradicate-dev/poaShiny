@@ -35,6 +35,8 @@ library(sf)
 
 library(shiny)
 
+library(DT)
+
 # Define any Python packages needed for the app here:
 PYTHON_DEPENDENCIES = c("numpy==1.18.4", "llvmlite==0.31.0", "numba==0.47.0")
 
