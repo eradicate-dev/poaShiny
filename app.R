@@ -232,6 +232,12 @@ server <- function(input, output, session) {
   setYears <- reactiveVal(NULL)
   
   
+  # server: set file paths --------------------------------------------------
+
+  paths <- reactiveValues(zonesShapeFName = NULL,
+                          relativeRiskFName = NULL,
+                          surveyFName = NULL)
+  
   valid <- reactive({
     
     input.ls <- list(prior_min = if(is.numeric(input$prior_min) & input$prior_min > 0 & input$prior_min < 1) input$prior_min else NULL,
@@ -279,30 +285,17 @@ server <- function(input, output, session) {
   # - copy device folders
   observe({
     if(input$namedExample == "Kaitake possums"){
-      
-      paths <- list.files("app/www/example_data/Kaitake_possums", pattern = "devices.csv|extent\\..*|relRiskRaster.tif", full.names = T)
-      paths.to <- sub("app/www/example_data/Kaitake_possums/", ".tmp/input/", paths)
-      
-      unlink(".tmp/input/*")
-      file.copy(paths, paths.to)
+      paths$zonesShapeFName <- "app/www/example_data/Kaitake_possums/extent.shp"
+      paths$relativeRiskFName <- "app/www/example_data/Kaitake_possums/relRiskRaster.tif"
+      paths$surveyFName <- "app/www/example_data/Kaitake_possums/devices.csv"
     } else if(input$namedExample == "Mahia possums"){
-      
-      paths <- list.files("app/www/example_data/Mahia_Audrey", pattern = ".csv$|extent.*|.tif", full.names = T)
-      paths.to <- sub("app/www/example_data/Mahia_Audrey/extent_block1ABCD", ".tmp/input/extent", paths)
-      paths.to <- sub("app/www/example_data/Mahia_Audrey/habDistRR_block1ABCD.tif", ".tmp/input/relRiskRaster.tif", paths.to)
-      paths.to <- sub("app/www/example_data/Mahia_Audrey/Surveillance_location.csv", ".tmp/input/devices.csv", paths.to)
-      
-      unlink(".tmp/input/*")
-      file.copy(paths, paths.to)
+      paths$zonesShapeFName <- "app/www/example_data/Mahia_Audrey/extent_block1ABCD.shp"
+      paths$relativeRiskFName <- "app/www/example_data/Mahia_Audrey/habDistRR_block1ABCD.tif"
+      paths$surveyFName <- "app/www/example_data/Mahia_Audrey/Surveillance_location.csv"
     } else if(input$namedExample == "CK stoats"){
-      
-      paths <- list.files("app/www/example_data/CK_stoats", pattern = ".csv$|extent.*|.tif", full.names = T)
-      paths.to <- sub("app/www/example_data/CK_stoats/extent", ".tmp/input/extent", paths)
-      paths.to <- sub("app/www/example_data/CK_stoats/relRisk.tif", ".tmp/input/relRiskRaster.tif", paths.to)
-      paths.to <- sub("app/www/example_data/CK_stoats/devices.csv", ".tmp/input/devices.csv", paths.to)
-      
-      unlink(".tmp/input/*")
-      file.copy(paths, paths.to)
+      paths$zonesShapeFName <- "app/www/example_data/CK_stoats/extent.shp"
+      paths$relativeRiskFName <- "app/www/example_data/CK_stoats/relRisk.tif"
+      paths$surveyFName <- "app/www/example_data/CK_stoats/devices.csv"
     } else {
       unlink(".tmp/input/*")
     }
@@ -316,14 +309,14 @@ server <- function(input, output, session) {
   # copy loaded device file to .tmp folder
   observe({
     if(!is.null(input$surveyFName) & input$namedExample == "None"){
-      paths <- input$surveyFName
-      paths.to <- paste0(path.tmp, "/input/", sub(".*(?=\\..*$)", "devices", normalizePath(paths$name), perl = TRUE))
-      file.copy(from = paths$datapath, to = normalizePath(paths.to), overwrite = TRUE)
+      paths.to <- paste0(path.tmp, "/input/", sub(".*(?=\\..*$)", "devices", normalizePath(input$surveyFName$name), perl = TRUE))
+      file.copy(from = input$surveyFName$datapath, to = normalizePath(paths.to), overwrite = TRUE)
+      paths$surveyFName <- normalizePath(".tmp/input/devices.csv")
     } 
     
-    if(file.exists(".tmp/input/devices.csv")){
+    if(!is.null(paths$surveyFName)){
       # load devices as spatial object
-      devs <- st_sf(st_as_sf(read.csv(".tmp/input/devices.csv", stringsAsFactors = FALSE), 
+      devs <- st_sf(st_as_sf(read.csv(paths$surveyFName, stringsAsFactors = FALSE), 
                              coords = c("Easting", "Northing")), crs = input$epsg)
       # get number devives types and sessions
       ntypes <- length(unique(devs$Species))
@@ -422,16 +415,15 @@ server <- function(input, output, session) {
   observe({
     
     if(!is.null(input$zonesShapeFName) & input$namedExample == "None"){
-      paths <- input$zonesShapeFName
-      # renames shapefile to extent.*
-      paths.to <- paste0(path.tmp, "/input/", sub(".*(?=\\..*$)", "extent", normalizePath(paths$datapath), perl = TRUE))
-      file.copy(from = paths$datapath, to = normalizePath(paths.to), overwrite = T)
+      paths.to <- paste0(path.tmp, "/input/", sub(".*(?=\\..*$)", "extent", normalizePath(input$zonesShapeFName$datapath), perl = TRUE))
+      file.copy(from = input$zonesShapeFName$datapath, to = normalizePath(paths.to), overwrite = T)
+      paths$zonesShapeFName <- normalizePath(".tmp/input/extent.shp")
     }
     
-    path.ext <- paste0(path.tmp, "/input/extent.shp")
-    if(file.exists(path.ext)){
-      message(paste("loading .shp file:", path.ext))
-      zonesShape.sf <- st_sf(st_read(path.ext), crs = input$epsg)
+    path.ext <- paths$zonesShapeFName
+    if(!is.null(paths$zonesShapeFName)){
+      message(paste("loading .shp file:", paths$zonesShapeFName))
+      zonesShape.sf <- st_sf(st_read(paths$zonesShapeFName), crs = input$epsg)
       zonesShape(zonesShape.sf)
     }
   })
@@ -472,19 +464,17 @@ server <- function(input, output, session) {
   observe({
     
     if(!is.null(input$relativeRiskFName) & input$namedExample == "None"){
-      
-      paths <- input$relativeRiskFName
       paths.to <- paste0(path.tmp, "/input/", 
-                         sub(".*(?=\\..*$)", "relRiskRaster", normalizePath(paths$name), perl = TRUE))
-      file.copy(from = paths$datapath, to = normalizePath(paths.to), overwrite = T)
+                         sub(".*(?=\\..*$)", "relRiskRaster", 
+                             normalizePath(input$relativeRiskFName$name), perl = TRUE))
+      file.copy(from = input$relativeRiskFName$datapath, to = normalizePath(paths.to), overwrite = T)
+      paths$relativeRiskFName <- normalizePath(list.files(".tmp/input", pattern = "relRiskRaster", full.names = T))
     }
     
-    path.RRmap <- paste0(path.tmp, "/input/relRiskRaster.tif")
-    
     # load any relative risk files in .tmp folder
-    if(file.exists(path.RRmap)){
-      message(paste("loading relative risk .tif file:", path.RRmap))
-      RRmap <- raster(path.RRmap)
+    if(!is.null(paths$relativeRiskFName)){
+      message(paste("loading relative risk .tif file:", paths$relativeRiskFName))
+      RRmap <- raster(paths$relativeRiskFName)
       relRiskRaster(RRmap)
     }
   })
@@ -646,13 +636,13 @@ server <- function(input, output, session) {
     
     # debugonce(RawData_R)
     rawdata <- 
-      RawData_R(zonesShapeFName = ".tmp/input/extent.shp", # "app\\www\\poa\\Kaitake\\Data\\extent_Kait.shp",
-              relativeRiskFName = ".tmp/input/relRiskRaster.tif", # "app\\www\\poa\\Kaitake\\Data\\relRiskRaster.tif",
+      RawData_R(zonesShapeFName = paths$zonesShapeFName,
+              relativeRiskFName = paths$relativeRiskFName,
               zonesOutFName = ".tmp/output/zones.tif", #defaults$zonesOutFName$value, # "app\\www\\poa\\Kaitake\\Results\\Model_0\\zones.tif",
               relRiskRasterOutFName = ".tmp/output/relRiskRaster.tif", # "app\\www\\poa\\Kaitake\\Results\\Model_0\\relRiskRaster.tif",
               resolution = as.double(valid()$resolution),
               epsg = as.integer(input$epsg),
-              surveyFName = ".tmp/input/devices.csv",
+              surveyFName = paths$surveyFName,
               params = myParams, 
               gridSurveyFname = NULL)
 
@@ -753,10 +743,12 @@ server <- function(input, output, session) {
     input.ls <- reactiveValuesToList(input)
     input.ls <- unlist(input.ls)
     
+    paths.ls <- unlist(reactiveValuesToList(paths))
+    
     # print(lapply(input.ls, as.character))
 
-    inputs.df <- data.frame(Description = names(input.ls),
-                            Value = input.ls)
+    inputs.df <- data.frame(Description = c(names(input.ls), names(paths.ls)),
+                            Value = c(input.ls, paths.ls))
     return(kable(inputs.df, row.names = FALSE))
   })
   
