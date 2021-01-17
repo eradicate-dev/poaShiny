@@ -205,10 +205,12 @@ RawData_R <- function(self = list(), zonesShapeFName,
       RRmat <- reticulate::py_to_r(RelRiskExtent)
       # create re-projected raster
       rast_bilinear <- 
-        raster(RRmat, 
+        raster::raster(RRmat, 
                xmn = self$xmin, xmx = self$xmin + ncol(RRmat) * self$resol, 
-               ymn = self$ymax - nrow(RRmat) * self$resol, ymx = self$ymax,
-               crs = sf::st_crs(self$epsg)[["wkt"]])
+               ymn = self$ymax - nrow(RRmat) * self$resol, ymx = self$ymax)
+      crs_out <- sp::CRS(sprintf("+init=epsg:%s", self$epsg))
+      raster::crs(rast_bilinear) <- crs_out   
+      
       # write out to relRiskRasterOutFName path
       print(paste0("writing processed relative risk raster to ", relRiskRasterOutFName))
       raster::writeRaster(rast_bilinear, relRiskRasterOutFName, overwrite = T)
@@ -256,12 +258,16 @@ RawData_R <- function(self = list(), zonesShapeFName,
   #----------------------------------------#
   # RUN FUNCTIONS
   #----------------------------------------#
+  print("starting makeMaskAndZones() ...")
   self[c("zoneArray", "zoneCodes", "Pu_zone", "RR_zone", "Name_zone")] <-
     self$makeMaskAndZones(self = self, multipleZones = params$multipleZones, params)
+  print("makeMaskAndZones() finished")
   
   print(paste('Name_zone', self$Name_zone))
   
+  print("starting makeRelativeRiskTif() ...")
   self$RelRiskExtent = self$makeRelativeRiskTif(self, relativeRiskFName, relRiskRasterOutFName)
+  print("makeRelativeRiskTif() finished")
   
   print(paste('surveyFName:', surveyFName))
 
