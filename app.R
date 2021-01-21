@@ -654,7 +654,7 @@ server <- function(input, output, session) {
     # browser()    # <- break into reactive object
     
     SeU.rast <- zone.rast <- raster(".tmp/output/zones.tif")
-    raster::values(SeU.rast) <- as.matrix(result$sensitivityList[0])
+    raster::values(SeU.rast) <- py_to_r(result$sensitivityList)[[1]]
     raster::values(SeU.rast)[raster::values(SeU.rast) == 0L] <- NA
     SeU.rast <- mask(SeU.rast, zone.rast, maskvalue=0)
     
