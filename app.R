@@ -479,8 +479,7 @@ server <- function(input, output, session) {
     # load any relative risk files in .tmp folder
     if(!is.null(paths$relativeRiskFName)){
       message(paste("loading relative risk .tif file:", paths$relativeRiskFName))
-      RRmap <- raster(paths$relativeRiskFName)
-      relRiskRaster(RRmap)
+      relRiskRaster(raster(paths$relativeRiskFName))
     }
   })
   
@@ -515,17 +514,18 @@ server <- function(input, output, session) {
   observe({
     if("RasterLayer" %in% class(relRiskRaster()) & input$renderRasts){
       
-      # get layer and convert to WGS84
-      RRmap.4326 <- 
-        projectRaster(relRiskRaster(), crs = sp::CRS("+init=epsg:4326"),
-                      method = "ngb")
+        RRmap.3857 <- 
+          projectRaster(relRiskRaster(), crs = sp::CRS("+init=epsg:3857"),
+                        method = "ngb")
       
-      # get bounds
-      bb <- as.vector(extent(RRmap.4326))                 
+      # get bounds (needs conversion to lat/long)
+      bb <- as.vector(extent(
+        raster::projectExtent(object = RRmap.3857, 
+                              crs = sp::CRS("+init=epsg:4326"))))
       
       # set values above MinRR to NA
-      RRmap.4326 <- raster::clamp(RRmap.4326, lower = input$setMinRR, useValues = FALSE)
-      valrng <- c(input$setMinRR, max(values(RRmap.4326), na.rm = T))
+      RRmap.3857 <- raster::clamp(RRmap.3857, lower = input$setMinRR, useValues = FALSE)
+      valrng <- c(input$setMinRR, max(values(RRmap.3857), na.rm = T))
 
       # make palette
       pal <- colorNumeric(palette = "viridis",
@@ -536,9 +536,9 @@ server <- function(input, output, session) {
       leafletProxy(session = session, mapId = "baseMap") %>%
         # leaflet() %>%
         clearGroup(group = "Relative risk") %>%
-        addRasterImage(x = RRmap.4326, group = "Relative risk",
-                       opacity = 0.95, #input$rasterOpacity,
-                       colors = pal, method = "ngb") %>%
+        addRasterImage(x = RRmap.3857, group = "Relative risk",
+                       opacity = 0.95, colors = pal, 
+                       project = FALSE, method = "ngb") %>%
         fitBounds(lng1 = bb[1], lat1 = bb[3], lng2 = bb[2], lat2 = bb[4])
         
       # add legend if relative risk values vary 
