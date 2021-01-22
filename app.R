@@ -514,10 +514,15 @@ server <- function(input, output, session) {
   observe({
     if("RasterLayer" %in% class(relRiskRaster()) & input$renderRasts){
       
+      withProgress(message = 'Reprojecting raster', detail = 'This may take a while...',
+                   value = 0, {
+        # get layer and convert to WGS84
         RRmap.3857 <- 
           projectRaster(relRiskRaster(), crs = sp::CRS("+init=epsg:3857"),
                         method = "ngb")
       
+      
+      incProgress(amount = 0.5, message = 'Mapping raster')
       # get bounds (needs conversion to lat/long)
       bb <- as.vector(extent(
         raster::projectExtent(object = RRmap.3857, 
@@ -541,6 +546,7 @@ server <- function(input, output, session) {
                        project = FALSE, method = "ngb") %>%
         fitBounds(lng1 = bb[1], lat1 = bb[3], lng2 = bb[2], lat2 = bb[4])
         
+      })
       # add legend if relative risk values vary 
       if(diff(valrng) > 0){
         leafletProxy(session = session, mapId = "baseMap") %>%  
