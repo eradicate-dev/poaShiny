@@ -100,9 +100,8 @@ ui.inputs <- list(
     numericInput(inputId = "setMinRR", label = defaults$setMinRR$label, value = defaults$setMinRR$value, min = 0, max = 1000),
     numericInput(inputId = "epsg", label = defaults$epsg$label, value = defaults$epsg$value)
   ),
-  DT::DTOutput(outputId = "deviceUI"),
-  actionButton(inputId = "runpy", label = "Run params script"),
-  actionButton(inputId = "GO", label = "Run inputs")
+  h4("Device parameters - double-click to adjust"),
+  DT::DTOutput(outputId = "deviceUI")
 )
 
 ui.inputs.priors <- 
@@ -143,6 +142,7 @@ ui.output <-
     # verbatimTextOutput("result"), 
     # h3("runpypress"),
     # verbatimTextOutput("runpypress"), 
+    h3("----------DEBUGGING-----------"),
     checkboxInput(inputId = "renderPts", label = "render map points", value = TRUE),
     checkboxInput(inputId = "renderRasts", label = "render map rasters", value = TRUE),
     h3("inputTable"),
@@ -155,12 +155,16 @@ ui <- fluidPage(
   tabsetPanel(
     tabPanel(title = "Run model", 
              # splitLayout(list(ui.inputs, ui.inputs.priors), ui.output)
-             fluidRow(column(4, list(ui.inputs, ui.inputs.priors)), column(8, list(ui.output)))
-             ),  
+             fluidRow(column(4, list(ui.inputs, ui.inputs.priors,
+                                     actionButton(inputId = "runpy", 
+                                                  label = "Calculate PoA")
+             )), 
+             column(8, list(ui.output)))
+    ),  
     ui.advinputs,
     ui.troubleshooting
-    )
   )
+)
 
 
 printLine <- NULL
