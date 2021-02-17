@@ -514,6 +514,9 @@ server <- function(input, output, session) {
   observe({
     if("RasterLayer" %in% class(relRiskRaster()) & input$renderRasts){
       
+      rasterOptions(# chunksize = 1e+06, 
+        maxmemory = 2.5e+08)
+      
       withProgress(message = 'Reprojecting raster', detail = 'This may take a while...',
                    value = 0, {
         # get layer and convert to WGS84
