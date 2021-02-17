@@ -91,7 +91,7 @@ ui.inputs <- list(
   # Sidebar with a slider input for number of bins 
   
   wellPanel(
-    selectInput(inputId = "namedExample", label = "Select example set", choices = c("None", "Kaitake possums", "Mahia possums", "CK stoats", "Nutria"), multiple = FALSE),
+    selectInput(inputId = "namedExample", label = "Select example set", choices = c("None", "Kaitake possums", "Mahia possums", "CK stoats"), multiple = FALSE),
     conditionalPanel(condition = "input.namedExample == 'None'",{
       list(fileInput(inputId = "zonesShapeFName", label = "zonesShapeFName", multiple = TRUE),
            fileInput(inputId = "surveyFName", label = "surveyFName", multiple = FALSE),
@@ -296,11 +296,6 @@ server <- function(input, output, session) {
       paths$zonesShapeFName <- "app/www/example_data/CK_stoats/extent.shp"
       paths$relativeRiskFName <- "app/www/example_data/CK_stoats/relRisk.tif"
       paths$surveyFName <- "app/www/example_data/CK_stoats/devices.csv"
-    } else if(input$namedExample == "Nutria"){
-      paths$zonesShapeFName <- "app/www/example_data/Nutria_data_dean/mngtZone_noZoneRisk/mngtZone_noZoneRisk.shp"
-      paths$relativeRiskFName <- "app/www/example_data/Nutria_data_dean/RR_High500.img"
-      paths$surveyFName <- "app/www/example_data/Nutria_data_dean/modifiedNutData.csv"
-      updateNumericInput(session = session, inputId = "epsg", value = 26918)
     } else {
       unlink(".tmp/input/*")
     }
