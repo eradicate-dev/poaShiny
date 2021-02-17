@@ -143,8 +143,8 @@ ui.output <-
     # verbatimTextOutput("result"), 
     # h3("runpypress"),
     # verbatimTextOutput("runpypress"), 
-    checkboxInput(inputId = "renderPts", label = "render map points", value = FALSE),
-    checkboxInput(inputId = "renderRasts", label = "render map rasters", value = FALSE),
+    checkboxInput(inputId = "renderPts", label = "render map points", value = TRUE),
+    checkboxInput(inputId = "renderRasts", label = "render map rasters", value = TRUE),
     h3("inputTable"),
     htmlOutput("inputTable"))
   )
