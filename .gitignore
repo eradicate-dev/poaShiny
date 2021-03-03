@@ -5,4 +5,5 @@
 .Ruserdata
 proofofabsence/__pycache__/*
 rsconnect
+.tmp
 *.pkl
