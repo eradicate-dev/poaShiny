@@ -112,6 +112,9 @@ ui.inputs.priors <-
        column(numericInput(inputId = "prior_max", label = "Prior max", value = defaults$prior_max$value, min = 0, max = 1), width = 4)
   )
 
+ui.inputs.yrs <- 
+  fluidRow(column(numericInput(inputId = "yrStart", label = "Start year", value = 1), width = 6),
+           column(numericInput(inputId = "yrEnd", label = "End year", value = 1), width = 6))
 
 # UI: advanced input ------------------------------------------------------
 ui.advinputs <- 
@@ -157,7 +160,7 @@ ui <- fluidPage(
   tabsetPanel(
     tabPanel(title = "Run model", 
              # splitLayout(list(ui.inputs, ui.inputs.priors), ui.output)
-             fluidRow(column(4, list(ui.inputs, ui.inputs.priors,
+             fluidRow(column(4, list(ui.inputs, ui.inputs.priors, ui.inputs.yrs,
                                      actionButton(inputId = "runpy", 
                                                   label = "Calculate PoA")
              )), 
@@ -334,6 +337,11 @@ server <- function(input, output, session) {
       # devs.4326 <- st_transform(devs, crs = 4326)
       
       devices(devs)
+      
+      # update start and finish years
+      updateNumericInput(session, inputId = "yrStart", value = min(devs$Year))
+      updateNumericInput(session, inputId = "yrEnd", value = max(devs$Year))
+      
     }
     
   })
@@ -576,7 +584,7 @@ server <- function(input, output, session) {
     myParams <- proofofabsence::makeParams(setMultipleZones = TRUE,
                                            setNumIterations = 2,
                                            setRRTrapDistance = 100.0,
-                                           startYear = 1, endYear = 2,
+                                           startYear = input$yrStart, endYear = input$yrEnd,
                                            startPu = 1.0, PuIncreaseRate = 0.0,
                                            setMinRR = 1.0,
                                            setPrior = c(0.2,0.3,0.4),
