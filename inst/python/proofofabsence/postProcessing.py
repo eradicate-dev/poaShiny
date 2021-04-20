@@ -36,7 +36,7 @@ import numpy as np
 from scipy.stats.mstats import mquantiles
 import prettytable
 import pickle
-from proofofabsence import params
+###from proofofabsence import params
 
 # for opening files with TuiView
 from PyQt5.QtWidgets import QApplication
@@ -63,13 +63,17 @@ def getPickleResults(pklpath, inPKL_Name):
 class ResultsProcessing(object):
     def __init__(self, inputDataPath, outputDataPath, preProcessingResults,
             calculationResults, zoneShapeFName, SSePoFResultTableName,
-            pofSSeGraphName, zoneSeResultTableName):
+            pofSSeGraphName, zoneSeResultTableName, appInvoke = False):
         """
         Object to read in results and produce tables, graphs and 2-D images
         """
-        # necessary to connect to Qt for TuiView
-        self.app = QApplication(sys.argv)
-
+        ## CONDITIONS FOR ONLINE APP
+        if appInvoke == True:
+            from ..proofofabsence import params
+        else:
+            from proofofabsence import params
+            # necessary to connect to Qt for TuiView
+            self.app = QApplication(sys.argv)
         # save zone shape file for overlaying on rasters
         self.zoneShapeFName = zoneShapeFName
 
@@ -101,6 +105,9 @@ class ResultsProcessing(object):
         self.calcdat = getPickleResults(self.outputdatapath, calculationResults)
 
     def makeTableFX(self, timeName):
+        """
+        ## MAKE POA AND SSE TABLE
+        """
         # SSe 2-D, years by iteration
         self.SSe2D = self.calcdat.sensitivityMatrix
         self.years = np.arange(self.calcdat.params.years[0], (self.calcdat.params.years[-1] + 1)) 
@@ -162,6 +169,9 @@ class ResultsProcessing(object):
 
 
     def makeZoneTableFX(self):
+        """
+        ## MAKE TABLE OF RESULTS OF SEZ FROM ZONES AND SESSIONS
+        """ 
         # zone Se 3-D: (years, iteration and zones)
 #        self.zoneSe3D= self.calcdat.zoneSeMatrix
         self.zoneYears = np.arange(self.calcdat.params.years[0], (self.calcdat.params.years[-1] + 1)) 
@@ -227,7 +237,8 @@ class ResultsProcessing(object):
         print(aa)
 
 
-    def plotFX(self, pofSSeGraphName, probName, timeName, targetPoA, priorTime):
+    def plotFX(self, pofSSeGraphName, probName, timeName, targetPoA, 
+            priorTime, plotFig = True):
         """
         graph PoF and SSe results
         """
@@ -291,7 +302,9 @@ class ResultsProcessing(object):
         # save plots to project directory
         pofSSeGraphFname = os.path.join(self.outputdatapath, pofSSeGraphName)
         P.savefig(pofSSeGraphFname, format='png')
-        P.show()
+        ## CONDITION FOR ONLINE TOOL TO AVOID INTERACTIVE PRINTING
+        if plotFig == True:
+            P.show()
 
 
     def getNTicks(self, priorName):
