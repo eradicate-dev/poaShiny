@@ -3,7 +3,15 @@
 .Rhistory
 .RData
 .Ruserdata
-proofofabsence/__pycache__/*
 rsconnect
 .tmp
 *.pkl
+Using reticulate in an R Package.url
+landcareresearch-dean_poa-e7299c4def57.zip
+__pycache__
+poa_objs.R
+preProcessing_R.R
+preProcessing_shinyPOA.R
+results/*
+man
+Anaconda Prompt (proofofabsence).lnk
