@@ -582,12 +582,12 @@ server <- function(input, output, session) {
     proofofabsence::poa_paks_min()
     
     myParams <- proofofabsence::makeParams(setMultipleZones = TRUE,
-                                           setNumIterations = 2,
+                                           setNumIterations = input$setNumIterations,
                                            setRRTrapDistance = 100.0,
                                            startYear = input$yrStart, endYear = input$yrEnd,
-                                           startPu = 1.0, PuIncreaseRate = 0.0,
-                                           setMinRR = 1.0,
-                                           setPrior = c(0.2,0.3,0.4),
+                                           startPu = input$startPu, PuIncreaseRate = 0.0,
+                                           setMinRR = input$setMinRR,
+                                           setPrior = c(input$prior_min,input$prior_mode,input$prior_max),
                                            setIntro = c(0.0001,0.0002,0.0003))
     
     myParams <- proofofabsence::addAnimalParams(myParams,
