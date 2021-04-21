@@ -12,14 +12,7 @@
 #'
 #' @examples
 #' proofofabsence::poa_paks_full()
-poa_paks_min <- function(condaenv = "proofofabsence"){
-
-  # configure reticulate ----------------------------------------------------
-
-  reticulate::use_condaenv(condaenv)
-  reticulate::py_config()
-  library(reticulate)
-  library(proofofabsence)
+poa_paks_min <- function(envname = "proofofabsence"){
 
   #-------------------------------------------------------------------------#
   # lines to set GDAL path to conda environment
@@ -33,8 +26,8 @@ poa_paks_min <- function(condaenv = "proofofabsence"){
   pickle    <<- reticulate::import("pickle", convert = FALSE)
   numba     <<- reticulate::import("numba", convert = FALSE)
 
-  bi <<- import_builtins(convert = FALSE)
-  poa <<- import_from_path(path = system.file("python", package = "proofofabsence"),
+  bi <<- reticulate::import_builtins(convert = FALSE)
+  poa <<- reticulate::import_from_path(path = system.file("python", package = "proofofabsence"),
                            module = "proofofabsence_min", convert = FALSE)
 }
 
