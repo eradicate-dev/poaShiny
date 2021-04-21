@@ -14,7 +14,13 @@ Imports:
     sf,
     sp,
     raster,
-    fasterize
+    fasterize,
+    shiny,
+    rgdal,
+    kableExtra,
+    leaflet,
+    DT
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
+Roxygen: list(markdown = TRUE)
