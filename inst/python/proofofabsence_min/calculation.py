@@ -28,12 +28,12 @@ import os
 import sys
 import copy
 from numba import jit
-from osgeo import gdal
-from osgeo import gdalconst
-from rios import calcstats
-from rios.cuiprogress import GDALProgressBar
+# from osgeo import gdal
+# from osgeo import gdalconst
+# from rios import calcstats
+# from rios.cuiprogress import GDALProgressBar
 
-from proofofabsence import params
+from proofofabsence_min import params
 
 # find libpython and extract the locking functions
 # so we can lock access to some arrays from threads
@@ -309,23 +309,23 @@ def calcProofOfAbsence(poaparams, trapArray, RRArray, zoneArray, zoneCodes, matc
     # (1) multilayered tif of annual mean SeU
 #    print('sensitivityList size', sensitivityList.nbytes / (1024 * 1024 * 1024))
     meanSeuTifPathName = os.path.join(outputDataPath, 'meanSeuAllYears.tif')
-    gdt_type = gdalconst.GDT_Float32
-    writeTif(sensitivityList, meanSeuTifPathName, gdt_type, wkt, match_geotrans)
+    # gdt_type = gdalconst.GDT_Float32
+    # writeTif(sensitivityList, meanSeuTifPathName, gdt_type, wkt, match_geotrans)
 
 
 #    del sensitivityList
     # (2) modified Relative Risk Map
     print('RRArray size', RRArray.nbytes / (1024 * 1024 * 1024))
     relRiskTifName = os.path.join(outputDataPath, 'updatedRelRisk.tif')
-    gdt_type = gdalconst.GDT_Float32
-    writeTif(RRArray, relRiskTifName, gdt_type, wkt, match_geotrans)
+    # gdt_type = gdalconst.GDT_Float32
+    # writeTif(RRArray, relRiskTifName, gdt_type, wkt, match_geotrans)
 #    del modifiedK
 
     # (3) updated Zone mask
     print('zoneArray size', zoneArray.nbytes / (1024 * 1024 * 1024))
     extZoneTifName = os.path.join(outputDataPath, 'updatedExtentZone.tif')
-    gdt_type = gdal.GDT_Byte
-    writeTif(zoneArray, extZoneTifName, gdt_type, wkt, match_geotrans)
+    # gdt_type = gdal.GDT_Byte
+    # writeTif(zoneArray, extZoneTifName, gdt_type, wkt, match_geotrans)
 
     # create object with result information
     result = Results()
@@ -366,40 +366,40 @@ def calcProofOfAbsence(poaparams, trapArray, RRArray, zoneArray, zoneCodes, matc
     return result
 
 
-def writeTif(raster, tempTifName, gdt_type, wkt, match_geotrans):
-    """
-    write single or multi-band tifs to directory
-    """
-    # if single band
-    if not isinstance(raster, list):
-        (nrows, ncols) = np.shape(raster)
-        ds = gdal.GetDriverByName('GTiff').Create(tempTifName, ncols,
-        nrows, 1, gdt_type,
-        options=['TILED=YES', 'COMPRESS=LZW', 'INTERLEAVE=BAND', 'BIGTIFF=IF_SAFER'])
-        ds.SetGeoTransform(match_geotrans)
-        ds.SetProjection(wkt)
-        band = ds.GetRasterBand(1)
-        band.WriteArray(raster)
-    # if multi-layered array
-    else:
-        (nrows, ncols) = np.shape(raster[0])
-        nlayers = len(raster)
-        ds = gdal.GetDriverByName('GTiff').Create(tempTifName, ncols,
-            nrows, nlayers, gdt_type,
-            options=['TILED=YES', 'COMPRESS=LZW', 'INTERLEAVE=BAND', 'BIGTIFF=IF_SAFER'])
-        ds.SetGeoTransform(match_geotrans)
-        ds.SetProjection(wkt)
-        # loop thru years (layers in tif)
-        for n in range(nlayers):
-            band = ds.GetRasterBand(n+1)
-            band.WriteArray(raster[n])
-            
-    # calculate stats so we have the overviews
-    progress = GDALProgressBar()
-    # should we be ignoring zero in the stats??
-    calcstats.calcStats(ds, progress, ignore=0)
-    
-    del ds  # Flush
+# def writeTif(raster, tempTifName, gdt_type, wkt, match_geotrans):
+#     """
+#     write single or multi-band tifs to directory
+#     """
+#     # if single band
+#     if not isinstance(raster, list):
+#         (nrows, ncols) = np.shape(raster)
+#         ds = gdal.GetDriverByName('GTiff').Create(tempTifName, ncols,
+#         nrows, 1, gdt_type,
+#         options=['TILED=YES', 'COMPRESS=LZW', 'INTERLEAVE=BAND', 'BIGTIFF=IF_SAFER'])
+#         ds.SetGeoTransform(match_geotrans)
+#         ds.SetProjection(wkt)
+#         band = ds.GetRasterBand(1)
+#         band.WriteArray(raster)
+#     # if multi-layered array
+#     else:
+#         (nrows, ncols) = np.shape(raster[0])
+#         nlayers = len(raster)
+#         ds = gdal.GetDriverByName('GTiff').Create(tempTifName, ncols,
+#             nrows, nlayers, gdt_type,
+#             options=['TILED=YES', 'COMPRESS=LZW', 'INTERLEAVE=BAND', 'BIGTIFF=IF_SAFER'])
+#         ds.SetGeoTransform(match_geotrans)
+#         ds.SetProjection(wkt)
+#         # loop thru years (layers in tif)
+#         for n in range(nlayers):
+#             band = ds.GetRasterBand(n+1)
+#             band.WriteArray(raster[n])
+#             
+#     # calculate stats so we have the overviews
+#     progress = GDALProgressBar()
+#     # should we be ignoring zero in the stats??
+#     calcstats.calcStats(ds, progress, ignore=0)
+#     
+#     del ds  # Flush
 
 @jit(nopython=True, nogil=True)
 def doIterations(startItr, endItr, sensitivityRaster, zoneSeResults, 
