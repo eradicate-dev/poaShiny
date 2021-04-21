@@ -567,105 +567,48 @@ server <- function(input, output, session) {
   # server: run py code -----------------------------------------------------
   pyPOA <- eventReactive(input$runpy, {
     
-    # import proofofabsence package
-    params <- reticulate::py_run_file(file = "proofofabsence/params.py", convert = FALSE)
-    preProcessing <- reticulate::py_run_file("proofofabsence/preProcessing.py", convert = FALSE)
-    calculation <- reticulate::py_run_file("proofofabsence/calculation.py", convert = FALSE)
-    
-    source("proofofabsence/preProcessing.R")
-    
     print("runpy press detected")
     
-    # import proofofabsence package
-    # params <- import_from_path(module = "params", path = "proofofabsence", convert = FALSE)
-    source_python("proofofabsence/params.py", convert = FALSE)
-    # preProcessing <- import_from_path(module = "preProcessing", path = "proofofabsence", convert = FALSE)
-    source_python("proofofabsence/preProcessing.py", convert = FALSE)
-    # calculation <- import_from_path(module = "calculation", path = "proofofabsence", convert = FALSE)
-    source_python("proofofabsence/calculation.py", convert = FALSE)
-
-    animals = AnimalTypes()                                              #
-    # create parameter objects ------------------------------------------------
-
-    # animal.params <-
-    #    list(TYPENUM = as.integer(12:17),
-    #         TYPECHAR = c("Leghold", "Sentinel", "PossMaster", "Camera", "CHEWDETECT", "AT220"),
-    #         g0mean = c(0.06, 0.04, 0.04, 0.075, 0.06, 0.05),
-    #         g0sd = c(0.03, 0.03, 0.03, 0.03, 0.03, 0.03),
-    #         sigmean = rep(valid()$sigmean, 6),
-    #         sigsd = rep(valid()$sigsd, 6))
+    proofofabsence::poa_paks_min()
     
-    animal.params <-
-      list(TYPENUM = as.integer(6:(6+nrow(set.animal.params())-1)),    # start IDs at arbritary number
-           TYPECHAR = row.names(set.animal.params()),
-           g0mean = set.animal.params()$`Mean g0`,
-           g0sd = set.animal.params()$`Stdev g0`,
-           sigmean = set.animal.params()$`Mean sigma`,
-           sigsd = set.animal.params()$`Stdev sigma`)
+    myParams <- proofofabsence::makeParams(setMultipleZones = TRUE,
+                                           setNumIterations = 2,
+                                           setRRTrapDistance = 100.0,
+                                           startYear = 1, endYear = 2,
+                                           startPu = 1.0, PuIncreaseRate = 0.0,
+                                           setMinRR = 1.0,
+                                           setPrior = c(0.2,0.3,0.4),
+                                           setIntro = c(0.0001,0.0002,0.0003))
     
-    print(animal.params)
-
-    for(i in seq_along(animal.params$TYPENUM)){
-      print(i)
-      animals$addAnimal(animal = animal.params$TYPENUM[i],
-                        name = animal.params$TYPECHAR[i],
-                        detect = params$DETECT_ANIMAL)
-    }
-
-    myParams = params$POAParameters(animals)
-
-    ## USE MULTIPLE ZONES
-    myParams$setMultipleZones(TRUE)
-
-    for(i in seq_along(animal.params$TYPENUM)){
-
-      TYPE <- as.integer(animal.params$TYPENUM[i])
-      myParams$setCapture(TYPE, animal.params$g0mean[i], animal.params$g0sd[i])
-      myParams$setSigma(TYPE, animal.params$sigmean[i], animal.params$sigsd[i])
-      myParams$addRRBufferAnimal(animalCode = TYPE)
-    }
-
-
-    # number of iterations
-    myParams$setNumIterations(as.integer(valid()$setNumIterations))
-    #    myParams.setNumChewcardTraps(3)
-    myParams$setRRTrapDistance(as.integer(valid()$setRRTrapDistance))
-
-    myParams$setYears(as.integer(1), as.integer(valid()$setYears))
-
-    ## THE startPu WILL NOT BE USED IF USE zoneData FILE - TURN OFF
-    # starting Pu (GRID CELL PREVALENCE) and period rate of Pu increase
-    startPu = as.double(valid()$startPu)
-
-    ## SET THE RATE OF INCREASE OF PU
-    PuIncreaseRate = as.double(0.0)
-    myParams$setPu(startPu, PuIncreaseRate)
-
-    # minimum RR value
-    myParams$setMinRR(as.double(input$setMinRR))
-
-    myParams$setPrior(valid()$prior_min, valid()$prior_mode, valid()$prior_max)
-    myParams$setIntro(0.00001, 0.00002, 0.00003)        # (min, mode, max)
-
-
+    myParams <- proofofabsence::addAnimalParams(myParams,
+                                                deviceName = row.names(set.animal.params()),
+                                                g0 = set.animal.params()$`Mean g0`,
+                                                g0sd = set.animal.params()$`Stdev g0`,
+                                                sig = set.animal.params()$`Mean sigma`, 
+                                                sigsd = set.animal.params()$`Stdev sigma`)
+    
+    
     # create rawdata using preProcessing.RawData() ----------------------------
+    
+    dir.create(path = ".tmp/input", recursive = TRUE, showWarnings = FALSE)
+    dir.create(path = ".tmp/output", recursive = TRUE, showWarnings = FALSE)
     
     # debugonce(RawData_R)
     rawdata <- 
-      RawData_R(zonesShapeFName = paths$zonesShapeFName,
-              relativeRiskFName = paths$relativeRiskFName,
-              zonesOutFName = ".tmp/output/zones.tif", #defaults$zonesOutFName$value, # "app\\www\\poa\\Kaitake\\Results\\Model_0\\zones.tif",
-              relRiskRasterOutFName = ".tmp/output/relRiskRaster.tif", # "app\\www\\poa\\Kaitake\\Results\\Model_0\\relRiskRaster.tif",
-              resolution = as.double(valid()$resolution),
-              epsg = as.integer(input$epsg),
-              surveyFName = paths$surveyFName,
-              params = myParams, 
-              gridSurveyFname = NULL)
-
-    result <- calculation$calcProofOfAbsence(myParams, rawdata$survey,
-                                               rawdata$RelRiskExtent, rawdata$zoneArray, rawdata$zoneCodes,
-                                               rawdata$match_geotrans, rawdata$wkt, "test_data/Results",
-                                               rawdata$RR_zone, rawdata$Pu_zone, rawdata$Name_zone)
+      proofofabsence::RawData_R(zonesShapeFName = paths$zonesShapeFName,
+                                relativeRiskFName = paths$relativeRiskFName,
+                                zonesOutFName = ".tmp/output/zones.tif", #defaults$zonesOutFName$value, # "app\\www\\poa\\Kaitake\\Results\\Model_0\\zones.tif",
+                                relRiskRasterOutFName = ".tmp/output/relRiskRaster.tif", # "app\\www\\poa\\Kaitake\\Results\\Model_0\\relRiskRaster.tif",
+                                resolution = as.double(valid()$resolution),
+                                epsg = as.integer(input$epsg),
+                                surveyFName = paths$surveyFName,
+                                params = myParams, 
+                                gridSurveyFname = NULL)
+    
+    result <- poa$calculation$calcProofOfAbsence(myParams, rawdata$survey,
+                                                 rawdata$RelRiskExtent, rawdata$zoneArray, rawdata$zoneCodes,
+                                                 rawdata$match_geotrans, rawdata$wkt, "test_data/Results",
+                                                 rawdata$RR_zone, rawdata$Pu_zone, rawdata$Name_zone)
 
     # browser()    # <- break into reactive object
     
