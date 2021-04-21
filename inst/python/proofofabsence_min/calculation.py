@@ -307,7 +307,7 @@ def calcProofOfAbsence(poaparams, trapArray, RRArray, zoneArray, zoneCodes, matc
 
     # write the big rasters to directory as *.tif
     # (1) multilayered tif of annual mean SeU
-#    print('sensitivityList size', sensitivityList.nbytes / (1024 * 1024 * 1024))
+    #    print('sensitivityList size', sensitivityList.nbytes / (1024 * 1024 * 1024))
     meanSeuTifPathName = os.path.join(outputDataPath, 'meanSeuAllYears.tif')
     # gdt_type = gdalconst.GDT_Float32
     # writeTif(sensitivityList, meanSeuTifPathName, gdt_type, wkt, match_geotrans)
@@ -331,6 +331,9 @@ def calcProofOfAbsence(poaparams, trapArray, RRArray, zoneArray, zoneCodes, matc
     result = Results()
     result.sensitivityMatrix = SSeMat
     print('r.seMat size', SSeMat.nbytes / (1024 * 1024 * 1024))
+
+    # values associated with 'meanSeuAllYears.tif' raster
+    result.sensitivityList = sensitivityList
 
     result.poFMatrix = PoFMat
     print('PofMat size', PoFMat.nbytes / (1024 * 1024 * 1024))
