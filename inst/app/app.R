@@ -289,17 +289,17 @@ server <- function(input, output, session) {
   # - copy device folders
   observe({
     if(input$namedExample == "Kaitake possums"){
-      paths$zonesShapeFName <- "app/www/example_data/Kaitake_possums/extent.shp"
-      paths$relativeRiskFName <- "app/www/example_data/Kaitake_possums/relRiskRaster.tif"
-      paths$surveyFName <- "app/www/example_data/Kaitake_possums/devices.csv"
+      paths$zonesShapeFName <- system.file("example_data/Kaitake_possums/extent.shp", package = "proofofabsence")
+      paths$relativeRiskFName <- system.file("example_data/Kaitake_possums/relRiskRaster.tif", package = "proofofabsence")
+      paths$surveyFName <- system.file("example_data/Kaitake_possums/devices.csv", package = "proofofabsence")
     } else if(input$namedExample == "Mahia possums"){
-      paths$zonesShapeFName <- "app/www/example_data/Mahia_Audrey/extent_block1ABCD.shp"
-      paths$relativeRiskFName <- "app/www/example_data/Mahia_Audrey/habDistRR_block1ABCD.tif"
-      paths$surveyFName <- "app/www/example_data/Mahia_Audrey/Surveillance_location.csv"
+      paths$zonesShapeFName <- system.file("example_data/Mahia_Audrey/extent_block1ABCD.shp", package = "proofofabsence")
+      paths$relativeRiskFName <- system.file("example_data/Mahia_Audrey/habDistRR_block1ABCD.tif", package = "proofofabsence")
+      paths$surveyFName <- system.file("example_data/Mahia_Audrey/Surveillance_location.csv", package = "proofofabsence")
     } else if(input$namedExample == "CK stoats"){
-      paths$zonesShapeFName <- "app/www/example_data/CK_stoats/extent.shp"
-      paths$relativeRiskFName <- "app/www/example_data/CK_stoats/relRisk.tif"
-      paths$surveyFName <- "app/www/example_data/CK_stoats/devices.csv"
+      paths$zonesShapeFName <- system.file("example_data/CK_stoats/extent.shp", package = "proofofabsence")
+      paths$relativeRiskFName <- system.file("example_data/CK_stoats/relRisk.tif", package = "proofofabsence")
+      paths$surveyFName <- system.file("example_data/CK_stoats/devices.csv", package = "proofofabsence")
     } else {
       unlink(".tmp/input/*")
     }
