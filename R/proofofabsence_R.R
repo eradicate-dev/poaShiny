@@ -35,7 +35,7 @@ poa_paks_min <- function(condaenv = "proofofabsence"){
 
   bi <<- import_builtins(convert = FALSE)
   poa <<- import_from_path(path = system.file("python", package = "proofofabsence"),
-                           module = "proofofabsence", convert = FALSE)
+                           module = "proofofabsence_min", convert = FALSE)
 }
 
 
@@ -80,14 +80,17 @@ RawData_R <- function(
         self$epsg = epsg
 
         # get spatial reference
-        sr = osr$SpatialReference()
-        sr$ImportFromEPSG(bi$int(self$epsg))
-        self$wkt = sr$ExportToWkt()
-
+        # sr = osr$SpatialReference()
+        # sr$ImportFromEPSG(bi$int(self$epsg))
+        # self$wkt = sr$ExportToWkt()
+        self$wkt <- rgdal::showWKT(p4s = "+init=epsg:2193", morphToESRI = TRUE)
+        
+        
         # Get layer dimensions of extent shapefile
-        self[c("xmin","xmax","ymin", "ymax")] <- getShapefileDimensions_reticulated(self = self, definition=np$False_)
+        # self[c("xmin","xmax","ymin", "ymax")] <- getShapefileDimensions_reticulated(self = self, definition=np$False_)
+        self[c("xmin","xmax","ymin", "ymax")] <- getShapefileDimensions_R(zonesShapeFName)
         # get number of columns and rows and set transformation
-        self[c("cols","rows","match_geotrans")] <- getGeoTrans_reticulated(self)
+        self[c("cols","rows","match_geotrans")] <- getGeoTrans_R(self)
 
         #----------------------------------------#
         # RUN FUNCTIONS
@@ -96,28 +99,20 @@ RawData_R <- function(
         #             self.makeMaskAndZones(params.multipleZones, params))
         self[c("zoneArray", "zoneCodes", "Pu_zone", "RR_zone", "Name_zone")] <-
           # suppressWarnings(makeMaskAndZones(self, multipleZones = py_to_r(params$multipleZones), params))
-          suppressWarnings(makeMaskAndZones(self, multipleZones = TRUE, params))
+          suppressWarnings(makeMaskAndZones(self, multipleZones = py_to_r(params$multipleZones), params))
 
         print(paste('Name_zone', self$Name_zone))
 
         # self.RelRiskExtent = self.makeRelativeRiskTif(relativeRiskFName,
         #                             relRiskRasterOutFName)
-        self$RelRiskExtent <- makeRelativeRiskTif(self =
-                                      list(xmin = py_to_r(self$xmin),
-                                           xmax = py_to_r(self$xmax),
-                                           ymin = py_to_r(self$ymin),
-                                           ymax = py_to_r(self$ymax),
-                                           rows = py_to_r(self$rows),
-                                           cols = py_to_r(self$cols),
-                                           resol = self$resol,
-                                           epsg = self$epsg),
-                                    relativeRiskFName = relativeRiskFName,relRiskRasterOutFName)
+        
+        self$RelRiskExtent <- makeRelativeRiskTif(self = self, relativeRiskFName = relativeRiskFName,relRiskRasterOutFName)
 
         print(paste('surveyFName', surveyFName))
 
         # condition to use point survey data or not
         # if surveyFName is not None:
-        if(surveyFName != bi$None){
+        if(!is.null(surveyFName)){
             print(paste('params.animals', params$animals))
             self$survey = poa$preProcessing$RawData$readSurveyData(self, surveyFName, params$animals)
         } else {
@@ -127,7 +122,7 @@ RawData_R <- function(
         }
 
         # if gridSurveyFname is not None:
-        if(gridSurveyFname != bi$None){
+        if(!is.null(gridSurveyFname)){
             # (self.gridSurveyYears, self.gridSurveyMeans, self.gridSurveySD,
             #         self.gridSurveyCodes, self.gridSurveyData) = self.readGridSurveyData(
             #         gridSurveyFname, params)
@@ -604,31 +599,22 @@ makeRelativeRiskTif <- function(self, relativeRiskFName, relRiskRasterOutFName){
 #' @keywords keywords
 #' @export
 
-getShapefileDimensions_reticulated <- function(self, definition=np$False_){
+getShapefileDimensions_R <- function(zonesShapeFName){
 
   # get x and y min and max from shapefile
-
-  # dataset = ogr.Open(self$zonesShapeFName)
-  dataset = ogr$Open(self$zonesShapeFName)
-  # layer = dataset.GetLayer()
-  layer = dataset$GetLayer()
-  # print out definitions optional
-  # if definition:
-  #   getShapeLayerDefinition(layer)
-  if(definition == np$True_) getShapeLayerDefinition(layer)
+  layer = sf::st_read(zonesShapeFName, quiet = FALSE)
   # get dimensions
   # (xmin, xmax, ymin, ymax) = layer.GetExtent()
-  xyminmax = layer$GetExtent()
-  # del dataset
+  xyminmax = as.numeric(sf::st_bbox(layer))
   # del layer
-  rm(dataset, layer)
+  rm(layer)
 
   # return xmin, xmax, ymin, ymax
-  return(list(xyminmax[0], xyminmax[1],
-              xyminmax[2], xyminmax[3]))
+  return(list(xyminmax[1], xyminmax[3],
+              xyminmax[2], xyminmax[4]))
 }
 
-getGeoTrans_reticulated <- function(self){
+getGeoTrans_R <- function(self){
   #### get dimensions that incorporate both extent shape and farm boundaries
   # cols = int((self.xmax - self.xmin) / self.resol)
   cols = np$int(np$divide(np$subtract(self$xmax, self$xmin), self$resol))
@@ -641,6 +627,8 @@ getGeoTrans_reticulated <- function(self){
   # print('cols', cols, 'rows', rows)
   paste('cols', cols, 'rows', rows)
   # return cols, rows, match_geotrans
-  return(list(cols = cols, rows = rows, match_geotrans = bi$list(match_geotrans)))
+  return(list(cols = as.integer(py_to_r(cols)), 
+              rows = as.integer(py_to_r(rows)), 
+              match_geotrans = bi$list(match_geotrans)))
 }
 
