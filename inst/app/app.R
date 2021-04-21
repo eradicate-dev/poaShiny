@@ -478,7 +478,10 @@ server <- function(input, output, session) {
     # load any relative risk files in .tmp folder
     if(!is.null(paths$relativeRiskFName)){
       message(paste("loading relative risk .tif file:", paths$relativeRiskFName))
-      relRiskRaster(raster(paths$relativeRiskFName))
+      r <- raster::raster(paths$relativeRiskFName)
+      raster::crs(r) <- sf::st_crs(input$epsg)[["wkt"]]
+      relRiskRaster(r)
+      rm(r)
     }
   })
   
@@ -520,7 +523,7 @@ server <- function(input, output, session) {
                    value = 0, {
         # get layer and convert to WGS84
         RRmap.3857 <- 
-          projectRaster(relRiskRaster(), crs = sp::CRS("+init=epsg:3857"),
+          projectRaster(relRiskRaster(), crs = sf::st_crs(3857)[["wkt"]],
                         method = "ngb")
       
       
