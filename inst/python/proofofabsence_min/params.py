@@ -82,7 +82,7 @@ class Animal(object):
 class AnimalTypes(object):
     """
     Class that knows about all the types of animals/traps
-    that are in the surveillance data. 
+    that are in the surveillance data.
 
     New types can be added. By default just the standard ones
     are known about (see TYPE_* constants above).
@@ -92,17 +92,17 @@ class AnimalTypes(object):
         """
         add the standard animal codes with their functions
         """
-        self.functionDict = {TYPE_POSSUM : Animal("POSSUM", DETECT_DISEASE_TRAP),
-            TYPE_POSSTRAP : Animal("POSSTRAP", DETECT_DISEASE_TRAP),
-            TYPE_CHEWCARD : Animal("CHEWCARD", DETECT_DISEASE_CHEWCARD),
-            TYPE_FERRET : Animal("FERRET", DETECT_DISEASE_SENTINEL),
-            TYPE_PIG : Animal("PIG", DETECT_DISEASE_SENTINEL),
-            TYPE_REDDEER : Animal("REDEER", DETECT_DISEASE_SENTINEL)}
+        self.functionDict = {TYPE_POSSUM: Animal("possum", DETECT_DISEASE_TRAP),
+            TYPE_POSSTRAP: Animal("posstrap", DETECT_DISEASE_TRAP),
+            TYPE_CHEWCARD: Animal("chewcard", DETECT_DISEASE_CHEWCARD),
+            TYPE_FERRET: Animal("ferret", DETECT_DISEASE_SENTINEL),
+            TYPE_PIG: Animal("pig", DETECT_DISEASE_SENTINEL),
+            TYPE_REDDEER: Animal("reddeer", DETECT_DISEASE_SENTINEL)}
 
     def addAnimal(self, animal, name, detect):
         """
         Add a new animal/sentinel etc that isn't one of the standard
-        types. 
+        types.
         'animal' is the code to use for setting the params below.
         'name' is the name that will appear in the survey data
         'detect' is one of the DETECT_* constants above that specifies
@@ -111,12 +111,13 @@ class AnimalTypes(object):
         if animal in self.functionDict:
             msg = 'animal code already in use'
             raise KeyError(msg)
-        self.functionDict[animal] = Animal(name, detect)
-    
+        self.functionDict[animal] = Animal(name.lower(), detect)
+
+
 class POAParameters(object):
     """
-    Contains the parameters for the POA run. This object is also required 
-    for the pre-processing. 
+    Contains the parameters for the POA run. This object is also required
+    for the pre-processing.
     """
     startpu = 1.0
     prior_a = None
@@ -214,7 +215,7 @@ class POAParameters(object):
 
     def setPu(self, startpu, puRateIncrease = 0.0):
         """
-        Set the Pu - cell level design prevalence 
+        Set the Pu - cell level design prevalence
         """
         self.pu = startpu
         self.puRate = puRateIncrease
@@ -241,7 +242,7 @@ class POAParameters(object):
         """
         self.parameterArray[animal]['mean_sig'] = mean
         self.parameterArray[animal]['sd_sig'] = sd
-        
+
     def setChewcard(self, animal, mean, sd):
         """
         Sets the chewcard parameters for the given animal index

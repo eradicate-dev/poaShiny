@@ -1,4 +1,3 @@
-
 """
 Contains class that allow setting the numeric parameters that
 control the running of the model.
@@ -47,11 +46,11 @@ Different detection process
 """
 
 ANIMAL_PARAM_DTYPE = [('mean_sig', 'f8'), ('sd_sig', 'f8'),
-    ('mean_CC', 'f8'), ('sd_CC', 'f8'), ('a_CC', 'f8'), ('b_CC', 'f8'),
-    ('mean_capt', 'f8'), ('sd_capt', 'f8'), ('a_capt', 'f8'), ('b_capt', 'f8'),
-    ('mean_test', 'f8'), ('sd_test', 'f8'), ('a_test', 'f8'), ('b_test', 'f8'),
-    ('mean_infect', 'f8'), ('sd_infect', 'f8'), ('a_infect', 'f8'),
-    ('b_infect', 'f8')]
+                      ('mean_CC', 'f8'), ('sd_CC', 'f8'), ('a_CC', 'f8'), ('b_CC', 'f8'),
+                      ('mean_capt', 'f8'), ('sd_capt', 'f8'), ('a_capt', 'f8'), ('b_capt', 'f8'),
+                      ('mean_test', 'f8'), ('sd_test', 'f8'), ('a_test', 'f8'), ('b_test', 'f8'),
+                      ('mean_infect', 'f8'), ('sd_infect', 'f8'), ('a_infect', 'f8'),
+                      ('b_infect', 'f8')]
 """
 numpy dtype for structured array that contains the parameters for 
 each animal
@@ -67,6 +66,7 @@ numpy dtype for structured array that contains the parameters each grid
 survey.
 """
 
+
 class Animal(object):
     """
     Class that described an animal/trap and how to process it
@@ -75,34 +75,37 @@ class Animal(object):
     later
     'detect' is one of the DETECT_* constants above
     """
+
     def __init__(self, name, detect):
         self.name = name
         self.detect = detect
 
+
 class AnimalTypes(object):
     """
     Class that knows about all the types of animals/traps
-    that are in the surveillance data. 
+    that are in the surveillance data.
 
     New types can be added. By default just the standard ones
     are known about (see TYPE_* constants above).
     """
     functionDict = None
+
     def __init__(self):
         """
         add the standard animal codes with their functions
         """
-        self.functionDict = {TYPE_POSSUM : Animal("POSSUM", DETECT_DISEASE_TRAP),
-            TYPE_POSSTRAP : Animal("POSSTRAP", DETECT_DISEASE_TRAP),
-            TYPE_CHEWCARD : Animal("CHEWCARD", DETECT_DISEASE_CHEWCARD),
-            TYPE_FERRET : Animal("FERRET", DETECT_DISEASE_SENTINEL),
-            TYPE_PIG : Animal("PIG", DETECT_DISEASE_SENTINEL),
-            TYPE_REDDEER : Animal("REDEER", DETECT_DISEASE_SENTINEL)}
+        self.functionDict = {TYPE_POSSUM: Animal("possum", DETECT_DISEASE_TRAP),
+                             TYPE_POSSTRAP: Animal("posstrap", DETECT_DISEASE_TRAP),
+                             TYPE_CHEWCARD: Animal("chewcard", DETECT_DISEASE_CHEWCARD),
+                             TYPE_FERRET: Animal("ferret", DETECT_DISEASE_SENTINEL),
+                             TYPE_PIG: Animal("pig", DETECT_DISEASE_SENTINEL),
+                             TYPE_REDDEER: Animal("reddeer", DETECT_DISEASE_SENTINEL)}
 
     def addAnimal(self, animal, name, detect):
         """
         Add a new animal/sentinel etc that isn't one of the standard
-        types. 
+        types.
         'animal' is the code to use for setting the params below.
         'name' is the name that will appear in the survey data
         'detect' is one of the DETECT_* constants above that specifies
@@ -111,12 +114,13 @@ class AnimalTypes(object):
         if animal in self.functionDict:
             msg = 'animal code already in use'
             raise KeyError(msg)
-        self.functionDict[animal] = Animal(name, detect)
-    
+        self.functionDict[animal] = Animal(name.lower(), detect)
+
+
 class POAParameters(object):
     """
-    Contains the parameters for the POA run. This object is also required 
-    for the pre-processing. 
+    Contains the parameters for the POA run. This object is also required
+    for the pre-processing.
     """
     startpu = 1.0
     prior_a = None
@@ -134,10 +138,10 @@ class POAParameters(object):
     parameterArray = None
     animals = None
     multipleZones = False
-    Pz = 1.0        # zone design prevalence - should always be set to 1
+    Pz = 1.0  # zone design prevalence - should always be set to 1
     # kBufferAnimals are the types we buffer with higher RR values
     # if they are in areas of < minRR
-#    RRBufferAnimals = {TYPE_POSSUM, TYPE_POSSTRAP, TYPE_CHEWCARD}
+    #    RRBufferAnimals = {TYPE_POSSUM, TYPE_POSSTRAP, TYPE_CHEWCARD}
     gridSurveyData = None
     gridSurveyParams = None
     # set to greater than one for multi threading
@@ -185,13 +189,11 @@ class POAParameters(object):
         """
         self.RRTrapDistance = RRDistance
 
-
     def setYears(self, startYear, endYear):
         """
         Sets a sequence of years that the model is to be run over
         """
         self.years = np.arange(startYear, (endYear + 1), dtype=int)
-
 
     def addRRBufferAnimal(self, animalCode):
         """
@@ -212,9 +214,9 @@ class POAParameters(object):
         """
         self.nChewcardTraps = nChewcardTraps
 
-    def setPu(self, startpu, puRateIncrease = 0.0):
+    def setPu(self, startpu, puRateIncrease=0.0):
         """
-        Set the Pu - cell level design prevalence 
+        Set the Pu - cell level design prevalence
         """
         self.pu = startpu
         self.puRate = puRateIncrease
@@ -241,7 +243,7 @@ class POAParameters(object):
         """
         self.parameterArray[animal]['mean_sig'] = mean
         self.parameterArray[animal]['sd_sig'] = sd
-        
+
     def setChewcard(self, animal, mean, sd):
         """
         Sets the chewcard parameters for the given animal index
@@ -286,14 +288,14 @@ class POAParameters(object):
         self.parameterArray[animal]['a_infect'] = a
         self.parameterArray[animal]['b_infect'] = b
 
-    def setGridSurvey(self, gridSurveyYears, gridSurveyData, 
-                gridSurveyMeans, gridSurveySD, gridSurveyCodes):
+    def setGridSurvey(self, gridSurveyYears, gridSurveyData,
+                      gridSurveyMeans, gridSurveySD, gridSurveyCodes):
         """
         Sets the data and parameters for grid survey
         """
         nGrids = len(gridSurveyYears)
-        self.gridSurveyParams = np.empty((nGrids,), 
-                dtype=GRID_SURVEY_PARAM_DTYPE)
+        self.gridSurveyParams = np.empty((nGrids,),
+                                         dtype=GRID_SURVEY_PARAM_DTYPE)
 
         for i in range(nGrids):
             self.gridSurveyParams[i]['year'] = gridSurveyYears[i]
@@ -303,7 +305,7 @@ class POAParameters(object):
             self.gridSurveyParams[i]['code'] = gridSurveyCodes[i]
 
         self.gridSurveyData = gridSurveyData
-        
+
     def setMultipleZones(self, multipleZones):
         """
         Sets whether we expect multiple zones in the shape
@@ -311,27 +313,29 @@ class POAParameters(object):
         """
         self.multipleZones = multipleZones
 
+
 def findBeta(mu, sdev):
     """
     Find a and b of a Beta distribution given mean and standard deviation
     """
     sdevsq = sdev * sdev;
-    a = mu * ( ( mu * (1.0 - mu) ) / sdevsq - 1.0)
-    b = ( 1.0 - mu ) * ( ( mu * ( 1.0 - mu ) ) / sdevsq - 1.0)
+    a = mu * ((mu * (1.0 - mu)) / sdevsq - 1.0)
+    b = (1.0 - mu) * ((mu * (1.0 - mu)) / sdevsq - 1.0)
 
     return a, b
 
+
 def findBetaPert(min, mode, max, shape=PERT_SHAPE):
     """
-    Find a and b of a Beta distribution given the information for a Pert distribution 
+    Find a and b of a Beta distribution given the information for a Pert distribution
     (min, mode, max)
-    see http://rgm2.lab.nig.ac.jp/RGM2/func.php?rd_id=mc2d:pert 
+    see http://rgm2.lab.nig.ac.jp/RGM2/func.php?rd_id=mc2d:pert
     """
-    mu = (min + max + shape * mode)/(shape + 2.0);
+    mu = (min + max + shape * mode) / (shape + 2.0);
     if mu == mode:
         shape1 = 1.0 + shape / 2.0
     else:
-        shape1 = (mu - min) * (2.0 * mode - min - max)/((mode-mu)*(max - min))
-    shape2 = shape1 * (max - mu)/(mu - min)
+        shape1 = (mu - min) * (2.0 * mode - min - max) / ((mode - mu) * (max - min))
+    shape2 = shape1 * (max - mu) / (mu - min)
     return shape1, shape2
 

@@ -31,12 +31,13 @@ from osgeo import ogr
 from osgeo import osr
 from osgeo import gdalconst
 from numba import njit
+import warnings
 
 from proofofabsence import params
 
 TRAP_PARAM_DTYPE = [('year', 'u4'), ('animal', 'u4'), ('detect', 'u4'),
-    ('easting', 'f8'), ('northing', 'f8'), ('age', 'f8'), ('sex', 'u1'),
-    ('trapnights', 'f8')]
+                    ('easting', 'f8'), ('northing', 'f8'), ('age', 'f8'), ('sex', 'u1'),
+                    ('trapnights', 'f8')]
 "data type for the array of animal/trap data"
 
 USE_GDAL_FOR_BILINEAR = False
@@ -52,18 +53,18 @@ RRZONE_CODE_ATTRIBUTE = "RR_zone"
 ## CODE FOR NAME OF ZONES
 NAMEZONE_CODE_ATTRIBUTE = "zoneName"
 
-
 EXPECTED_SHP_ATTRIBUTES = [(ZONE_CODE_ATTRIBUTE, [ogr.OFTInteger, ogr.OFTInteger64]),
-                            (RRZONE_CODE_ATTRIBUTE, [ogr.OFTReal]),
-                            (PU_CODE_ATTRIBUTE, [ogr.OFTInteger, ogr.OFTInteger64]),
-                            (NAMEZONE_CODE_ATTRIBUTE, [ogr.OFTString])]
+                           (RRZONE_CODE_ATTRIBUTE, [ogr.OFTInteger, ogr.OFTInteger64,
+                                                    ogr.OFTReal]),
+                           (PU_CODE_ATTRIBUTE, [ogr.OFTInteger, ogr.OFTInteger64,
+                                                ogr.OFTReal]),
+                           (NAMEZONE_CODE_ATTRIBUTE, [ogr.OFTString])]
 
 # EXPECTED_SHP_ATTRIBUTES = [(ZONE_CODE_ATTRIBUTE, [ogr.OFTInteger, ogr.OFTInteger64]),
-#                             (RRZONE_CODE_ATTRIBUTE, [ogr.OFTReal]),
-#                             (PU_CODE_ATTRIBUTE, [ogr.OFTInteger, ogr.OFTInteger64]),
-#                             (NAMEZONE_CODE_ATTRIBUTE, [ogr.OFTString])]
+#                            (RRZONE_CODE_ATTRIBUTE, [ogr.OFTReal]),
+#                            (PU_CODE_ATTRIBUTE, [ogr.OFTInteger, ogr.OFTInteger64]),
+#                            (NAMEZONE_CODE_ATTRIBUTE, [ogr.OFTString])]
 "Check that these attributes exist as the correct types"
-
 
 
 def decodeBytes(byteArray, nArray):
@@ -74,23 +75,63 @@ def decodeBytes(byteArray, nArray):
     for i in range(1, nArray):
         strArr_i = str(byteArray[i], 'utf-8')
         strArray = np.append(strArray, strArr_i)
-    return(strArray)
+    return (strArray)
+
 
 def equalProjection(this, other):
     """
-    Returns True if the projection of self is the same as the 
+    Returns True if the projection of self is the same as the
     projection of other
-        
+
     """
     srSelf = osr.SpatialReference(wkt=this)
     srOther = osr.SpatialReference(wkt=other)
     return bool(srSelf.IsSame(srOther))
 
 
+# @njit
+def checkPointData_In_Extent(surveyDat, geotrans, zoneArray, ndat):
+    """
+    ## CHECK PERCENTAGE OF POINT DATA IN EXTENT OF INTEREST
+    """
+    transform = np.array(geotrans)
+    halfRes = transform[1] / 2
+    countIn = 0.0
+    (r, c) = np.shape(zoneArray)
+    print('shape extent', r, c)
+    countOut = 0
+    notAOI = 0
+    ## LOOP EASTING AND NORTHINGS
+    for i in range(ndat):
+        x = surveyDat['easting'][i]
+        y = surveyDat['northing'][i]
+        ## GET ROWS AND COLS
+        col = int(np.round((x - transform[0] - halfRes) / transform[1]))
+        row = int(np.round((transform[3] - y - halfRes) / transform[1]))
+        ## CHECK IF IN AREA OF INTEREST (SHAPEFILE)
+        try:
+            zoneArray[row, col]
+        except (ValueError, IndexError):
+            inRaster = False
+        else:
+            inRaster = True
+        if not inRaster:
+            countOut += 1
+            continue
+        if zoneArray[row, col] == 1:
+            countIn += 1  ## ADD TO COUNT
+        else:
+            notAOI += 1
+    percentIn = countIn / ndat
+    #    print('countOut', countOut, 'notAOI', notAOI, 'countIn', countIn, 'ndat', ndat,
+    #        'percentIn', percentIn)
+    return (percentIn)
+
+
 class RawData():
     def __init__(self, zonesShapeFName, relativeRiskFName,
-            zonesOutFName, relRiskRasterOutFName, resolution, epsg,
-            surveyFName, params, gridSurveyFname=None):
+                 zonesOutFName, relRiskRasterOutFName, resolution, epsg,
+                 surveyFName, params, gridSurveyFname=None):
         """
         Read in data and do one-time manipulations
         """
@@ -111,17 +152,17 @@ class RawData():
         self.xmin, self.xmax, self.ymin, self.ymax = self.getShapefileDimensions(definition=False)
         # get number of columns and rows and set transformation
         self.cols, self.rows, self.match_geotrans = self.getGeoTrans()
-        
+
         ##########################################
         # RUN FUNCTIONS
         ##########################################
         (self.zoneArray, self.zoneCodes, self.Pu_zone, self.RR_zone, self.Name_zone) = (
-                    self.makeMaskAndZones(params.multipleZones, params))
+            self.makeMaskAndZones(params.multipleZones, params))
 
         print('Name_zone', self.Name_zone)
-        
-        self.RelRiskExtent = self.makeRelativeRiskTif(relativeRiskFName, 
-                                    relRiskRasterOutFName)
+
+        self.RelRiskExtent = self.makeRelativeRiskTif(relativeRiskFName,
+                                                      relRiskRasterOutFName)
 
         print('surveyFName', surveyFName)
 
@@ -133,12 +174,11 @@ class RawData():
             # not present, but need an empty array for processing
             self.survey = np.empty((0,), dtype=TRAP_PARAM_DTYPE)
 
-
         if gridSurveyFname is not None:
 
-            (self.gridSurveyYears, self.gridSurveyMeans, self.gridSurveySD, 
-                    self.gridSurveyCodes, self.gridSurveyData) = self.readGridSurveyData(
-                    gridSurveyFname, params)
+            (self.gridSurveyYears, self.gridSurveyMeans, self.gridSurveySD,
+             self.gridSurveyCodes, self.gridSurveyData) = self.readGridSurveyData(
+                gridSurveyFname, params)
 
         else:
             # not present
@@ -148,14 +188,16 @@ class RawData():
             self.gridSurveySD = None
             self.gridSurveyCodes = None
 
+        print('Start data check')
+        self.outOfZoneWarning = self.dataCheck(surveyFName, self.gridSurveyData)
+        print('Finished data check')
+
         # END RUN FUNCTIONS
         ##########################################
-
 
         ##########################################
         # RAWDATAFUNCTIONS
         ##########################################
-
 
     def makeMaskAndZones(self, multipleZones, params):
         """
@@ -164,7 +206,7 @@ class RawData():
         # create extent raster tiff
         dataset = ogr.Open(self.zonesShapeFName)
         zones_layer = dataset.GetLayer()
-        
+
         # OK now check all the expected attributes are in the shape file
         # if we are doing the multiple zones thing
         if multipleZones:
@@ -174,31 +216,31 @@ class RawData():
                 if idx == -1:
                     msg = 'Required Field %s not found in shape file' % name
                     raise ValueError(msg)
-               
+
                 fieldDefn = featDefn.GetFieldDefn(idx)
                 ogrType = fieldDefn.GetType()
                 if ogrType not in types:
                     foundName = fieldDefn.GetTypeName()
                     expectedNames = [ogr.GetFieldTypeName(x) for x in types]
-                    msg = '%s is of type %s. Expected: %s' % (name, foundName, 
-                                        ','.join(expectedNames))
+                    msg = '%s is of type %s. Expected: %s' % (name, foundName,
+                                                              ','.join(expectedNames))
                     raise ValueError(msg)
 
         zones_ds = gdal.GetDriverByName('GTiff').Create(self.zonesOutFName, self.cols,
-                            self.rows, 1, gdal.GDT_Byte)
+                                                        self.rows, 1, gdal.GDT_Byte)
         zones_ds.SetGeoTransform(self.match_geotrans)
         zones_ds.SetProjection(self.wkt)
         band = zones_ds.GetRasterBand(1)
-        NoData_value = 0    #-9999
+        NoData_value = 0  # -9999
         band.SetNoDataValue(NoData_value)
         # Rasterize Extent and write to directory
-        
+
         if multipleZones:
             # burn the value of the ZONE_CODE_ATTRIBUTE
-            gdal.RasterizeLayer(zones_ds, [1], zones_layer, 
-                    options=['ATTRIBUTE=%s' % ZONE_CODE_ATTRIBUTE])
+            gdal.RasterizeLayer(zones_ds, [1], zones_layer,
+                                options=['ATTRIBUTE=%s' % ZONE_CODE_ATTRIBUTE])
 
-            # get the unique zones 
+            # get the unique zones
             # and create a mapping between the zone and RR_zone, Pu_zone
             zones = set()
             zoneToRRDict = {}
@@ -218,7 +260,7 @@ class RawData():
                 ## GET NAMES OF ZONES FOR RESULTS TABLE:
                 nn = feature.GetFieldAsString(NAMEZONE_CODE_ATTRIBUTE)
                 zoneToNameDict[zone] = nn
-                    
+
             # ok turn zones into an array of unique values
             zoneCodes = np.array(list(zones))
             zoneCodes.sort()
@@ -241,29 +283,29 @@ class RawData():
             Pu_zone = np.array([params.pu])
             RR_zone = np.array([1])
             Name_zone = np.array(['oneZone'])
-        
+
         zones_ds.FlushCache()
-        
+
         # read in the data so we can return it
         zoneArray = zones_ds.GetRasterBand(1).ReadAsArray()
-        
+
         del dataset
         del zones_ds
         return zoneArray, zoneCodes, Pu_zone, RR_zone, Name_zone
-        
+
     def readGridSurveyData(self, gridSurveyFname, params):
         """
-        Read all the grid survey data and make sure it is converted to 
+        Read all the grid survey data and make sure it is converted to
         files of the correct spatial reference and extent.
         """
-        rawGridSurvey = np.genfromtxt(gridSurveyFname,  delimiter=',', names=True,
-            dtype=['S200', 'i4', 'f8', 'f8'])
+        rawGridSurvey = np.genfromtxt(gridSurveyFname, delimiter=',', names=True,
+                                      dtype=['S200', 'i4', 'f8', 'f8'])
 
         gridSurveyYears = rawGridSurvey['year']
 
         nGrids = len(gridSurveyYears)
-#        print('gridyears', self.gridSurveyYears, 'type', type(self.gridSurveyYears),
-#            'is scalar', np.isscalar(self.gridSurveyYears), 'gridsize', nGrids)
+        #        print('gridyears', self.gridSurveyYears, 'type', type(self.gridSurveyYears),
+        #            'is scalar', np.isscalar(self.gridSurveyYears), 'gridsize', nGrids)
 
         gridSurveyMeans = rawGridSurvey['mean']
         gridSurveySD = rawGridSurvey['sd']
@@ -274,15 +316,15 @@ class RawData():
 
         # work out the data type to use - find the minimum data type we can use
         # to save memory
-        maxCode = gridSurveyCodes[-1]      # 2**number of grids-1
+        maxCode = gridSurveyCodes[-1]  # 2**number of grids-1
         npDType = None
         for dt in (np.uint8, np.uint16, np.uint32, np.uint64):  # loop potential data types
-            info = np.iinfo(dt)                 # get min and max of datetype        
-            if maxCode <= info.max:             # if the required integer < max of data type, keep
+            info = np.iinfo(dt)  # get min and max of datetype
+            if maxCode <= info.max:  # if the required integer < max of data type, keep
                 npDType = dt
                 break
-                
-        if npDType is None:                     # if have more than 61 grids, it will be error
+
+        if npDType is None:  # if have more than 61 grids, it will be error
             msg = 'Too many grid survey years to store in an integer'
             raise ValueError(msg)
 
@@ -291,13 +333,12 @@ class RawData():
         # have to create a mask to update the grid survey rasters
         # this is not ideal because we do this in calculation.py
 
-
         tmpExtMask = self.zoneArray.copy()
         tmpExtMask[self.RelRiskExtent < params.minRR] = 0
 
-        # so we know when we got to the first one        
+        # so we know when we got to the first one
         gridSurveyData = None
-        
+
         # reproject each dataset into a temproary file and
         # then read it in.
         for fname, code in zip(rawGridSurvey['gridName'], gridSurveyCodes):
@@ -310,7 +351,7 @@ class RawData():
             os.close(handle)
 
             reproj_ds = gdal.GetDriverByName('GTiff').Create(reprojFName, self.cols,
-                            self.rows, 1, gdal.GDT_Byte)
+                                                             self.rows, 1, gdal.GDT_Byte)
 
             reproj_ds.SetGeoTransform(self.match_geotrans)
             # spatial reference from making extent mask
@@ -336,9 +377,38 @@ class RawData():
             del reproj_ds
             del src_ds
             os.remove(reprojFName)
-            
-        return(gridSurveyYears, gridSurveyMeans, gridSurveySD, gridSurveyCodes, 
+
+        return (gridSurveyYears, gridSurveyMeans, gridSurveySD, gridSurveyCodes,
                 gridSurveyData)
+
+    def dataCheck(self, surveyFName, gridSurveyData):
+        """
+        ## CHECK IF AT LEAST 5% OF POINT DATA OR GRID DATA ARE IN EXTENT OF INTEREST
+        """
+        ## IF HAVE POINT DATA
+        warningMessage = None
+        if surveyFName is not None:
+            ndat = np.shape(self.survey)[0]
+            percentIn = checkPointData_In_Extent(self.survey,
+                                                 self.match_geotrans, self.zoneArray, ndat)
+            if percentIn < 0.05:
+                warningMessage = "Less than 5% of point data are in area of interest. Consider checking point data or projections."
+        ## IF HAVE GRID DATA
+        if gridSurveyData is not None:
+            maskGrid = gridSurveyData > 0
+            zoneMask = self.zoneArray == 1
+            nExtentCells = np.sum(zoneMask)
+            nGridCells = np.sum(maskGrid)
+            #            maskGridExtent = maskGrid & zoneMask
+            #            nGridCellsInExtent = np.sum(maskGridExtent)
+            percentGrid = nGridCells / nExtentCells
+            if percentGrid < 0.05:
+                warningMessage = "Less than 5% of grid surveillance is in the area of interest. Consider checking grid data or projections."
+
+            print('nGridCells', nGridCells, 'nExtentCells', nExtentCells)
+        # warnings.warn(warningMessage)
+        print(warningMessage)
+        return warningMessage
 
     def getShapefileDimensions(self, definition=False):
         """
@@ -362,10 +432,9 @@ class RawData():
         cols = int((self.xmax - self.xmin) / self.resol)
         rows = int((self.ymax - self.ymin) / self.resol)
         match_geotrans = [self.xmin, self.resol, 0, self.ymax, 0,
-                               -self.resol]
+                          -self.resol]
         print('cols', cols, 'rows', rows)
         return cols, rows, match_geotrans
-
 
     def makeRelativeRiskTif(self, relativeRiskFName, relRiskRasterOutFName):
         """
@@ -375,7 +444,7 @@ class RawData():
         print('rr name', relativeRiskFName)
 
         dst = gdal.GetDriverByName('GTiff').Create(relRiskRasterOutFName, self.cols, self.rows,
-                                1, gdalconst.GDT_Float32)
+                                                   1, gdalconst.GDT_Float32)
         dst.SetGeoTransform(self.match_geotrans)
         # spatial reference from making extent mask
         dst.SetProjection(self.wkt)
@@ -397,21 +466,21 @@ class RawData():
                 inband = RR_src.GetRasterBand(1)
                 inband.SetNoDataValue(0)
                 in_im = inband.ReadAsArray()
-                
+
                 # subset to extent of shape file
                 geoTrans = RR_src.GetGeoTransform()
                 invGeoTrans = gdal.InvGeoTransform(geoTrans)
-                tlx, tly = gdal.ApplyGeoTransform(invGeoTrans, 
-                                self.xmin, self.ymax)
-                brx, bry = gdal.ApplyGeoTransform(invGeoTrans, 
-                                self.xmin + (self.resol * self.cols),
-                                self.ymax - (self.resol * self.rows))
+                tlx, tly = gdal.ApplyGeoTransform(invGeoTrans,
+                                                  self.xmin, self.ymax)
+                brx, bry = gdal.ApplyGeoTransform(invGeoTrans,
+                                                  self.xmin + (self.resol * self.cols),
+                                                  self.ymax - (self.resol * self.rows))
                 tlx = int(np.round(tlx))
                 tly = int(np.round(tly))
                 brx = int(np.round(brx))
                 bry = int(np.round(bry))
                 in_im = in_im[tly:bry, tlx:brx]
-                
+
                 nodata = inband.GetNoDataValue()
                 if nodata is None:
                     raise ValueError("No Data value must be set on RR raster")
@@ -430,10 +499,9 @@ class RawData():
             RelRiskExtent = np.where(zoneArray > 0, 1, 0).astype(np.float32)
             outband = dst.GetRasterBand(1)
             outband.WriteArray(RelRiskExtent)
-            
+
         print('finish makeRRTif')
         return RelRiskExtent
-
 
     def writeTifToFile(self, fname, data, gdt_type):
         """
@@ -441,7 +509,7 @@ class RawData():
         """
         # write array to tif in directory
         dst = gdal.GetDriverByName('GTiff').Create(fname, self.cols,
-                    self.rows, 1, gdt_type)
+                                                   self.rows, 1, gdt_type)
         dst.SetGeoTransform(self.match_geotrans)
         dst.SetProjection(self.wkt)
         band = dst.GetRasterBand(1)
@@ -455,15 +523,15 @@ class RawData():
         """
         # read in surveillance data
         surveyPathFName = surveyFName
-        rawSurvey = np.genfromtxt(surveyPathFName,  delimiter=',', names=True,
-            dtype=['u4', 'S32', 'f8', 'f8', 'f8', 'S10', 'f8'])
+        rawSurvey = np.genfromtxt(surveyPathFName, delimiter=',', names=True,
+                                  dtype=['u4', 'S32', 'f8', 'f8', 'f8', 'S10', 'f8'])
         survey = np.zeros(rawSurvey.shape, dtype=TRAP_PARAM_DTYPE)
 
         if np.sum(rawSurvey['Tnights'] < 0):
             raise ValueError('Negative trap nights found in point survey data')
 
-        #TRAP_PARAM_DTYPE = [('u4', 'year'), ('u4', 'animal'), ('f8', 'easting'),
-        #('f8', 'northing'), ('f8', 'age'), ('u1', 'sex'), ('u4', 'trapnights')]
+        # TRAP_PARAM_DTYPE = [('u4', 'year'), ('u4', 'animal'), ('f8', 'easting'),
+        # ('f8', 'northing'), ('f8', 'age'), ('u1', 'sex'), ('u4', 'trapnights')]
         # copy the basic ones accross
         survey['year'] = rawSurvey['Year']
         survey['easting'] = rawSurvey['Easting']
@@ -484,20 +552,21 @@ class RawData():
             # have to be careful to match bytes, might need some
             # work for Python 2.x
 
-            mask = (rawSurvey['Species'] == animal.name.encode())
+            mask = (np.char.lower(rawSurvey['Species']) == animal.name.encode())
             survey['animal'][mask] = code
             survey['detect'][mask] = animal.detect
             translatedAnimals[mask] = True
 
         # check if there are any that haven't been translated
         if not translatedAnimals.all():
-            missedAnimals = np.unique(rawSurvey['Species'][mask == False])
+            missedAnimals = np.unique(np.char.lower(rawSurvey['Species'])[mask == False])
             format = ','.join([str(x) for x in missedAnimals])
             msg = ('Was not able to understand the following species. ' +
-                'Add these to the parameters: %s' % format)
+                   'Add these to the parameters: %s' % format)
             raise ValueError(msg)
 
         return survey
+
 
 ##################################################
 # Pickle results to directory
@@ -506,10 +575,11 @@ class RawData():
 
 class PickleDat(object):
     """
-    This object contains the fields from RawData that 
+    This object contains the fields from RawData that
     are needed for running the model. This object is
     designed to be pickled.
     """
+
     def __init__(self, rawdata):
         # assemble objects to pickle
         self.wkt = rawdata.wkt
@@ -530,17 +600,18 @@ class PickleDat(object):
         self.gridSurveySD = rawdata.gridSurveySD
         self.gridSurveyCodes = rawdata.gridSurveyCodes
 
+
 # Workaround for errors in bilinear interpolation in GDAL 2.x.
 # matches behaviour in GDAL 1.x which appears to give the correct answers.
 @njit
 def bilinear(in_im, out_im, nodata):
-
     xratio = in_im.shape[1] / out_im.shape[1]
     yratio = in_im.shape[0] / out_im.shape[0]
 
     for y in range(out_im.shape[0]):
         for x in range(out_im.shape[1]):
             out_im[y, x] = bilinear_interpolate(in_im, x * xratio, y * yratio, nodata)
+
 
 @njit
 def bilinear_interpolate(im, x, y, nodata):

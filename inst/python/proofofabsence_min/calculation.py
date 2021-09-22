@@ -669,6 +669,13 @@ def circleFunction(dSigma, traps, nCurrentTrap, paramArray,
     dSearchBRX = traps[nCurrentTrap]['easting'] + dSearchDistance
     dSearchBRY = traps[nCurrentTrap]['northing'] - dSearchDistance
 
+
+
+
+    ## TODO: IS THERE AN ERROR IN THE ROW CALCULATION BELOW?
+
+
+
     # Convert to pixel coords 
     # Both could be outside the raster, but we need to search 
     # anyway in case the search area intersects with the raster 
@@ -677,6 +684,12 @@ def circleFunction(dSigma, traps, nCurrentTrap, paramArray,
     nTLY = int(np.round((dSearchTLY - transform[3] - halfRes) / transform[5]))
     nBRX = int(np.round((dSearchBRX - transform[0] - halfRes) / transform[1]))
     nBRY = int(np.round((dSearchBRY - transform[3] - halfRes) / transform[5]))
+
+
+
+
+
+
 
     # Correct back to coords on the grid 
     dSearchTLX = transform[0] + nTLX * transform[1] + halfRes
