@@ -214,9 +214,12 @@ server <- function(input, output, session) {
     reticulate::virtualenv_install(virtualenv_dir, packages = PYTHON_DEPENDENCIES)
     reticulate::use_virtualenv(virtualenv_dir, required = T)
     
-  } else if(grepl("conda.exe", Sys.getenv("CONDA_EXE"))){ 
-    # check if conda available and use 'r_poa' environment
-    use_condaenv(condaenv = "r_poa", required = TRUE)
+  } else if(!is.null(reticulate::conda_binary())){ 
+    
+    # check if conda available and use 'proofofabsence' environment
+    reticulate::use_condaenv(condaenv = "proofofabsence", required = TRUE)
+    print(reticulate::py_config())
+    
   } else {
     # use python on system path
     if(Sys.getenv("PYTHON_PATH") != "") use_python(Sys.getenv("PYTHON_PATH"))
