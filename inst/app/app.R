@@ -70,7 +70,8 @@ defaults <-
        setRRTrapDistance = list(desc = "", label = "Relative risk distance", value = 1),
        setMinRR = list(desc = "", label = "Minimum relative risk value", value = 1),
        setYears = list(desc = "", label = "setYears", value = 2),
-       startPu = list(desc = "", label = "startPu", value = 1))
+       startPu = list(desc = "", label = "startPu", value = 1),
+       summaryCIs = list(desc = "", label = "Summary table credible intervals", value = 0.95))
 
 
 # Define UI
@@ -126,7 +127,8 @@ ui.advinputs <-
                numericInput(inputId = "setNumIterations", label = defaults$setNumIterations$label, value = defaults$setNumIterations$value),
                numericInput(inputId = "setRRTrapDistance", label = defaults$setRRTrapDistance$label, value = defaults$setRRTrapDistance$value),
                numericInput(inputId = "setYears", label = defaults$setYears$label, value = defaults$setYears$value),
-               numericInput(inputId = "startPu", label = defaults$startPu$label, value = defaults$startPu$value)
+               numericInput(inputId = "startPu", label = defaults$startPu$label, value = defaults$startPu$value),
+               numericInput(inputId = "summaryCIs", label = defaults$summaryCIs$label, value = defaults$summaryCIs$value)
              )))
 
 
@@ -136,7 +138,9 @@ ui.output <-
   # list(
     # verbatimTextOutput(outputId = "table2"),
     fluidRow(column(width = 6, 
-                    list(h3("Probability of absence")),
+    list(h3("Probability of absence")),
+    div(title = "Adjust credible from default (0.95) under the 'Advanced inputs' tab.", h4("Summary table")),
+    tableOutput("POAsummary"),
     plotOutput("PoAtimeplot"),
     plotOutput("PoAdensplot")),
     # h3("validTable"),
@@ -644,6 +648,51 @@ server <- function(input, output, session) {
   
   # observe({try(print(pyPOA()$poFMatrix))})
 
+
+  # server: summary table ---------------------------------------------------
+  output$POAsummary <- renderTable({
+    
+    # get credible interval from advanced input
+    credint <- input$summaryCIs
+    lowint <- (1-credint)/2
+    uppint <- 1 - lowint
+    
+    # get results
+    result <- pyPOA()
+    
+    # Prior
+    prior <- py_to_r(result$priorStore)
+    prior_mean <- mean(prior)
+    prior_low <- quantile(prior, probs = lowint)
+    prior_upp <- quantile(prior, probs = uppint)
+    prior_string <- sprintf("%0.3f (%0.3f, %0.3f)", prior_mean, prior_low, prior_upp)
+    
+    # SSe
+    SSe_mat <- py_to_r(result$sensitivityMatrix)
+    SSe_mean <- rowMeans(SSe_mat)
+    SSe_low <- apply(SSe_mat, 1, quantile, probs = lowint)
+    SSe_upp <- apply(SSe_mat, 1, quantile, probs = uppint)
+    SSe_string <- sprintf("%0.3f (%0.3f, %0.3f)", SSe_mean, SSe_low, SSe_upp)
+    
+    # PoF
+    PoFmat <- py_to_r(result$poFMatrix)
+    poa_mean <- rowMeans(PoFmat)
+    poa_low <- apply(PoFmat, 1, quantile, lowint)
+    poa_upp <- apply(PoFmat, 1, quantile, uppint)
+    poa_string <- sprintf("%0.3f (%0.3f, %0.3f)", poa_mean, poa_low, poa_upp)
+    
+    years <- py_to_r(result$params$years)
+    # py_to_r(result$sensitivityList)
+    
+    formatted_df <- 
+      rbind(data.frame(Output = "Prior", Session = NA, 
+                       Value = prior_string),
+            data.frame(Output = c("SSe", rep("", length(SSe_string) - 1)), 
+                       Session = sprintf("%d", years), Value = SSe_string),
+            data.frame(Output = c("PoF", rep("", length(poa_string) - 1)), 
+                       Session = sprintf("%d", years), Value = poa_string)) }, na = "")
+  
+  
   # server: PoF plot --------------------------------------------------------
   # observe({try(print(py_to_r(pyPOA()$poFMatrix)))})
   
