@@ -13,11 +13,11 @@
 #'
 #' @examples
 #' proofofabsence::poa_paks_full()
-poa_paks_full <- function(condaenv = "proofofabsence"){
+poa_paks_full <- function(envname = "proofofabsence"){
 
   # configure reticulate ----------------------------------------------------
 
-  reticulate::use_condaenv(condaenv)
+  reticulate::use_condaenv(envname)
   reticulate::py_config()
   library(reticulate)
   library(proofofabsence)
@@ -43,6 +43,9 @@ poa_paks_full <- function(condaenv = "proofofabsence"){
   # py <<- import_main(convert = FALSE)
   poa <<- import_from_path(path = system.file("python", package = "proofofabsence"),
                            module = "proofofabsence", convert = FALSE)
+  
+  
+  
 }
 
 
@@ -59,9 +62,6 @@ poa_paks_full <- function(condaenv = "proofofabsence"){
 #'
 #' @return
 #' @export
-#'
-#' @examples
-#' addAnimalParams()
 addAnimalParams <- function(POAParameters = makeParams(),
                             deviceName = LETTERS[1:6],
                             g0 = rep(0.05, 6),
@@ -297,9 +297,6 @@ RawData_reticulated <- function(
 #' @param parameter 2
 #' @keywords keywords
 #' @export
-#' @examples
-#'  proofofabsence::preProcessing_reticulated()
-
 preProcessing_reticulated <- function(
            inputDataPath = "inst/example_data/Kaitake_possums", # system.file("example_data/Kaitake_possums", package = "proofofabsence"),
            outputDataPath = "results",
@@ -428,17 +425,6 @@ preProcessing_reticulated <- function(
   #     main()
   return(list(pickledat = pickledat, myParams = myParams, rawdata = rawdata))
 }
-
-#' title
-#'
-#' description
-#' @param parameter 1
-#' @param parameter 2
-#' @keywords keywords
-#' @export
-#' @examples
-#'  example code
-
 
 calcProofOfAbsence_reticulated <- function(myParams, pickledat, outputDataPath = "example_data/result0"){
 

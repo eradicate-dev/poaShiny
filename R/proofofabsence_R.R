@@ -88,9 +88,33 @@ poa_paks_min <- function(envname = "proofofabsence"){
 #' @export
 #'
 #' @examples
-#' proofofabsence::RawData_R()
+#' # library(proofofabsence)
+#' 
+#' # load python packages from anaconda install
+#' poa_paks_min()
+#' 
+#' # create minimal parameters object
+#' myParams <- makeParams()
+#' 
+#' # show parameterArray where detection device  values are stored
+#' myParams$parameterArray
+#' 
+#' # append animal/device parameters
+#' myParams <- addAnimalParams(myParams, deviceName = "legholdtrap",
+#'                             g0 = 0.05, g0sd = 0.01, sig = 90, sigsd = 10)
+#' myParams$parameterArray
+#' 
+#' # pass paths to RawData function
+#' rawdata <- RawData_R(zonesShapeFName = "inst/example_data/Mahia_Audrey/extent_block1ABCD.shp",
+#'   relativeRiskFName = "inst/example_data/Mahia_Audrey/habDistRR_block1ABCD.tif",
+#'   zonesOutFName = "results/zones.tif",
+#'   relRiskRasterOutFName = "results/rr.tif",
+#'   resolution = 100.0,
+#'   epsg = 2193,
+#'   surveyFName = bi$str("inst/example_data/Mahia_Audrey/Surveillance_location.csv"),
+#'   params = myParams,
+#'   gridSurveyFname=bi$None)
 RawData_R <- function(
-        # inputs
         zonesShapeFName = "inst/example_data/Kaitake_possums/extent.shp",
         relativeRiskFName = "inst/example_data/Kaitake_possums/relRiskRaster.tif",
         zonesOutFName = "results/zones.tif",
@@ -98,7 +122,7 @@ RawData_R <- function(
         resolution = 100.0,
         epsg = 2193,
         surveyFName = bi$str("inst/example_data/Kaitake_possums/devices.csv"),
-        params = proofofabsence::preProcessing_reticulated()[["myParams"]],
+        params = makeParams(),
         gridSurveyFname=bi$None){
 
         # replace RawData class self object with an R list
@@ -115,7 +139,7 @@ RawData_R <- function(
         # sr = osr$SpatialReference()
         # sr$ImportFromEPSG(bi$int(self$epsg))
         # self$wkt = sr$ExportToWkt()
-        self$wkt <- rgdal::showWKT(p4s = "+init=epsg:2193", morphToESRI = TRUE)
+        self$wkt <- sf::st_crs(2193)[["wkt"]]
         
         
         # Get layer dimensions of extent shapefile
@@ -131,7 +155,9 @@ RawData_R <- function(
         #             self.makeMaskAndZones(params.multipleZones, params))
         self[c("zoneArray", "zoneCodes", "Pu_zone", "RR_zone", "Name_zone")] <-
           # suppressWarnings(makeMaskAndZones(self, multipleZones = py_to_r(params$multipleZones), params))
-          suppressWarnings(makeMaskAndZones(self, multipleZones = py_to_r(params$multipleZones), params))
+          suppressWarnings(
+            makeMaskAndZones(self = self, params = params,
+                             multipleZones = reticulate::py_to_r(params$multipleZones)))
 
         print(paste('Name_zone', self$Name_zone))
 
@@ -179,9 +205,6 @@ RawData_R <- function(
 #' @param parameter 2
 #' @keywords keywords
 #' @export
-#' @examples
-#'  proofofabsence::preProcessing_reticulated()
-
 preProcessing_reticulated <- function(
            inputDataPath = "inst/example_data/Kaitake_possums", # system.file("example_data/Kaitake_possums", package = "proofofabsence"),
            outputDataPath = "results",
@@ -655,4 +678,9 @@ getGeoTrans_R <- function(self){
               rows = as.integer(reticulate::py_to_r(rows)), 
               match_geotrans = bi$list(match_geotrans)))
 }
+
+
+
+
+
 

@@ -29,7 +29,7 @@ conda_env_build_full <- function(envname = "proofofabsence", force.overwrite = T
 
   # required python packages and versions
   paks <- c("python==3.7.1","numba==0.48.0","numpy==1.17.5","rios==1.4.10","gdal==2.3.2",
-            "r==3.*", "rstudio","r-leaflet==2.0.3","r-shiny==1.4.0","r-reticulate==1.14",
+            "r==3.*", "rstudio","r-leaflet==2.0.3","r-shiny==1.4.0","r-reticulate==1.22",
             "r-rgdal==1.4_7","r-raster==3.0_7","r-sf==0.8_0","r-kableextra==1.1.0", 
             "r-devtools", "rtools")
 
@@ -48,6 +48,13 @@ conda_env_build_min <- function(envname = "proofofabsence", force.overwrite = TR
     if(!force.overwrite) switch(menu(choices = c("y","n"), title = "Proceed?") + 1, stop("Cancelling"),"",stop("Cancelling"))
   }
 
+  #-------------------------------------------------------------------------#
+  # conda create -n proofofabsence -c conda-forge python==3.7.1 numba==0.48.0
+  # numpy==1.17.5 r==3.* rstudio r-leaflet==2.0.3 r-shiny==1.4.0
+  # r-reticulate==1.14 r-rgdal==1.4_7 r-raster==3.0_7 r-sf==0.8_0
+  # r-kableextra==1.1.0 r-devtools rtools
+  #-------------------------------------------------------------------------#
+  
   # required python packages and versions
   paks <- c("python==3.7.1","numba==0.48.0","numpy==1.17.5","r==3.*", "rstudio",
             "r-leaflet==2.0.3","r-shiny==1.4.0","r-reticulate==1.14",
