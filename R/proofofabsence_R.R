@@ -400,35 +400,27 @@ preProcessing_reticulated <- function(
 #' title
 #'
 #' description
-#' @param parameter 1
-#' @param parameter 2
-#' @keywords keywords
+#'
+#' @param myParams POAParameters python class created using
+#'   \code{\link{makeParams}}
+#' @param rawdata Python dictionary containing survey data and spatial
+#'   information. Created using \code{\link{RawData_R}}
+#' @param outputDataPath Output directory to save output data.
+#'
 #' @export
-#' @examples
-#'  example code
+calcProofOfAbsence_reticulated <- function(myParams, rawdata, outputDataPath){
 
-
-calcProofOfAbsence_reticulated <- function(myParams, pickledat, outputDataPath = "example_data/result0"){
-
-  require(reticulate)
-  py_available()
-  use_condaenv("proofofabsence")
-  py_config()
-
-  py <- import_main(convert = F)
-  builtins <- import_builtins(convert = FALSE)
-
-  os <- import("os", convert = F, as = "os")
-  pickle <- import("pickle", convert = F)
-  np <- import("numpy", convert = F)
-
-  poa <- proofofabsence::poa_py()
-  calculation <- poa$calculation
-
-  calculation$calcProofOfAbsence(myParams, pickledat$survey,
-                                 pickledat$relativeRiskRaster, pickledat$zoneArray, pickledat$zoneCodes,
-                                 pickledat$match_geotrans, pickledat$wkt, outputDataPath,
-                                 pickledat$RR_zone, pickledat$Pu_zone, pickledat$Name_zone)
+  # create save directory if missing
+  dir.create(outputDataPath, recursive = TRUE)
+  
+  # load python modules
+  poa_paks_min()
+  
+  # run calcs
+  poa$calculation$calcProofOfAbsence(myParams, rawdata$survey,
+                                     rawdata$RelRiskExtent, rawdata$zoneArray, rawdata$zoneCodes,
+                                     rawdata$match_geotrans, rawdata$wkt, outputDataPath,
+                                     rawdata$RR_zone, rawdata$Pu_zone, rawdata$Name_zone)
 }
 
 #' makeMaskAndZones
