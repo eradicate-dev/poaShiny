@@ -16,14 +16,14 @@ poa_paks_min <- function(envname = "proofofabsence"){
 
   # envname <- "proofofabsence"
   
-  if(is.null(reticulate::conda_binary())) stop("Conda binary not found using conda_binary(). Is Anaconda installed?")
-  
-  # choose conda environment to use
-  env_loaded <- try(reticulate::use_condaenv("a", required = TRUE), silent = TRUE)
-  
-  # try loading conda environment
-  tryCatch(reticulate::use_condaenv(envname, required = TRUE), 
-           error = function(.) cat("No conda environment", envname, "found. Try building using conda_env_build_min()."))
+  # if(is.null(reticulate::conda_binary())) stop("Conda binary not found using conda_binary(). Is Anaconda installed?")
+  # 
+  # # choose conda environment to use
+  # env_loaded <- try(reticulate::use_condaenv("a", required = TRUE), silent = TRUE)
+  # 
+  # # try loading conda environment
+  # tryCatch(reticulate::use_condaenv(envname, required = TRUE), 
+  #          error = function(.) cat("No conda environment", envname, "found. Try building using conda_env_build_min()."))
   
   #-------------------------------------------------------------------------#
   # lines to set GDAL path to conda environment
