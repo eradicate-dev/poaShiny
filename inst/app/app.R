@@ -586,7 +586,7 @@ server <- function(input, output, session) {
     
     print("runpy press detected")
     
-    # proofofabsence::poa_paks_min()
+    proofofabsence::poa_paks_min()
     
     myParams <- proofofabsence::makeParams(setMultipleZones = TRUE,
                                            setNumIterations = input$setNumIterations,
