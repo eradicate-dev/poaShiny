@@ -14,6 +14,17 @@
 #' proofofabsence::poa_paks_full()
 poa_paks_min <- function(envname = "proofofabsence"){
 
+  # envname <- "proofofabsence"
+  
+  if(is.null(reticulate::conda_binary())) stop("Conda binary not found using conda_binary(). Is Anaconda installed?")
+  
+  # choose conda environment to use
+  env_loaded <- try(reticulate::use_condaenv("a", required = TRUE), silent = TRUE)
+  
+  # try loading conda environment
+  tryCatch(reticulate::use_condaenv(envname, required = TRUE), 
+           error = function(.) cat("No conda environment", envname, "found. Try building using conda_env_build_min()."))
+  
   #-------------------------------------------------------------------------#
   # lines to set GDAL path to conda environment
   #  - only needed if using outside an activated conda environment
@@ -21,14 +32,42 @@ poa_paks_min <- function(envname = "proofofabsence"){
   #-------------------------------------------------------------------------#
 
   # IMPORT MODULES
-  os        <<- reticulate::import("os", convert = FALSE)
-  np        <<- reticulate::import("numpy", convert = FALSE)
-  pickle    <<- reticulate::import("pickle", convert = FALSE)
-  numba     <<- reticulate::import("numba", convert = FALSE)
-
+  modules <- c(os = "os", np = "numpy", pickle = "pickle", numba = "numba")
+  
+  for(i in names(modules)){
+    if(reticulate::py_module_available(modules[i])){
+      assign(x = i, envir = .GlobalEnv,
+             value = reticulate::import(modules[i], convert = FALSE, delay_load = TRUE))
+    } else {
+      stop(sprintf("'%s' module missing from %s python environment.\n", modules[i], envname),
+           sprintf("Try installing using reticulate::conda_install(envname = '%s', packages = '%s')", envname, modules[i]))
+    }
+  }
+  
   bi <<- reticulate::import_builtins(convert = FALSE)
-  poa <<- reticulate::import_from_path(path = system.file("python", package = "proofofabsence"),
-                           module = "proofofabsence_min", convert = FALSE)
+  
+  ## Import POA modules from package folder
+  poa <<- 
+    reticulate::import_from_path(
+      path = system.file("python", package = "proofofabsence"),
+      module = "proofofabsence_min", 
+      convert = FALSE, delay_load = TRUE)
+  
+  # list and module files in package directory python folder
+  module_files <- list.files(# system.file("python/proofofabsence_min", package = "proofofabsence"),
+    "inst/python/proofofabsence_min/",
+    pattern = ".py$")
+  module_names <- sub("\\.\\w*$", "", module_files[!grepl("^__",module_files)])
+  
+  # check sub-modules loaded
+  for(i in module_names){
+    try( print(reticulate::py_str( poa[[i]] ) ), silent = TRUE)
+    if(!reticulate::py_has_attr(x = poa, i)){
+      stop("Sub module '", i, "' not loaded from ", 
+           system.file("python/proofofabsence_min", package = "proofofabsence"))
+    }
+  }
+  
 }
 
 
