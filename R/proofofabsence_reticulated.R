@@ -82,7 +82,7 @@ addAnimalParams <- function(POAParameters = makeParams(),
   # default AnimalTypes class
   .animals <- poa$params$AnimalTypes()
   # get length of POAParameters$animals. TYPE integer adds to this.
-  dictlen <- py_to_r(bi$len(.animals$functionDict))
+  dictlen <- reticulate::py_to_r(bi$len(.animals$functionDict))
 
   # add animals
   for(i in seq_along(deviceName)){
@@ -151,7 +151,7 @@ makeParams <- function(
     myParams = poa$params$POAParameters(animals)
 
     ## USE MULTIPLE ZONES
-    myParams$setMultipleZones(r_to_py(setMultipleZones))
+    myParams$setMultipleZones(reticulate::r_to_py(setMultipleZones))
 
     #---------------------------------------------------------------------------#
     # ADD LEGHOLD TRAP PARAMETERS                                               #
@@ -268,7 +268,7 @@ RawData_reticulated <- function(
         } else {
             # not present, but need an empty array for processing
             # self.survey = np.empty((0,), dtype=TRAP_PARAM_DTYPE)
-            self$survey = np$empty(tuple(0L), dtype=TRAP_PARAM_DTYPE)
+            self$survey = np$empty(reticulate::tuple(0L), dtype=TRAP_PARAM_DTYPE)
         }
 
         # if gridSurveyFname is not None:
@@ -344,12 +344,12 @@ preProcessing_reticulated <- function(
   #    relRiskRasterOutFName = None
 
   ############ IF USE GRIDS
-  useGrids = r_to_py(useGrids)
-  gridSurvey = r_to_py(NULL)   # os.path.join(inputDataPath, 'gridScenario14.csv')
+  useGrids = reticulate::r_to_py(useGrids)
+  gridSurvey = reticulate::r_to_py(NULL)   # os.path.join(inputDataPath, 'gridScenario14.csv')
 
   ############ IF FIRST RUN CONDITION
   # if True, do preprocessing, else skip to calculations
-  firstRun = r_to_py(firstRun)        # True or False
+  firstRun = reticulate::r_to_py(firstRun)        # True or False
 
   # resolution for analysis
   Resolution = np$double(np$double(Resolution))
@@ -367,7 +367,7 @@ preProcessing_reticulated <- function(
 
   # print('firstRun = ', firstRun)
 
-  if(py_to_r(firstRun)){
+  if(reticulate::py_to_r(firstRun)){
     # initiate instances of Classes
     rawdata = poa$preProcessing$RawData(zoneShapeFName, relativeRiskFName,
                                     zoneOutFName, relRiskRasterOutFName, Resolution, epsg,
@@ -376,7 +376,7 @@ preProcessing_reticulated <- function(
     print('finish preProcessing')
 
     ## condition on presence of grid data
-    if(py_to_r(useGrids)){
+    if(reticulate::py_to_r(useGrids)){
       myParams$setGridSurvey(rawdata.gridSurveyYears, rawdata.gridSurveyData,
                              rawdata.gridSurveyMeans, rawdata.gridSurveySD, rawdata.gridSurveyCodes)
     }
@@ -469,6 +469,9 @@ calcProofOfAbsence_reticulated <- function(myParams, pickledat, outputDataPath =
 #' @param parameter 1
 #' @param parameter 2
 #' @keywords keywords
+#' 
+#' @import reticulate
+#' 
 #' @export
 makeMaskAndZones_reticulated <- function(self, multipleZones, params){
   # """

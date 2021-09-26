@@ -150,7 +150,7 @@ RawData_R <- function(
         } else {
             # not present, but need an empty array for processing
             # self.survey = np.empty((0,), dtype=TRAP_PARAM_DTYPE)
-            self$survey = np$empty(tuple(0L), dtype=TRAP_PARAM_DTYPE)
+            self$survey = np$empty(reticulate::tuple(0L), dtype=TRAP_PARAM_DTYPE)
         }
 
         # if gridSurveyFname is not None:
@@ -231,8 +231,8 @@ preProcessing_reticulated <- function(
   #    relRiskRasterOutFName = None
 
   ############ IF USE GRIDS
-  useGrids = r_to_py(useGrids)
-  gridSurvey = r_to_py(NULL)   # os.path.join(inputDataPath, 'gridScenario14.csv')
+  useGrids = reticulate::r_to_py(useGrids)
+  gridSurvey = reticulate::r_to_py(NULL)   # os.path.join(inputDataPath, 'gridScenario14.csv')
 
   ############ IF FIRST RUN CONDITION
   # if True, do preprocessing, else skip to calculations
@@ -335,7 +335,7 @@ preProcessing_reticulated <- function(
 
   # print('firstRun = ', firstRun)
 
-  if(py_to_r(firstRun)){
+  if(reticulate::py_to_r(firstRun)){
     # initiate instances of Classes
     rawdata = poa$preProcessing$RawData(zoneShapeFName, relativeRiskFName,
                                     zoneOutFName, relRiskRasterOutFName, Resolution, epsg,
@@ -344,7 +344,7 @@ preProcessing_reticulated <- function(
     print('finish preProcessing')
 
     ## condition on presence of grid data
-    if(py_to_r(useGrids)){
+    if(reticulate::py_to_r(useGrids)){
       myParams$setGridSurvey(rawdata.gridSurveyYears, rawdata.gridSurveyData,
                              rawdata.gridSurveyMeans, rawdata.gridSurveySD, rawdata.gridSurveyCodes)
     }
@@ -524,10 +524,10 @@ makeMaskAndZones <- function(self, multipleZones, params){
   zones_ds <- fasterize::fasterize(sf = zones_layer, raster = zones_ds, field = ZONE_CODE_ATTRIBUTE, background = 0)
 
   # create zone arrays
-  zoneCodes <- np_array(zones_layer$zoneID, dtype = "int")
-  Pu_zone <- np_array(zones_layer$Pu_zone, dtype = "float")
-  RR_zone <- np_array(zones_layer$RR_zone, dtype = "float")
-  Name_zone <- np_array(zones_layer$zoneName, dtype = "str")
+  zoneCodes <- reticulate::np_array(zones_layer$zoneID, dtype = "int")
+  Pu_zone <- reticulate::np_array(zones_layer$Pu_zone, dtype = "float")
+  RR_zone <- reticulate::np_array(zones_layer$RR_zone, dtype = "float")
+  Name_zone <- reticulate::np_array(zones_layer$zoneName, dtype = "str")
 
   if(!multipleZones){
     # just burn 1 inside the polygon(s)
@@ -539,7 +539,7 @@ makeMaskAndZones <- function(self, multipleZones, params){
   }
 
   # read in the data so we can return it
-  zoneArray <- np_array(raster::as.matrix(zones_ds))
+  zoneArray <- reticulate::np_array(raster::as.matrix(zones_ds))
 
   # write to file
   print(self$zonesOutFName)
@@ -584,7 +584,7 @@ makeRelativeRiskTif <- function(self, relativeRiskFName, relRiskRasterOutFName){
     # set missing values to zero
     in_im[is.na(in_im)] <- 0
     # convert to numpy array
-    in_im = np_array(in_im, "float32")
+    in_im = reticulate::np_array(in_im, "float32")
 
     # make empty numpy array with rows:columns from self
     RelRiskExtent = np$empty(bi$tuple(list(self$rows, self$cols)), dtype=np$float32)
@@ -611,7 +611,7 @@ makeRelativeRiskTif <- function(self, relativeRiskFName, relRiskRasterOutFName){
     rast.zones <- raster::raster(zonesOutFName)
     rast.zero <- raster::clamp(rast.zones, lower = -Inf, upper = 1, useValues = TRUE)
 
-    RelRiskExtent <- np_array(raster::as.matrix(!is.na(rast.zero)), dtype=np$float32)
+    RelRiskExtent <- reticulate::np_array(raster::as.matrix(!is.na(rast.zero)), dtype=np$float32)
 
     # write out to relRiskRasterOutFName path
     raster::values(rast.zero) <- reticulate::py_to_r(RelRiskExtent)
@@ -659,8 +659,8 @@ getGeoTrans_R <- function(self){
   # print('cols', cols, 'rows', rows)
   paste('cols', cols, 'rows', rows)
   # return cols, rows, match_geotrans
-  return(list(cols = as.integer(py_to_r(cols)), 
-              rows = as.integer(py_to_r(rows)), 
+  return(list(cols = as.integer(reticulate::py_to_r(cols)), 
+              rows = as.integer(reticulate::py_to_r(rows)), 
               match_geotrans = bi$list(match_geotrans)))
 }
 
