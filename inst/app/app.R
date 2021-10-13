@@ -100,6 +100,8 @@ ui.inputs <- list(
            fileInput(inputId = "surveyFName", label = "surveyFName", multiple = FALSE),
            fileInput(inputId = "relativeRiskFName", label = "relativeRiskFName", multiple = FALSE))
     }),
+    radioButtons(inputId = "useMultiZone", label = "Use single or multiple zones?", 
+                 choices = c("Single zone", "Multiple zones"), selected = "Multiple zones"),
     numericInput(inputId = "setMinRR", label = defaults$setMinRR$label, value = defaults$setMinRR$value, min = 0, max = 1000),
     numericInput(inputId = "epsg", label = defaults$epsg$label, value = defaults$epsg$value)
   ),
@@ -447,6 +449,18 @@ server <- function(input, output, session) {
       zonesShape.sf <- st_sf(st_read(paths$zonesShapeFName), crs = input$epsg)
       zonesShape(zonesShape.sf)
     }
+    
+    # set to use single zone if a single feature shape file loaded
+    if(!is.null(zonesShape())) if(nrow(zonesShape()) == 1){
+      updateRadioButtons(inputId = "useMultiZone", 
+                         selected = "Single zone", choices = "Single zone")
+    } else {
+      updateRadioButtons(inputId = "useMultiZone", 
+                         selected = "Multiple zones", 
+                         choices = c("Single zone", "Multiple zones"))
+    }
+    
+    
   })
   
   observe({
@@ -588,7 +602,7 @@ server <- function(input, output, session) {
     
     proofofabsence::poa_paks_min()
     
-    myParams <- proofofabsence::makeParams(setMultipleZones = TRUE,
+    myParams <- proofofabsence::makeParams(setMultipleZones = input$useMultiZone %in% "Multiple zones",
                                            setNumIterations = input$setNumIterations,
                                            setRRTrapDistance = 100.0,
                                            startYear = input$yrStart, endYear = input$yrEnd,
