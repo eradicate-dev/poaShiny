@@ -604,7 +604,7 @@ server <- function(input, output, session) {
     
     myParams <- proofofabsence::makeParams(setMultipleZones = input$useMultiZone %in% "Multiple zones",
                                            setNumIterations = input$setNumIterations,
-                                           setRRTrapDistance = 100.0,
+                                           setRRTrapDistance = input$setRRTrapDistance,
                                            startYear = input$yrStart, endYear = input$yrEnd,
                                            startPu = input$startPu, PuIncreaseRate = 0.0,
                                            setMinRR = input$setMinRR,
