@@ -483,12 +483,33 @@ makeMaskAndZones <- function(self, multipleZones, params){
                                  c("character","numeric", "integer"), "character")
   names(EXPECTED_SHP_ATTRIBUTES) <- c(ZONE_CODE_ATTRIBUTE, PU_CODE_ATTRIBUTE, RRZONE_CODE_ATTRIBUTE, NAMEZONE_CODE_ATTRIBUTE)
 
+  # field names to match to loaded shape file (case-insensitive, but can be regex)
+  shp_fields <- c(zoneID = "zone.?ID",
+                  Pu_zone = "Pu.?zone",
+                  RR_zone = "RR.?zone",
+                  zoneName = "zone.?Name")
+  
   # Use zone shapefile to make zone raster
 
   # create extent raster tiff
   zones_layer = sf::st_read(self$zonesShapeFName, crs = self$epsg,
                             int64_as_string = TRUE, stringsAsFactors = FALSE, quiet = TRUE)
 
+  # check each shape file field
+  for(i in seq_along(shp_fields)){
+    # find matching shape file field 
+    selectCol <- grepl(pattern = shp_fields[i], 
+                       x = names(zones_layer), ignore.case = TRUE)
+    if(!any(selectCol)){
+      # warn if none found
+      stop("Shapefile field matching ", names(shp_fields)[i], " not found.")
+    } else {
+      # replace with strict value if matching pattern in shp_fields
+      # (i.e. ZoneID replaced with zoneID)
+      names(zones_layer)[selectCol] <- names(shp_fields)[i]
+    }
+  }
+  
   # OK now check all the expected attributes are in the shape file
   # if we are doing the multiple zones thing
   if(multipleZones){
