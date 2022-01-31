@@ -109,10 +109,21 @@ ui.inputs <- list(
   DT::DTOutput(outputId = "deviceUI")
 )
 
+## UI: priors ----
 ui.inputs.priors <- 
-  fluidRow(column(numericInput(inputId = "prior_min", label = "Prior min", value = defaults$prior_min$value, min = 0, max = 1), width = 4),
-       column(numericInput(inputId = "prior_mode", label = "Prior mode", value = defaults$prior_mode$value, min = 0, max = 1), width = 4),
-       column(numericInput(inputId = "prior_max", label = "Prior max", value = defaults$prior_max$value, min = 0, max = 1), width = 4)
+  list(
+    div(title = "Values must be between 0 and 1 and min < mode < max",
+        wellPanel(
+          h5("Set parameters for prior distribution"),
+          fluidRow(
+            column(numericInput(inputId = "prior_min", label = "Prior min", value = defaults$prior_min$value, min = 0, max = 1), width = 4),
+            column(numericInput(inputId = "prior_mode", label = "Prior mode", value = defaults$prior_mode$value, min = 0, max = 1), width = 4),
+            column(numericInput(inputId = "prior_max", label = "Prior max", value = defaults$prior_max$value, min = 0, max = 1), width = 4)
+          )
+        )
+    )
+  )
+  
   )
 
 ui.inputs.yrs <- 
