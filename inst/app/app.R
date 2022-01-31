@@ -124,6 +124,19 @@ ui.inputs.priors <-
     )
   )
   
+## UI: introduction prob ----
+ui.set.intro <-
+  list(
+    div(title = "Values must be between 0 and 1 and min < mode < max",
+        wellPanel(
+          h5("Set parameters for distribution of re-introduction probability"),
+          fluidRow(
+            column(numericInput(inputId = "intro_min", label = "Minimum", value = 0.00001), width = 4),
+            column(numericInput(inputId = "intro_mode", label = "Mode", value = 0.00002), width = 4),
+            column(numericInput(inputId = "intro_max", label = "Maximum", value = 0.00003), width = 4)
+          )
+        )
+    )
   )
 
 ui.inputs.yrs <- 
@@ -177,7 +190,7 @@ ui <- fluidPage(
   tabsetPanel(
     tabPanel(title = "Run model", 
              # splitLayout(list(ui.inputs, ui.inputs.priors), ui.output)
-             fluidRow(column(4, list(ui.inputs, ui.inputs.priors, ui.inputs.yrs,
+             fluidRow(column(4, list(ui.inputs, ui.inputs.priors, ui.set.intro, ui.inputs.yrs,
                                      actionButton(inputId = "runpy", 
                                                   label = "Calculate PoA")
              )), 
@@ -620,7 +633,7 @@ server <- function(input, output, session) {
                                            startPu = input$startPu, PuIncreaseRate = 0.0,
                                            setMinRR = input$setMinRR,
                                            setPrior = c(input$prior_min,input$prior_mode,input$prior_max),
-                                           setIntro = c(0.0001,0.0002,0.0003))
+                                           setIntro = c(input$intro_min,input$intro_mode,input$intro_max))
     
     myParams <- proofofabsence::addAnimalParams(myParams,
                                                 deviceName = row.names(set.animal.params()),
