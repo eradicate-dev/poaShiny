@@ -745,11 +745,14 @@ server <- function(input, output, session) {
     prior_mean <- mean(prior)
     prior_low <- quantile(prior, 0.05)
     prior_upp <- quantile(prior, 0.95)
-    plot(y = c(prior_mean, poa_mean), x = c(0, years), ylim = c(0, 1), type = "b", 
+    ploty <- c(prior_mean, poa_mean)
+    plotx <- c(min(years)-1, years)
+    plot(y = ploty, x = plotx, ylim = c(0, 1), type = "b", 
          xlab = "Session", ylab = "Probability of absence", axes = FALSE, frame.plot = TRUE)
-    axis(side = 1, at = c(0, years), labels = c("Prior", years))
+    axis(side = 1, at = plotx, labels = c("Prior", years))
     axis(2, at = seq(0,1,0.2))
-    arrows(y0 = c(prior_low, poa_low), x0 = c(0, years), y1 = c(prior_upp, poa_upp), x1 = c(0, years), code = 3, angle = 90)
+    arrows(y0 = c(prior_low, poa_low), x0 = plotx, 
+           y1 = c(prior_upp, poa_upp), x1 = plotx, code = 3, angle = 90)
   })
   
 
