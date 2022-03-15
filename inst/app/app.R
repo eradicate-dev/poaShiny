@@ -90,7 +90,7 @@ ui.troubleshooting <- tabPanel(title = "Troubleshooting",
 
 ui.inputs <- list(
   # Application title
-  titlePanel("Shiny proof-of-absence interface"),
+  titlePanel("Proof-of-absence calculator"),
   # Sidebar with a slider input for number of bins 
   
   wellPanel(
@@ -161,28 +161,42 @@ ui.advinputs <-
 # UI: output --------------------------------------------------------------
 
 ui.output <- 
-  # list(
-    # verbatimTextOutput(outputId = "table2"),
-    fluidRow(column(width = 6, 
-    list(h3("Probability of absence")),
-    div(title = "Adjust credible from default (0.95) under the 'Advanced inputs' tab.", h4("Summary table")),
-    tableOutput("POAsummary"),
-    plotOutput("PoAtimeplot"),
-    plotOutput("PoAdensplot")),
-    # h3("validTable"),
-    # verbatimTextOutput("validTable"),
-    column(width = 6, list(h3("baseMap"),
-    leafletOutput("baseMap")),
-    # h3("result"),
-    # verbatimTextOutput("result"), 
-    # h3("runpypress"),
-    # verbatimTextOutput("runpypress"), 
-    h3("----------DEBUGGING-----------"),
-    checkboxInput(inputId = "renderPts", label = "render map points", value = TRUE),
-    checkboxInput(inputId = "renderRasts", label = "render map rasters", value = TRUE),
-    h3("inputTable"),
-    htmlOutput("inputTable"))
-  )
+  fluidRow(column(width=10,
+    tabsetPanel(id="maintabs", type="tabs",
+              #Map tab
+              tabPanel(title="Maps", value="panel1",
+                       leafletOutput("baseMap", height = 700),   
+                       checkboxInput(inputId = "renderPts", label = "render map points", value = TRUE),
+                       checkboxInput(inputId = "renderRasts", label = "render map rasters", value = TRUE)
+                       
+              ),
+              tabPanel(title="Probability of absence", value="panel2",
+                       tableOutput("POAsummary")),
+              tabPanel(title="Plots", value="panel3",
+                       plotOutput("PoAtimeplot", width="70%"),
+                       plotOutput("PoAdensplot", width="70%")),
+              )))
+
+  #   fluidRow(column(width = 6, 
+  #   list(h3("Probability of absence")),
+  #   div(title = "Adjust credible from default (0.95) under the 'Advanced inputs' tab.", h4("Summary table")),
+  #   tableOutput("POAsummary"),
+  #   plotOutput("PoAtimeplot"),
+  #   plotOutput("PoAdensplot")),
+  #   # h3("validTable"),
+  #   # verbatimTextOutput("validTable"),
+  #   column(width = 6, list(h3("baseMap"),
+  #   leafletOutput("baseMap")),
+  #   # h3("result"),
+  #   # verbatimTextOutput("result"), 
+  #   # h3("runpypress"),
+  #   # verbatimTextOutput("runpypress"), 
+  #   h3("----------DEBUGGING-----------"),
+  #   checkboxInput(inputId = "renderPts", label = "render map points", value = TRUE),
+  #   checkboxInput(inputId = "renderRasts", label = "render map rasters", value = TRUE),
+  #   h3("inputTable"),
+  #   htmlOutput("inputTable"))
+  # )
 
 
 # UI: layout page ---------------------------------------------------------
