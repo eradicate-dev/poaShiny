@@ -474,7 +474,6 @@ server <- function(input, output, session) {
   
   # copy loaded extent file to .tmp folder
   observe({
-    
     if(!is.null(input$zonesShapeFName) & input$namedExample == "None"){
       paths.to <- paste0(path.tmp, "/input/", sub(".*(?=\\..*$)", "extent", normalizePath(input$zonesShapeFName$datapath), perl = TRUE))
       file.copy(from = input$zonesShapeFName$datapath, to = normalizePath(paths.to), overwrite = T)
@@ -484,10 +483,13 @@ server <- function(input, output, session) {
     path.ext <- paths$zonesShapeFName
     if(!is.null(paths$zonesShapeFName)){
       message(paste("loading .shp file:", paths$zonesShapeFName))
-      zonesShape.sf <- st_sf(st_read(paths$zonesShapeFName), crs = input$epsg)
+      zonesShape.sf <- st_sf(st_read(paths$zonesShapeFName))
       zonesShape(zonesShape.sf)
     }
     
+    if(!is.null(zonesShape())) {
+      updateNumericInput(session, inputId = "epsg", value = st_crs(zonesShape())$epsg)
+    }
     # set to use single zone if a single feature shape file loaded
     if(!is.null(zonesShape())) if(nrow(zonesShape()) == 1){
       updateRadioButtons(inputId = "useMultiZone", 
