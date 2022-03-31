@@ -476,10 +476,12 @@ server <- function(input, output, session) {
     
     # set to use single zone if a single feature shape file loaded
     if(!is.null(zonesShape())) if(nrow(zonesShape()) == 1){
-      updateRadioButtons(inputId = "useMultiZone", 
+      updateRadioButtons(session = session, 
+                         inputId = "useMultiZone", 
                          selected = "Single zone", choices = "Single zone")
     } else {
-      updateRadioButtons(inputId = "useMultiZone", 
+      updateRadioButtons(session = session, 
+                         inputId = "useMultiZone", 
                          selected = "Multiple zones", 
                          choices = c("Single zone", "Multiple zones"))
     }
