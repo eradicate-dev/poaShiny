@@ -490,7 +490,7 @@ calcProofOfAbsence_reticulated <- function(myParams, rawdata, outputDataPath){
   poa_paks_min()
   
   # run calcs
-  poa$calculation$calcProofOfAbsence(myParams, rawdata$survey,
+  res <- poa$calculation$calcProofOfAbsence(myParams, rawdata$survey,
                                      rawdata$RelRiskExtent, rawdata$zoneArray, rawdata$zoneCodes,
                                      rawdata$match_geotrans, rawdata$wkt, outputDataPath,
                                      rawdata$RR_zone, rawdata$Pu_zone, rawdata$Name_zone)
