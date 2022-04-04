@@ -494,6 +494,10 @@ calcProofOfAbsence_reticulated <- function(myParams, rawdata, outputDataPath){
                                      rawdata$RelRiskExtent, rawdata$zoneArray, rawdata$zoneCodes,
                                      rawdata$match_geotrans, rawdata$wkt, outputDataPath,
                                      rawdata$RR_zone, rawdata$Pu_zone, rawdata$Name_zone)
+  class(res) <- c(class(res), "POAresults")
+  
+  return(res)
+  
 }
 
 #' makeMaskAndZones
