@@ -426,28 +426,28 @@ preProcessing_reticulated <- function(
   return(list(pickledat = pickledat, myParams = myParams, rawdata = rawdata))
 }
 
-calcProofOfAbsence_reticulated <- function(myParams, pickledat, outputDataPath = "example_data/result0"){
-
-  require(reticulate)
-  py_available()
-  use_condaenv("proofofabsence")
-  py_config()
-
-  py <- import_main(convert = F)
-  builtins <- import_builtins(convert = FALSE)
-
-  os <- import("os", convert = F, as = "os")
-  pickle <- import("pickle", convert = F)
-  np <- import("numpy", convert = F)
-
-  poa <- proofofabsence::poa_py()
-  calculation <- poa$calculation
-
-  calculation$calcProofOfAbsence(myParams, pickledat$survey,
-                                 pickledat$relativeRiskRaster, pickledat$zoneArray, pickledat$zoneCodes,
-                                 pickledat$match_geotrans, pickledat$wkt, outputDataPath,
-                                 pickledat$RR_zone, pickledat$Pu_zone, pickledat$Name_zone)
-}
+# calcProofOfAbsence_reticulated <- function(myParams, pickledat, outputDataPath = "example_data/result0"){
+# 
+#   require(reticulate)
+#   # py_available()
+#   reticulate::use_condaenv(condaenv = "proofofabsence", required = TRUE)
+#   # reticulate::py_config()
+# 
+#   py <- import_main(convert = F)
+#   builtins <- import_builtins(convert = FALSE)
+# 
+#   os <- import("os", convert = F, as = "os")
+#   pickle <- import("pickle", convert = F)
+#   np <- import("numpy", convert = F)
+# 
+#   poa <- proofofabsence::poa_py()
+#   calculation <- poa$calculation
+# 
+#   calculation$calcProofOfAbsence(myParams, pickledat$survey,
+#                                  pickledat$relativeRiskRaster, pickledat$zoneArray, pickledat$zoneCodes,
+#                                  pickledat$match_geotrans, pickledat$wkt, outputDataPath,
+#                                  pickledat$RR_zone, pickledat$Pu_zone, pickledat$Name_zone)
+# }
 
 #' makeMaskAndZones_reticulated
 #'
