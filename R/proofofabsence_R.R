@@ -486,9 +486,6 @@ calcProofOfAbsence_reticulated <- function(myParams, rawdata, outputDataPath){
   # create save directory if missing
   dir.create(outputDataPath, recursive = TRUE)
   
-  # load python modules
-  poa_paks_min()
-  
   # run calcs
   res <- poa$calculation$calcProofOfAbsence(myParams, rawdata$survey,
                                      rawdata$RelRiskExtent, rawdata$zoneArray, rawdata$zoneCodes,
