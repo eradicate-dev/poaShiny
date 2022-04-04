@@ -431,6 +431,56 @@ preProcessing_reticulated <- function(
 #' @param outputDataPath Output directory to save output data.
 #'
 #' @export
+#' @examples
+#' reticulate::use_condaenv("proofofabsence")
+#' poa_paks_min()
+#' 
+#' myParams <-
+#'   makeParams(setMultipleZones = TRUE,
+#'              setNumIterations = 10,
+#'              setRRTrapDistance = 100,
+#'              startYear = 1, endYear = 2,
+#'              startPu = 1.0, PuIncreaseRate = 0.0,
+#'              setMinRR = 1.0,
+#'              setPrior = c(0.10, 0.2, 0.70),
+#'              setIntro = c(0.10, 0.2, 0.70))
+#' 
+#' myParams <-
+#'   addAnimalParams(
+#'     myParams,
+#'     deviceName = c("AT220", "Camera", "CHEWDETECT",
+#'                    "Leghold", "PossMaster", "Sentinel"),
+#'     g0 = rep(0.2, 6),
+#'     g0sd = rep(0.05, 6),
+#'     sig = rep(90, 6),
+#'     sigsd = rep(10, 6))
+#' # view added parameters
+#' myParams$parameterArray
+#' 
+#' # path to example input shape files and relative risk raster
+#' inputshp <- system.file("example_data/Kaitake_possums/extent.shp",
+#'                         package = "proofofabsence")
+#' inputrast <- system.file("example_data/Kaitake_possums/relRiskRaster.tif",
+#'                          package = "proofofabsence")
+#' inputsurv <- system.file("example_data/Kaitake_possums/devices.csv",
+#'                          package = "proofofabsence")
+#' # output raster to temporary file
+#' outputrast <- tempfile(fileext = ".tif")
+#' # output results to temporary folder
+#' outputdir <- tempdir()
+#' 
+#' rawdata <-
+#'   RawData_R(zonesShapeFName = inputshp,
+#'             relativeRiskFName = inputrast,
+#'             zonesOutFName = tempfile(fileext = ".tif"),
+#'             relRiskRasterOutFName = outputrast,
+#'             resolution = as.double(100),
+#'             epsg = as.integer(2193),
+#'             surveyFName = inputsurv,
+#'             params = myParams,
+#'             gridSurveyFname = NULL)
+#' 
+#' res <- calcProofOfAbsence_reticulated(myParams = myParams, rawdata = rawdata, outputDataPath = outputdir)
 calcProofOfAbsence_reticulated <- function(myParams, rawdata, outputDataPath){
 
   # create save directory if missing
