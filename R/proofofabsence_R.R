@@ -606,17 +606,21 @@ makeRelativeRiskTif <- function(self, relativeRiskFName, relRiskRasterOutFName){
   # if RR not given, then it is derived from the zones data
 
   # make extent object using x/y min/max in self
-  ext <- raster::extent(self$xmin, self$xmax, self$ymin, self$ymax)
+  ext <- terra::ext(self$xmin, self$xmax, self$ymin, self$ymax)
 
   if(!is.null(relativeRiskFName)){
 
     # import relative risk raster
-    RR_src = raster::raster(relativeRiskFName)
+    RR_src <- terra::rast(relativeRiskFName)
+    
+    # check only single layer given for relative risk
+    if(terra::nlyr(RR_src) != 1) stop("raster file '", relativeRiskFName, "' can only have a single layer")
+
     # crop raster to extent
-    RR_src <- raster::crop(RR_src, ext)
+    RR_src <- terra::crop(RR_src, ext)
 
     # convert raster values to matrix
-    in_im <- raster::as.matrix(RR_src)
+    in_im <- terra::as.array(RR_src)[,,1]
     # set missing values to zero
     in_im[is.na(in_im)] <- 0
     # convert to numpy array
@@ -631,28 +635,28 @@ makeRelativeRiskTif <- function(self, relativeRiskFName, relRiskRasterOutFName){
     # convert numpy array back to R
     RRmat <- reticulate::py_to_r(RelRiskExtent)
     # create re-projected raster
-    rast_bilinear <-
-      raster::raster(RRmat,
-                     xmn = self$xmin, xmx = self$xmin + ncol(RRmat) * self$resol,
-                     ymn = self$ymax - nrow(RRmat) * self$resol, ymx = self$ymax)
-    crs_out <- sp::CRS(sprintf("+init=epsg:%s", self$epsg))
-    raster::crs(rast_bilinear) <- crs_out
-
+    rast_bilinear <- 
+      terra::rast(nrows = nrow(RRmat), ncols = ncol(RRmat),
+                  xmin = self$xmin, xmax = self$xmin + ncol(RRmat) * self$resol,
+                  ymin = self$ymax - nrow(RRmat) * self$resol, ymax = self$ymax,
+                  vals = RRmat, 
+                  crs = sf::st_crs(self$epsg)[["wkt"]])
+    
     # write out to relRiskRasterOutFName path
     print(paste0("writing processed relative risk raster to ", relRiskRasterOutFName))
-    try(raster::writeRaster(rast_bilinear, relRiskRasterOutFName, overwrite = TRUE))
+    try(terra::writeRaster(x = rast_bilinear, filename = relRiskRasterOutFName, overwrite = TRUE))
 
   } else {
 
-    rast.zones <- raster::raster(zonesOutFName)
-    rast.zero <- raster::clamp(rast.zones, lower = -Inf, upper = 1, useValues = TRUE)
-
-    RelRiskExtent <- reticulate::np_array(raster::as.matrix(!is.na(rast.zero)), dtype=np$float32)
-
+    rast.zones <- terra::rast(self$zonesOutFName)
+    rast.zero <- terra::clamp(rast.zones, lower = -Inf, upper = 1, values = TRUE)
+    
+    RelRiskExtent <- reticulate::np_array(raster::as.matrix(!is.na(rast.zero), wide = TRUE), dtype=np$float32)
+    
     # write out to relRiskRasterOutFName path
-    raster::values(rast.zero) <- reticulate::py_to_r(RelRiskExtent)
+    terra::values(rast.zero) <- reticulate::py_to_r(RelRiskExtent)
     print(paste0("writing processed relative risk raster to ", relRiskRasterOutFName))
-    raster::writeRaster(rast.zero, relRiskRasterOutFName, overwrite = T)
+    terra::writeRaster(x = rast.zero, filename = relRiskRasterOutFName, overwrite = TRUE)
   }
 
   print('finish makeRRTif')
