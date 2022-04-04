@@ -139,7 +139,7 @@ RawData_R <- function(
         # sr = osr$SpatialReference()
         # sr$ImportFromEPSG(bi$int(self$epsg))
         # self$wkt = sr$ExportToWkt()
-        self$wkt <- sf::st_crs(2193)[["wkt"]]
+        self$wkt <- sf::st_crs(epsg)[["wkt"]]
         
         
         # Get layer dimensions of extent shapefile
