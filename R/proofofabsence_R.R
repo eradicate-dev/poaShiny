@@ -136,9 +136,12 @@ RawData_R <- function(
         self$epsg = epsg
 
         # get spatial reference
-        # sr = osr$SpatialReference()
-        # sr$ImportFromEPSG(bi$int(self$epsg))
-        # self$wkt = sr$ExportToWkt()
+        if(any(class(osr) %in% "python.builtin.module")){
+          sr <- osr$SpatialReference()
+          sr$ImportFromEPSG(bi$int(self$epsg))  
+          self$wkt_alt = sr$ExportToWkt()
+        }
+        
         self$wkt <- sf::st_crs(epsg)[["wkt"]]
         
         
