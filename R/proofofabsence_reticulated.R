@@ -467,6 +467,13 @@ makeMaskAndZones_reticulated <- function(self, multipleZones, params){
   # dataset = ogr.Open(self.zonesShapeFName)
 
   #-------------------------------------------------------------------------#
+  # check self for missing entries (py crashes if missing)
+  req <- c("zonesShapeFName", "zonesOutFName", "cols", "rows", 
+              "match_geotrans", "wkt", "xmin", "ymax", "resol")
+  noreq <- sapply(self[req], is.null)
+  if(any(noreq)) stop("missing self entries:", paste(req[noreq], collapse = " "))
+  
+  #-------------------------------------------------------------------------#
   # Original attributes list
   #
   ZONE_CODE_ATTRIBUTE = "zoneID"
@@ -650,6 +657,13 @@ makeRelativeRiskTif_reticulated <- function(self, relativeRiskFName, relRiskRast
   # read in rel risk ascii, and write relative risk Tiff to directory
   # if RR not given, then it is derived from the zones data
 
+  #-------------------------------------------------------------------------#
+  # check self for missing entries (py crashes if missing)
+  req <- c("cols", "rows", "match_geotrans", "wkt", "xmin", "ymax", "resol", 
+           "zonesOutFName")
+  noreq <- sapply(self[req], is.null)
+  if(any(noreq)) stop("missing self entries:", paste(req[noreq], collapse = " "))
+  
   USE_GDAL_FOR_BILINEAR = FALSE
 
   # Change to True to use GDAL for bilinear interpolation.
@@ -777,6 +791,13 @@ makeRelativeRiskTif_reticulated <- function(self, relativeRiskFName, relRiskRast
 
 getShapefileDimensions_reticulated <- function(self, definition=np$False_){
 
+  #-------------------------------------------------------------------------#
+  # check self for missing entries (py crashes if missing)
+  req <- c("zonesShapeFName")
+  noreq <- sapply(self[req], is.null)
+  if(any(noreq)) stop("missing self entries:", paste(req[noreq], collapse = " "))
+  
+  
   # get x and y min and max from shapefile
 
   # dataset = ogr.Open(self$zonesShapeFName)
@@ -800,6 +821,13 @@ getShapefileDimensions_reticulated <- function(self, definition=np$False_){
 }
 
 getGeoTrans_reticulated <- function(self){
+  
+  #-------------------------------------------------------------------------#
+  # check self for missing entries (py crashes if missing)
+  req <- c("xmax", "xmin", "ymin", "ymax", "resol") 
+  noreq <- sapply(self[req], is.null)
+  if(any(noreq)) stop("missing self entries:", paste(req[noreq], collapse = " "))
+  
   #### get dimensions that incorporate both extent shape and farm boundaries
   # cols = int((self.xmax - self.xmin) / self.resol)
   cols = np$int(np$divide(np$subtract(self$xmax, self$xmin), self$resol))
