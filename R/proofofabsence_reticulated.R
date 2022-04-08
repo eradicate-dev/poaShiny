@@ -222,6 +222,11 @@ RawData_reticulated <- function(
         params = makeParams(),
         gridSurveyFname=NULL){
 
+  # Set TRAP_PARAM_DTYPE - in py scripts this is set at the start of the preProcessing.py
+  TRAP_PARAM_DTYPE = bi$list(list(tuple('year', 'u4'), tuple('animal', 'u4'), tuple('detect', 'u4'), 
+                                  tuple('easting', 'f8'), tuple('northing', 'f8'), tuple('age', 'f8'), tuple('sex', 'u1'), 
+                                  tuple('trapnights', 'f8')))
+  
   proofofabsence::poa_paks_full()
 
         # replace RawData class self object with an R list
