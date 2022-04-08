@@ -4,51 +4,6 @@
 
 
 
-#' Import required packages and modules required to run proof of absence scripts
-#'
-#' @param condaenv Name of configured conda environment
-#'
-#' @return
-#' @export
-#'
-#' @examples
-#' proofofabsence::poa_paks_full()
-poa_paks_full <- function(envname = "proofofabsence"){
-
-  # configure reticulate ----------------------------------------------------
-
-  reticulate::use_condaenv(envname)
-  reticulate::py_config()
-  library(reticulate)
-  library(proofofabsence)
-
-  #-------------------------------------------------------------------------#
-  # lines to set GDAL path to conda environment
-  #  - only needed if using outside an activated conda environment
-  # Sys.setenv(GDAL_DATA = "C:/ProgramData/Anaconda3/envs/proofofabsence/Library/share/gdal")
-  #-------------------------------------------------------------------------#
-
-  # IMPORT MODULES
-  os        <<- reticulate::import("os", convert = FALSE)
-  np        <<- reticulate::import("numpy", convert = FALSE)
-  pickle    <<- reticulate::import("pickle", convert = FALSE)
-  # tempfile  <<- reticulate::import("tempfile", convert = FALSE)
-  gdal      <<- reticulate::import("gdal", convert = FALSE)
-  ogr       <<- reticulate::import("ogr", convert = FALSE)
-  osr       <<- reticulate::import("osr", convert = FALSE)
-  gdalconst <<- reticulate::import("gdalconst", convert = FALSE)
-  numba     <<- reticulate::import("numba", convert = FALSE)
-
-  bi <<- import_builtins(convert = FALSE)
-  # py <<- import_main(convert = FALSE)
-  poa <<- import_from_path(path = system.file("python", package = "proofofabsence"),
-                           module = "proofofabsence", convert = FALSE)
-  
-  
-  
-}
-
-
 #' addAnimalParams
 #'
 #' Add animal parameters to POAParameters object
@@ -227,8 +182,6 @@ RawData_reticulated <- function(
                                   tuple('easting', 'f8'), tuple('northing', 'f8'), tuple('age', 'f8'), tuple('sex', 'u1'), 
                                   tuple('trapnights', 'f8')))
   
-  proofofabsence::poa_paks_full()
-
         # replace RawData class self object with an R list
         self <- list()
 

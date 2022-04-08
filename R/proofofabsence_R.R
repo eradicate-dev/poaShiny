@@ -5,15 +5,18 @@
 
 #' Import required packages and modules required to run proof of absence scripts
 #'
-#' @param condaenv Name of configured conda environment
+#' @param envname Name of configured conda environment
+#' @param modules Select the the full set of proofofabsence modules (default =
+#'   "full") to load from python scripts or a minimal set primarily for handling
+#'   calculations ("minimal")
 #'
 #' @return
 #' @export
-#'
-#' @examples
-#' proofofabsence::poa_paks_full()
-poa_paks_min <- function(envname = "proofofabsence"){
+poa_paks <- function(envname = "proofofabsence", modules = "full"){
 
+  # check modules argument
+  if(!modules %in% c("full", "minimal")) stop("modules argument must be 'full' or 'minimal'")
+  
   # envname <- "proofofabsence"
   
   # if(is.null(reticulate::conda_binary())) stop("Conda binary not found using conda_binary(). Is Anaconda installed?")
@@ -32,39 +35,52 @@ poa_paks_min <- function(envname = "proofofabsence"){
   #-------------------------------------------------------------------------#
 
   # IMPORT MODULES
-  modules <- c(os = "os", np = "numpy", pickle = "pickle", numba = "numba")
   
-  for(i in names(modules)){
-    if(reticulate::py_module_available(modules[i])){
+  # select required modules
+  reqmodules <- 
+    switch(modules,
+           minimal = c(os = "os", np = "numpy", pickle = "pickle", numba = "numba"),
+           full = c(os = "os", np = "numpy", pickle = "pickle", numba = "numba", 
+                    gdal = "gdal", osr = "osr", ogr = "ogr", gdalconst = "gdalconst"))
+
+  # load required modules and assign to .GlobalEnv
+  for(i in names(reqmodules)){
+    if(reticulate::py_module_available(reqmodules[i])){
       assign(x = i, envir = .GlobalEnv,
-             value = reticulate::import(modules[i], convert = FALSE, delay_load = TRUE))
+             value = reticulate::import(reqmodules[i], convert = FALSE, delay_load = TRUE))
     } else {
-      stop(sprintf("'%s' module missing from %s python environment.\n", modules[i], envname),
-           sprintf("Try installing using reticulate::conda_install(envname = '%s', packages = '%s')", envname, modules[i]))
+      stop(sprintf("'%s' module missing from %s python environment.\n", reqmodules[i], envname),
+           sprintf("Try installing using reticulate::conda_install(envname = '%s', packages = '%s')", envname, reqmodules[i]))
     }
   }
   
+  # always load builtin modules
   bi <<- reticulate::import_builtins(convert = FALSE)
   
   ## Import POA modules from package folder
+  
+  # directory containing proofofabsence python scripts
+  pydir <- switch(modules, full = "proofofabsence", 
+                    minimal = "proofofabsence_min")
+  # find file paths in package directory
+  pypath <- file.path(system.file("python", package = "proofofabsence"), pydir)
+  
+  # load proofofabsence module
   poa <<- 
     reticulate::import_from_path(
       path = system.file("python", package = "proofofabsence"),
-      module = "proofofabsence_min", 
+      module = pydir, 
       convert = FALSE, delay_load = TRUE)
   
   # list and module files in package directory python folder
-  module_files <- list.files(# system.file("python/proofofabsence_min", package = "proofofabsence"),
-    "inst/python/proofofabsence_min/",
-    pattern = ".py$")
+  module_files <- list.files(pypath, pattern = ".py$")
   module_names <- sub("\\.\\w*$", "", module_files[!grepl("^__",module_files)])
   
   # check sub-modules loaded
   for(i in module_names){
     try( print(reticulate::py_str( poa[[i]] ) ), silent = TRUE)
     if(!reticulate::py_has_attr(x = poa, i)){
-      stop("Sub module '", i, "' not loaded from ", 
-           system.file("python/proofofabsence_min", package = "proofofabsence"))
+      stop("Sub module '", i, "' not loaded from ", pypath)
     }
   }
   
@@ -91,7 +107,7 @@ poa_paks_min <- function(envname = "proofofabsence"){
 #' # library(proofofabsence)
 #' 
 #' # load python packages from anaconda install
-#' poa_paks_min()
+#' poa_paks(modules = "minimal")
 #' 
 #' # create minimal parameters object
 #' myParams <- makeParams()
@@ -436,7 +452,7 @@ preProcessing_reticulated <- function(
 #' @export
 #' @examples
 #' reticulate::use_condaenv("proofofabsence")
-#' poa_paks_min()
+#' poa_paks(modules = "minimal")
 #' 
 #' myParams <-
 #'   makeParams(setMultipleZones = TRUE,
