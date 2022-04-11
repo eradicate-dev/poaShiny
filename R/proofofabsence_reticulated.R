@@ -190,11 +190,11 @@ RawData_reticulated <- function(
         self$zonesOutFName = zonesOutFName
         self$relRiskRasterOutFName = relRiskRasterOutFName
         self$resol = resolution
-        self$epsg = epsg
+        self$epsg = bi$int(epsg)
 
         # get spatial reference
         sr = osr$SpatialReference()
-        sr$ImportFromEPSG(bi$int(self$epsg))
+        sr$ImportFromEPSG(self$epsg)
         self$wkt = sr$ExportToWkt()
 
         # Get layer dimensions of extent shapefile
