@@ -20,13 +20,14 @@
 ########################################
 ########################################
 
-import os
-import pickle
-import numpy as np
+library(reticulate)
+library(proofofabsence)
+use_condaenv("proofofabsence")
+poa_paks(modules = "full")
 
-from proofofabsence import preProcessing
-from proofofabsence import params
-from proofofabsence import calculation
+preProcessing <- poa$preProcessing
+params <- poa$params
+calculation <- poa$calculation
 
 ######################
 # Main function
