@@ -104,9 +104,9 @@ poa_paks <- function(envname = "proofofabsence", modules = "minimal"){
 #' @export
 #'
 #' @examples
-#' # library(proofofabsence)
 #' 
 #' # load python packages from anaconda install
+#' reticulate::use_condaenv("proofofabsence")
 #' poa_paks(modules = "minimal")
 #' 
 #' # create minimal parameters object
