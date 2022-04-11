@@ -12,7 +12,7 @@
 #'
 #' @return
 #' @export
-poa_paks <- function(envname = "proofofabsence", modules = "full"){
+poa_paks <- function(envname = "proofofabsence", modules = "minimal"){
 
   # check modules argument
   if(!modules %in% c("full", "minimal")) stop("modules argument must be 'full' or 'minimal'")
