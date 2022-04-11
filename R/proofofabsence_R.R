@@ -152,7 +152,7 @@ RawData_R <- function(
         self$epsg = epsg
 
         # get spatial reference
-        if(any(class(osr) %in% "python.builtin.module")){
+        if("osr" %in% ls(envir = .GlobalEnv) && "python.builtin.module" %in% class(osr)){
           sr <- osr$SpatialReference()
           sr$ImportFromEPSG(bi$int(self$epsg))  
           self$wkt_alt = sr$ExportToWkt()
