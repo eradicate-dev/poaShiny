@@ -5,15 +5,18 @@
 
 #' Import required packages and modules required to run proof of absence scripts
 #'
-#' @param condaenv Name of configured conda environment
+#' @param envname Name of configured conda environment
+#' @param modules Select the the full set of proofofabsence modules (default =
+#'   "full") to load from python scripts or a minimal set primarily for handling
+#'   calculations ("minimal")
 #'
 #' @return
 #' @export
-#'
-#' @examples
-#' proofofabsence::poa_paks_full()
-poa_paks_min <- function(envname = "proofofabsence"){
+poa_paks <- function(envname = "proofofabsence", modules = "full"){
 
+  # check modules argument
+  if(!modules %in% c("full", "minimal")) stop("modules argument must be 'full' or 'minimal'")
+  
   # envname <- "proofofabsence"
   
   # if(is.null(reticulate::conda_binary())) stop("Conda binary not found using conda_binary(). Is Anaconda installed?")
@@ -32,39 +35,52 @@ poa_paks_min <- function(envname = "proofofabsence"){
   #-------------------------------------------------------------------------#
 
   # IMPORT MODULES
-  modules <- c(os = "os", np = "numpy", pickle = "pickle", numba = "numba")
   
-  for(i in names(modules)){
-    if(reticulate::py_module_available(modules[i])){
+  # select required modules
+  reqmodules <- 
+    switch(modules,
+           minimal = c(os = "os", np = "numpy", pickle = "pickle", numba = "numba"),
+           full = c(os = "os", np = "numpy", pickle = "pickle", numba = "numba", 
+                    gdal = "gdal", osr = "osr", ogr = "ogr", gdalconst = "gdalconst"))
+
+  # load required modules and assign to .GlobalEnv
+  for(i in names(reqmodules)){
+    if(reticulate::py_module_available(reqmodules[i])){
       assign(x = i, envir = .GlobalEnv,
-             value = reticulate::import(modules[i], convert = FALSE, delay_load = TRUE))
+             value = reticulate::import(reqmodules[i], convert = FALSE, delay_load = TRUE))
     } else {
-      stop(sprintf("'%s' module missing from %s python environment.\n", modules[i], envname),
-           sprintf("Try installing using reticulate::conda_install(envname = '%s', packages = '%s')", envname, modules[i]))
+      stop(sprintf("'%s' module missing from %s python environment.\n", reqmodules[i], envname),
+           sprintf("Try installing using reticulate::conda_install(envname = '%s', packages = '%s')", envname, reqmodules[i]))
     }
   }
   
+  # always load builtin modules
   bi <<- reticulate::import_builtins(convert = FALSE)
   
   ## Import POA modules from package folder
+  
+  # directory containing proofofabsence python scripts
+  pydir <- switch(modules, full = "proofofabsence", 
+                    minimal = "proofofabsence_min")
+  # find file paths in package directory
+  pypath <- file.path(system.file("python", package = "proofofabsence"), pydir)
+  
+  # load proofofabsence module
   poa <<- 
     reticulate::import_from_path(
       path = system.file("python", package = "proofofabsence"),
-      module = "proofofabsence_min", 
+      module = pydir, 
       convert = FALSE, delay_load = TRUE)
   
   # list and module files in package directory python folder
-  module_files <- list.files(# system.file("python/proofofabsence_min", package = "proofofabsence"),
-    "inst/python/proofofabsence_min/",
-    pattern = ".py$")
+  module_files <- list.files(pypath, pattern = ".py$")
   module_names <- sub("\\.\\w*$", "", module_files[!grepl("^__",module_files)])
   
   # check sub-modules loaded
   for(i in module_names){
     try( print(reticulate::py_str( poa[[i]] ) ), silent = TRUE)
     if(!reticulate::py_has_attr(x = poa, i)){
-      stop("Sub module '", i, "' not loaded from ", 
-           system.file("python/proofofabsence_min", package = "proofofabsence"))
+      stop("Sub module '", i, "' not loaded from ", pypath)
     }
   }
   
@@ -91,7 +107,7 @@ poa_paks_min <- function(envname = "proofofabsence"){
 #' # library(proofofabsence)
 #' 
 #' # load python packages from anaconda install
-#' poa_paks_min()
+#' poa_paks(modules = "minimal")
 #' 
 #' # create minimal parameters object
 #' myParams <- makeParams()
@@ -136,10 +152,13 @@ RawData_R <- function(
         self$epsg = epsg
 
         # get spatial reference
-        # sr = osr$SpatialReference()
-        # sr$ImportFromEPSG(bi$int(self$epsg))
-        # self$wkt = sr$ExportToWkt()
-        self$wkt <- sf::st_crs(2193)[["wkt"]]
+        if(any(class(osr) %in% "python.builtin.module")){
+          sr <- osr$SpatialReference()
+          sr$ImportFromEPSG(bi$int(self$epsg))  
+          self$wkt_alt = sr$ExportToWkt()
+        }
+        
+        self$wkt <- sf::st_crs(epsg)[["wkt"]]
         
         
         # Get layer dimensions of extent shapefile
@@ -431,19 +450,70 @@ preProcessing_reticulated <- function(
 #' @param outputDataPath Output directory to save output data.
 #'
 #' @export
+#' @examples
+#' reticulate::use_condaenv("proofofabsence")
+#' poa_paks(modules = "minimal")
+#' 
+#' myParams <-
+#'   makeParams(setMultipleZones = TRUE,
+#'              setNumIterations = 10,
+#'              setRRTrapDistance = 100,
+#'              startYear = 1, endYear = 2,
+#'              startPu = 1.0, PuIncreaseRate = 0.0,
+#'              setMinRR = 1.0,
+#'              setPrior = c(0.10, 0.2, 0.70),
+#'              setIntro = c(0.10, 0.2, 0.70))
+#' 
+#' myParams <-
+#'   addAnimalParams(
+#'     myParams,
+#'     deviceName = c("AT220", "Camera", "CHEWDETECT",
+#'                    "Leghold", "PossMaster", "Sentinel"),
+#'     g0 = rep(0.2, 6),
+#'     g0sd = rep(0.05, 6),
+#'     sig = rep(90, 6),
+#'     sigsd = rep(10, 6))
+#' # view added parameters
+#' myParams$parameterArray
+#' 
+#' # path to example input shape files and relative risk raster
+#' inputshp <- system.file("example_data/Kaitake_possums/extent.shp",
+#'                         package = "proofofabsence")
+#' inputrast <- system.file("example_data/Kaitake_possums/relRiskRaster.tif",
+#'                          package = "proofofabsence")
+#' inputsurv <- system.file("example_data/Kaitake_possums/devices.csv",
+#'                          package = "proofofabsence")
+#' # output raster to temporary file
+#' outputrast <- tempfile(fileext = ".tif")
+#' # output results to temporary folder
+#' outputdir <- tempdir()
+#' 
+#' rawdata <-
+#'   RawData_R(zonesShapeFName = inputshp,
+#'             relativeRiskFName = inputrast,
+#'             zonesOutFName = tempfile(fileext = ".tif"),
+#'             relRiskRasterOutFName = outputrast,
+#'             resolution = as.double(100),
+#'             epsg = as.integer(2193),
+#'             surveyFName = inputsurv,
+#'             params = myParams,
+#'             gridSurveyFname = NULL)
+#' 
+#' res <- calcProofOfAbsence_reticulated(myParams = myParams, rawdata = rawdata, outputDataPath = outputdir)
 calcProofOfAbsence_reticulated <- function(myParams, rawdata, outputDataPath){
 
   # create save directory if missing
   dir.create(outputDataPath, recursive = TRUE)
   
-  # load python modules
-  poa_paks_min()
-  
   # run calcs
-  poa$calculation$calcProofOfAbsence(myParams, rawdata$survey,
+  res <- poa$calculation$calcProofOfAbsence(myParams, rawdata$survey,
                                      rawdata$RelRiskExtent, rawdata$zoneArray, rawdata$zoneCodes,
                                      rawdata$match_geotrans, rawdata$wkt, outputDataPath,
                                      rawdata$RR_zone, rawdata$Pu_zone, rawdata$Name_zone)
+  class(res) <- c(class(res), "POAresults")
+  
+  return(res)
+  
 }
 
 #' makeMaskAndZones
@@ -606,17 +676,21 @@ makeRelativeRiskTif <- function(self, relativeRiskFName, relRiskRasterOutFName){
   # if RR not given, then it is derived from the zones data
 
   # make extent object using x/y min/max in self
-  ext <- raster::extent(self$xmin, self$xmax, self$ymin, self$ymax)
+  ext <- terra::ext(self$xmin, self$xmax, self$ymin, self$ymax)
 
   if(!is.null(relativeRiskFName)){
 
     # import relative risk raster
-    RR_src = raster::raster(relativeRiskFName)
+    RR_src <- terra::rast(relativeRiskFName)
+    
+    # check only single layer given for relative risk
+    if(terra::nlyr(RR_src) != 1) stop("raster file '", relativeRiskFName, "' can only have a single layer")
+
     # crop raster to extent
-    RR_src <- raster::crop(RR_src, ext)
+    RR_src <- terra::crop(RR_src, ext)
 
     # convert raster values to matrix
-    in_im <- raster::as.matrix(RR_src)
+    in_im <- terra::as.array(RR_src)[,,1]
     # set missing values to zero
     in_im[is.na(in_im)] <- 0
     # convert to numpy array
@@ -631,28 +705,28 @@ makeRelativeRiskTif <- function(self, relativeRiskFName, relRiskRasterOutFName){
     # convert numpy array back to R
     RRmat <- reticulate::py_to_r(RelRiskExtent)
     # create re-projected raster
-    rast_bilinear <-
-      raster::raster(RRmat,
-                     xmn = self$xmin, xmx = self$xmin + ncol(RRmat) * self$resol,
-                     ymn = self$ymax - nrow(RRmat) * self$resol, ymx = self$ymax)
-    crs_out <- sp::CRS(sprintf("+init=epsg:%s", self$epsg))
-    raster::crs(rast_bilinear) <- crs_out
-
+    rast_bilinear <- 
+      terra::rast(nrows = nrow(RRmat), ncols = ncol(RRmat),
+                  xmin = self$xmin, xmax = self$xmin + ncol(RRmat) * self$resol,
+                  ymin = self$ymax - nrow(RRmat) * self$resol, ymax = self$ymax,
+                  vals = RRmat, 
+                  crs = sf::st_crs(self$epsg)[["wkt"]])
+    
     # write out to relRiskRasterOutFName path
     print(paste0("writing processed relative risk raster to ", relRiskRasterOutFName))
-    try(raster::writeRaster(rast_bilinear, relRiskRasterOutFName, overwrite = TRUE))
+    try(terra::writeRaster(x = rast_bilinear, filename = relRiskRasterOutFName, overwrite = TRUE))
 
   } else {
 
-    rast.zones <- raster::raster(zonesOutFName)
-    rast.zero <- raster::clamp(rast.zones, lower = -Inf, upper = 1, useValues = TRUE)
-
-    RelRiskExtent <- reticulate::np_array(raster::as.matrix(!is.na(rast.zero)), dtype=np$float32)
-
+    rast.zones <- terra::rast(self$zonesOutFName)
+    rast.zero <- terra::clamp(rast.zones, lower = -Inf, upper = 1, values = TRUE)
+    
+    RelRiskExtent <- reticulate::np_array(raster::as.matrix(!is.na(rast.zero), wide = TRUE), dtype=np$float32)
+    
     # write out to relRiskRasterOutFName path
-    raster::values(rast.zero) <- reticulate::py_to_r(RelRiskExtent)
+    terra::values(rast.zero) <- reticulate::py_to_r(RelRiskExtent)
     print(paste0("writing processed relative risk raster to ", relRiskRasterOutFName))
-    raster::writeRaster(rast.zero, relRiskRasterOutFName, overwrite = T)
+    terra::writeRaster(x = rast.zero, filename = relRiskRasterOutFName, overwrite = TRUE)
   }
 
   print('finish makeRRTif')

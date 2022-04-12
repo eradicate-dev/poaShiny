@@ -4,51 +4,6 @@
 
 
 
-#' Import required packages and modules required to run proof of absence scripts
-#'
-#' @param condaenv Name of configured conda environment
-#'
-#' @return
-#' @export
-#'
-#' @examples
-#' proofofabsence::poa_paks_full()
-poa_paks_full <- function(envname = "proofofabsence"){
-
-  # configure reticulate ----------------------------------------------------
-
-  reticulate::use_condaenv(envname)
-  reticulate::py_config()
-  library(reticulate)
-  library(proofofabsence)
-
-  #-------------------------------------------------------------------------#
-  # lines to set GDAL path to conda environment
-  #  - only needed if using outside an activated conda environment
-  # Sys.setenv(GDAL_DATA = "C:/ProgramData/Anaconda3/envs/proofofabsence/Library/share/gdal")
-  #-------------------------------------------------------------------------#
-
-  # IMPORT MODULES
-  os        <<- reticulate::import("os", convert = FALSE)
-  np        <<- reticulate::import("numpy", convert = FALSE)
-  pickle    <<- reticulate::import("pickle", convert = FALSE)
-  # tempfile  <<- reticulate::import("tempfile", convert = FALSE)
-  gdal      <<- reticulate::import("gdal", convert = FALSE)
-  ogr       <<- reticulate::import("ogr", convert = FALSE)
-  osr       <<- reticulate::import("osr", convert = FALSE)
-  gdalconst <<- reticulate::import("gdalconst", convert = FALSE)
-  numba     <<- reticulate::import("numba", convert = FALSE)
-
-  bi <<- import_builtins(convert = FALSE)
-  # py <<- import_main(convert = FALSE)
-  poa <<- import_from_path(path = system.file("python", package = "proofofabsence"),
-                           module = "proofofabsence", convert = FALSE)
-  
-  
-  
-}
-
-
 #' addAnimalParams
 #'
 #' Add animal parameters to POAParameters object
@@ -222,8 +177,11 @@ RawData_reticulated <- function(
         params = makeParams(),
         gridSurveyFname=NULL){
 
-  proofofabsence::poa_paks_full()
-
+  # Set TRAP_PARAM_DTYPE - in py scripts this is set at the start of the preProcessing.py
+  TRAP_PARAM_DTYPE = bi$list(list(tuple('year', 'u4'), tuple('animal', 'u4'), tuple('detect', 'u4'), 
+                                  tuple('easting', 'f8'), tuple('northing', 'f8'), tuple('age', 'f8'), tuple('sex', 'u1'), 
+                                  tuple('trapnights', 'f8')))
+  
         # replace RawData class self object with an R list
         self <- list()
 
@@ -426,28 +384,28 @@ preProcessing_reticulated <- function(
   return(list(pickledat = pickledat, myParams = myParams, rawdata = rawdata))
 }
 
-calcProofOfAbsence_reticulated <- function(myParams, pickledat, outputDataPath = "example_data/result0"){
-
-  require(reticulate)
-  py_available()
-  use_condaenv("proofofabsence")
-  py_config()
-
-  py <- import_main(convert = F)
-  builtins <- import_builtins(convert = FALSE)
-
-  os <- import("os", convert = F, as = "os")
-  pickle <- import("pickle", convert = F)
-  np <- import("numpy", convert = F)
-
-  poa <- proofofabsence::poa_py()
-  calculation <- poa$calculation
-
-  calculation$calcProofOfAbsence(myParams, pickledat$survey,
-                                 pickledat$relativeRiskRaster, pickledat$zoneArray, pickledat$zoneCodes,
-                                 pickledat$match_geotrans, pickledat$wkt, outputDataPath,
-                                 pickledat$RR_zone, pickledat$Pu_zone, pickledat$Name_zone)
-}
+# calcProofOfAbsence_reticulated <- function(myParams, pickledat, outputDataPath = "example_data/result0"){
+# 
+#   require(reticulate)
+#   # py_available()
+#   reticulate::use_condaenv(condaenv = "proofofabsence", required = TRUE)
+#   # reticulate::py_config()
+# 
+#   py <- import_main(convert = F)
+#   builtins <- import_builtins(convert = FALSE)
+# 
+#   os <- import("os", convert = F, as = "os")
+#   pickle <- import("pickle", convert = F)
+#   np <- import("numpy", convert = F)
+# 
+#   poa <- proofofabsence::poa_py()
+#   calculation <- poa$calculation
+# 
+#   calculation$calcProofOfAbsence(myParams, pickledat$survey,
+#                                  pickledat$relativeRiskRaster, pickledat$zoneArray, pickledat$zoneCodes,
+#                                  pickledat$match_geotrans, pickledat$wkt, outputDataPath,
+#                                  pickledat$RR_zone, pickledat$Pu_zone, pickledat$Name_zone)
+# }
 
 #' makeMaskAndZones_reticulated
 #'
@@ -466,6 +424,13 @@ makeMaskAndZones_reticulated <- function(self, multipleZones, params){
   # create extent raster tiff
   # dataset = ogr.Open(self.zonesShapeFName)
 
+  #-------------------------------------------------------------------------#
+  # check self for missing entries (py crashes if missing)
+  req <- c("zonesShapeFName", "zonesOutFName", "cols", "rows", 
+              "match_geotrans", "wkt", "xmin", "ymax", "resol")
+  noreq <- sapply(self[req], is.null)
+  if(any(noreq)) stop("missing self entries:", paste(req[noreq], collapse = " "))
+  
   #-------------------------------------------------------------------------#
   # Original attributes list
   #
@@ -650,6 +615,13 @@ makeRelativeRiskTif_reticulated <- function(self, relativeRiskFName, relRiskRast
   # read in rel risk ascii, and write relative risk Tiff to directory
   # if RR not given, then it is derived from the zones data
 
+  #-------------------------------------------------------------------------#
+  # check self for missing entries (py crashes if missing)
+  req <- c("cols", "rows", "match_geotrans", "wkt", "xmin", "ymax", "resol", 
+           "zonesOutFName")
+  noreq <- sapply(self[req], is.null)
+  if(any(noreq)) stop("missing self entries:", paste(req[noreq], collapse = " "))
+  
   USE_GDAL_FOR_BILINEAR = FALSE
 
   # Change to True to use GDAL for bilinear interpolation.
@@ -777,6 +749,13 @@ makeRelativeRiskTif_reticulated <- function(self, relativeRiskFName, relRiskRast
 
 getShapefileDimensions_reticulated <- function(self, definition=np$False_){
 
+  #-------------------------------------------------------------------------#
+  # check self for missing entries (py crashes if missing)
+  req <- c("zonesShapeFName")
+  noreq <- sapply(self[req], is.null)
+  if(any(noreq)) stop("missing self entries:", paste(req[noreq], collapse = " "))
+  
+  
   # get x and y min and max from shapefile
 
   # dataset = ogr.Open(self$zonesShapeFName)
@@ -800,6 +779,13 @@ getShapefileDimensions_reticulated <- function(self, definition=np$False_){
 }
 
 getGeoTrans_reticulated <- function(self){
+  
+  #-------------------------------------------------------------------------#
+  # check self for missing entries (py crashes if missing)
+  req <- c("xmax", "xmin", "ymin", "ymax", "resol") 
+  noreq <- sapply(self[req], is.null)
+  if(any(noreq)) stop("missing self entries:", paste(req[noreq], collapse = " "))
+  
   #### get dimensions that incorporate both extent shape and farm boundaries
   # cols = int((self.xmax - self.xmin) / self.resol)
   cols = np$int(np$divide(np$subtract(self$xmax, self$xmin), self$resol))
