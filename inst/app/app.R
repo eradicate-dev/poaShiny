@@ -388,7 +388,7 @@ server <- function(input, output, session) {
       # update start and finish years
       updateNumericInput(session, inputId = "yrStart", value = min(devs$Year))
       updateNumericInput(session, inputId = "yrEnd", value = max(devs$Year))
-      
+      updateNumericInput(session, inputId = "setYears", value = max(devs$Year)-min(devs$Year)+1)
     }
     
   })
