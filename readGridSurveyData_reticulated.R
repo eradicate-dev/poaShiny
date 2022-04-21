@@ -1,5 +1,12 @@
 readGridSurveyData <- function(self, gridSurveyFname = NULL, params = poa$params){
   
+  #-------------------------------------------------------------------------#
+  # check self for missing entries (py crashes if missing)
+  req <- c("zoneArray")
+  noreq <- sapply(self[req], is.null)
+  if(any(noreq)) stop("missing self entries:", paste(req[noreq], collapse = " "))
+  #-------------------------------------------------------------------------#
+  
   # Read all the grid survey data and make sure it is converted to
   # files of the correct spatial reference and extent.
   
