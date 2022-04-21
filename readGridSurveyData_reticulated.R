@@ -1,8 +1,8 @@
-    """
-    Read all the grid survey data and make sure it is converted to
-    files of the correct spatial reference and extent.
-    """
 readGridSurveyData <- function(self, gridSurveyFname = NULL, params = poa$params){
+  
+  # Read all the grid survey data and make sure it is converted to
+  # files of the correct spatial reference and extent.
+  
     rawGridSurvey = np.genfromtxt(gridSurveyFname, delimiter=',', names=True,
                                   dtype=['S200', 'i4', 'f8', 'f8'])
 
