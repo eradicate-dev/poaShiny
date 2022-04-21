@@ -7,6 +7,13 @@ readGridSurveyData <- function(self, gridSurveyFname = NULL, params = poa$params
   if(any(noreq)) stop("missing self entries:", paste(req[noreq], collapse = " "))
   #-------------------------------------------------------------------------#
   
+  #- development inputs ----------------------------------------------------#
+  # TODO: delete when in package
+  params <- poa$params$POAParameters()
+  gridSurveyFname <- bi$str("inst/python/Nutria example from Dean/poa/Nutria/Data/gridPublicSur7.csv")
+  # self$zoneArray
+  #- development inputs ----------------------------------------------------#
+  
   # Read all the grid survey data and make sure it is converted to
   # files of the correct spatial reference and extent.
   
