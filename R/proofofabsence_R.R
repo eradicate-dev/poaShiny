@@ -5,29 +5,17 @@
 
 #' Import required packages and modules required to run proof of absence scripts
 #'
-#' @param envname Name of configured conda environment
 #' @param modules Select the the full set of proofofabsence modules (default =
 #'   "full") to load from python scripts or a minimal set primarily for handling
 #'   calculations ("minimal")
 #'
 #' @return
 #' @export
-poa_paks <- function(envname = "proofofabsence", modules = "minimal"){
+poa_paks <- function(modules = "minimal"){
 
   # check modules argument
   if(!modules %in% c("full", "minimal")) stop("modules argument must be 'full' or 'minimal'")
-  
-  # envname <- "proofofabsence"
-  
-  # if(is.null(reticulate::conda_binary())) stop("Conda binary not found using conda_binary(). Is Anaconda installed?")
-  # 
-  # # choose conda environment to use
-  # env_loaded <- try(reticulate::use_condaenv("a", required = TRUE), silent = TRUE)
-  # 
-  # # try loading conda environment
-  # tryCatch(reticulate::use_condaenv(envname, required = TRUE), 
-  #          error = function(.) cat("No conda environment", envname, "found. Try building using conda_env_build_min()."))
-  
+
   #-------------------------------------------------------------------------#
   # lines to set GDAL path to conda environment
   #  - only needed if using outside an activated conda environment
@@ -36,22 +24,39 @@ poa_paks <- function(envname = "proofofabsence", modules = "minimal"){
 
   # IMPORT MODULES
   
-  # select required modules
+  # check for required modules
   reqmodules <- 
     switch(modules,
-           minimal = c(os = "os", np = "numpy", pickle = "pickle", numba = "numba"),
-           full = c(os = "os", np = "numpy", pickle = "pickle", numba = "numba", 
-                    gdal = "gdal", osr = "osr", ogr = "ogr", gdalconst = "gdalconst"))
+           minimal = c("numpy", "pickle", "numba"),
+           full = c("numpy", "pickle", "numba", "osgeo"))
 
-  # load required modules and assign to .GlobalEnv
-  for(i in names(reqmodules)){
-    if(reticulate::py_module_available(reqmodules[i])){
-      assign(x = i, envir = .GlobalEnv,
-             value = reticulate::import(reqmodules[i], convert = FALSE, delay_load = TRUE))
-    } else {
-      stop(sprintf("'%s' module missing from %s python environment.\n", reqmodules[i], envname),
-           sprintf("Try installing using reticulate::conda_install(envname = '%s', packages = '%s')", envname, reqmodules[i]))
+  for(i in reqmodules){
+    if(!reticulate::py_module_available(i)){
+      stop(i, " module missing from python environment.")
     }
+  }
+  
+  # load required modules and assign to .GlobalEnv
+  if(modules == "full"){
+    os <<- reticulate::import(module = "os", convert = FALSE, delay_load = TRUE)
+    np <<- reticulate::import(module = "numpy", convert = FALSE, delay_load = TRUE)
+    pickle <<- reticulate::import(module = "pickle", convert = FALSE, delay_load = TRUE)
+    pytempfile <<- reticulate::import(module = "tempfile", convert = FALSE, delay_load = TRUE)
+    gdal <<- reticulate::import(module = "osgeo.gdal", convert = FALSE, delay_load = TRUE)
+    ogr <<- reticulate::import(module = "osgeo.ogr", convert = FALSE, delay_load = TRUE)
+    osr <<- reticulate::import(module = "osgeo.osr", convert = FALSE, delay_load = TRUE)
+    gdalconst <<- reticulate::import(module = "osgeo.gdalconst", convert = FALSE, delay_load = TRUE)
+    njit <<- reticulate::import(module = "numba", convert = FALSE, delay_load = TRUE)$njit
+    jit <<- reticulate::import(module = "numba", convert = FALSE, delay_load = TRUE)$jit
+  }
+  
+  if(modules == "minimal"){
+    os <<- reticulate::import(module = "os", convert = FALSE, delay_load = TRUE) 
+    np <<- reticulate::import(module = "numpy", convert = FALSE, delay_load = TRUE)
+    pickle <<- reticulate::import(module = "pickle", convert = FALSE, delay_load = TRUE)
+    pytempfile <<- reticulate::import(module = "tempfile", convert = FALSE, delay_load = TRUE)
+    njit <<- reticulate::import(module = "numba", convert = FALSE, delay_load = TRUE)$njit
+    jit <<- reticulate::import(module = "numba", convert = FALSE, delay_load = TRUE)$jit
   }
   
   # always load builtin modules
