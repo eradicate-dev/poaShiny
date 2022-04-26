@@ -18,13 +18,23 @@ conda_env_check <- function(envname = "proofofabsence"){
 #' Builds Anaconda environment with package load required to run the Proof of Absence scripts using python
 #' @param force.overwrite Overwrite existing Anaconda environments named 'proofofabsence' (default = TRUE).
 #' @examples
-#'  conda_env_build(force.overwrite = T)  # build new Anaconda environment
-
+#' \dontrun{
+#'   
+#'   # build new Anaconda environment
+#'   conda_env_build_full(envname = "newenv", force.overwrite = TRUE)
+#'   
+#'   reticulate::conda_list()     # show 'newenv' environment
+#'   
+#'   # remove created environment
+#'   reticulate::conda_remove(envname = "newenv")
+#'   
+#'   reticulate::conda_list()     # 'newenv' environment removed
+#' }
 conda_env_build_full <- function(envname = "proofofabsence", force.overwrite = TRUE){
 
   if(conda_env_check(envname)){
     message(sprintf("existing '%s' environment found", envname))
-    if(!force.overwrite) switch(menu(choices = c("y","n"), title = "Proceed?") + 1, stop("Cancelling"),"",stop("Cancelling"))
+    if(!force.overwrite) switch(utils::menu(choices = c("y","n"), title = "Proceed?") + 1, stop("Cancelling"),"",stop("Cancelling"))
   }
 
   # required python packages and versions
@@ -43,7 +53,7 @@ conda_env_build_min <- function(envname = "proofofabsence", force.overwrite = TR
 
   if(conda_env_check(envname)){
     message(sprintf("existing '%s' environment found", envname))
-    if(!force.overwrite) switch(menu(choices = c("y","n"), title = "Proceed?") + 1, stop("Cancelling"),"",stop("Cancelling"))
+    if(!force.overwrite) switch(utils::menu(choices = c("y","n"), title = "Proceed?") + 1, stop("Cancelling"),"",stop("Cancelling"))
   }
 
   #-------------------------------------------------------------------------#
