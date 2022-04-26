@@ -1,4 +1,6 @@
 
+# visible bindings for global variables when using non-standard evaluation
+utils::globalVariables(c("poa", "bi", "np", "os", "pickle", "osr", "ogr", "gdal", "gdalconst"))
 
 
 
