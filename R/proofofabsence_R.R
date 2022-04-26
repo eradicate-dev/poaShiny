@@ -143,13 +143,13 @@ poa_paks <- function(modules = "minimal"){
 #'   params = myParams,
 #'   gridSurveyFname=bi$None)
 RawData_R <- function(
-        zonesShapeFName = "inst/example_data/Kaitake_possums/extent.shp",
-        relativeRiskFName = "inst/example_data/Kaitake_possums/relRiskRaster.tif",
-        zonesOutFName = "results/zones.tif",
-        relRiskRasterOutFName = "results/rr.tif",
+        zonesShapeFName,
+        relativeRiskFName,
+        zonesOutFName,
+        relRiskRasterOutFName,
         resolution = 100.0,
-        epsg = 2193,
-        surveyFName = bi$str("inst/example_data/Kaitake_possums/devices.csv"),
+        epsg,
+        surveyFName,
         params = makeParams(),
         gridSurveyFname=bi$None){
 
