@@ -16,7 +16,10 @@ conda_env_check <- function(envname = "proofofabsence"){
 #' Build Anaconda environment for Proof of Absence python scripts
 #'
 #' Builds Anaconda environment with package load required to run the Proof of Absence scripts using python
+#'
+#' @param envname Name of created environment
 #' @param force.overwrite Overwrite existing Anaconda environments named 'proofofabsence' (default = TRUE).
+#'
 #' @examples
 #' \dontrun{
 #'   
