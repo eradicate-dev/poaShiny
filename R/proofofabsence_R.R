@@ -125,14 +125,21 @@ poa_paks <- function(modules = "minimal"){
 #'                             g0 = 0.05, g0sd = 0.01, sig = 90, sigsd = 10)
 #' myParams$parameterArray
 #' 
-#' # pass paths to RawData function
-#' rawdata <- RawData_R(zonesShapeFName = "inst/example_data/Mahia_Audrey/extent_block1ABCD.shp",
-#'   relativeRiskFName = "inst/example_data/Mahia_Audrey/habDistRR_block1ABCD.tif",
-#'   zonesOutFName = "results/zones.tif",
-#'   relRiskRasterOutFName = "results/rr.tif",
+#' # paths to shape and survey files
+#' zonesShapeFName <- system.file("example_data/Mahia_Audrey/extent_block1ABCD.shp", package = "proofofabsence")
+#' relativeRiskFName <- system.file("example_data/Mahia_Audrey/habDistRR_block1ABCD.tif", package = "proofofabsence")
+#' surveyFName <- system.file("example_data/Mahia_Audrey/Surveillance_location.csv", package = "proofofabsence")
+#' zonesOutFName <- tempfile(fileext = ".tif")
+#' relRiskRasterOutFName <- tempfile(fileext = ".tif")
+#' 
+#' #' # pass paths to RawData function
+#' rawdata <- RawData_R(zonesShapeFName = zonesShapeFName,
+#'   relativeRiskFName = relativeRiskFName,
+#'   zonesOutFName = zonesOutFName,
+#'   relRiskRasterOutFName = relRiskRasterOutFName,
 #'   resolution = 100.0,
 #'   epsg = 2193,
-#'   surveyFName = bi$str("inst/example_data/Mahia_Audrey/Surveillance_location.csv"),
+#'   surveyFName = bi$str(surveyFName),
 #'   params = myParams,
 #'   gridSurveyFname=bi$None)
 RawData_R <- function(
