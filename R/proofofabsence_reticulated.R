@@ -1,6 +1,4 @@
-# TODO --------------------------------------------------------------------
 
-# make reticulated readGridSurveyData when I get access to example data
 
 
 
@@ -287,11 +285,11 @@ preProcessing_reticulated <- function(
   # set INPUT extent and relative risk file names
   zoneShapeFName = os$path$join(inputDataPath, zoneShapeFName)
 
-  #'extentOnly.shp')    #'extent_block1.shp')
-  #'extent_gradient.shp')
+  #extentOnly.shp')    #'extent_block1.shp')
+  #extent_gradient.shp')
   relativeRiskFName = os$path$join(inputDataPath, relativeRiskFName)
-  #'habDistRR.tif')
-  #'RR_mahia.tif')
+  #habDistRR.tif')
+  #RR_mahia.tif')
   #    relativeRiskFName = None
 
   # Surveillance data Name

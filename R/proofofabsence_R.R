@@ -234,7 +234,7 @@ RawData_R <- function(
 #' preProcessing_reticulated
 #' @param parameter 1
 #' @param parameter 2
-#' @keywords keywords
+#'
 #' @export
 preProcessing_reticulated <- function(
            inputDataPath = "inst/example_data/Kaitake_possums", # system.file("example_data/Kaitake_possums", package = "proofofabsence"),
@@ -269,11 +269,11 @@ preProcessing_reticulated <- function(
   # set INPUT extent and relative risk file names
   zoneShapeFName = os$path$join(inputDataPath, zoneShapeFName)
 
-  #'extentOnly.shp')    #'extent_block1.shp')
-  #'extent_gradient.shp')
+  #extentOnly.shp')    #'extent_block1.shp')
+  #extent_gradient.shp')
   relativeRiskFName = os$path$join(inputDataPath, relativeRiskFName)
-  #'habDistRR.tif')
-  #'RR_mahia.tif')
+  #habDistRR.tif')
+  #RR_mahia.tif')
   #    relativeRiskFName = None
 
   # Surveillance data Name
