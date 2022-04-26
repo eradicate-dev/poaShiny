@@ -77,24 +77,3 @@ conda_env_build_min <- function(envname = "proofofabsence", force.overwrite = TR
 
 }
 
-
-#' poa_py
-#'
-#' This function loads the python proof of absence functions in R using reticulate
-#' @keywords python poa reticulate
-#' @export
-#' @examples
-#' require(reticulate)
-#' use_condaenv("proofofabsence")
-#' poa <- poa_py()
-#' poa$calculation             # show calculation proofofabsence module
-#' py <- import_builtins()     # import built-in python functions
-#' py$dir(poa)                 # display functions available with a module
-#' py$dir(poa$calculation)
-#' py$dir(poa$preProcessing)
-
-poa_py <- function(){
-  preProcessing <- reticulate::import("proofofabsence", convert = FALSE, delay_load = T)
-  return(preProcessing)
-}
-
