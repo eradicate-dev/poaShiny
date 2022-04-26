@@ -157,14 +157,6 @@ makeParams <- function(
     return(myParams)
   }
 
-#' RawData_reticulated
-#'
-#' RawData_reticulated
-#' @param parameter 1
-#' @param parameter 2
-#' @export
-
-# class RawData():
 RawData_reticulated <- function(
         # inputs
         zonesShapeFName = "inst/example_data/Kaitake_possums/extent.shp",
