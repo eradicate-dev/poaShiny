@@ -82,7 +82,29 @@ addAnimalParams <- function(POAParameters = makeParams(),
 #' @export
 #'
 #' @examples
-#' proofofabsence.params.POAParameters()
+#' proofofabsence::poa_paks(modules = "minimal")
+#' myParams <- proofofabsence::makeParams(setMultipleZones = FALSE,
+#'                            setNumIterations = 2,
+#'                            setRRTrapDistance = 100.0,
+#'                            startYear = 1,
+#'                            endYear = 1,
+#'                            startPu = 1.0,
+#'                            PuIncreaseRate = 0.0,
+#'                            setMinRR = 1.0,
+#'                            setPrior = c(0.10, 0.2, 0.70),
+#'                            setIntro = c(0.001, 0.05, 0.30))
+#' 
+#' # attributes in params object
+#' myParams$multipleZones
+#' myParams$RRTrapDistance
+#' myParams$years
+#' myParams$startpu
+#' myParams$pu
+#' myParams$minRR
+#' myParams$prior_min
+#' myParams$prior_max
+#' myParams$intro_min
+#' myParams$intro_max
 makeParams <- function(
     setMultipleZones = FALSE,
     setNumIterations = 2,
