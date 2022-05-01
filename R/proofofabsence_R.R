@@ -705,29 +705,38 @@ readGridSurveyData <- function(self, gridSurveyFname = NULL, params = poa$params
   # Read all the grid survey data and make sure it is converted to
   # files of the correct spatial reference and extent.
   
-  rawGridSurvey = np$genfromtxt(gridSurveyFname, delimiter=",", names=TRUE,
+  rawGridSurvey_orig = np$genfromtxt(gridSurveyFname, delimiter=",", names=TRUE,
                                 dtype=list('S200', 'i4', 'f8', 'f8'))
+  rawGridSurvey <- read.csv(as.character(gridSurveyFname), 
+                            colClasses = c("character", "integer", "numeric", "numeric"))
   
-  gridSurveyYears = rawGridSurvey['year']
+  gridSurveyYears_orig = rawGridSurvey_orig['year']
+  gridSurveyYears = rawGridSurvey[['year']]
   
-  nGrids = bi$len(gridSurveyYears)
+  nGrids_orig = bi$len(gridSurveyYears_orig)
+  nGrids <- length(gridSurveyYears)
   #        print('gridyears', self.gridSurveyYears, 'type', type(self.gridSurveyYears),
   #            'is scalar', np.isscalar(self.gridSurveyYears), 'gridsize', nGrids)
   
-  gridSurveyMeans = rawGridSurvey['mean']
-  gridSurveySD = rawGridSurvey['sd']
+  gridSurveyMeans_orig = rawGridSurvey_orig['mean']
+  gridSurveySD_orig = rawGridSurvey_orig['sd']
+  gridSurveyMeans = rawGridSurvey[['mean']]
+  gridSurveySD = rawGridSurvey[['sd']]
   # get an array of powers of 2 so we can encode
   # each year in a raster as a bit
-  gridSurveyCodes = np$power(2, np$arange(nGrids))
-  dirName = os$path$dirname(gridSurveyFname)
+  gridSurveyCodes_orig = np$power(2, np$arange(nGrids_orig))
+  gridSurveyCodes <- 2 ^ (seq_len(nGrids) - 1)
+  dirName_orig = os$path$dirname(gridSurveyFname)
+  dirName <- dirname(gridSurveyFname)
   
   # work out the data type to use - find the minimum data type we can use
   # to save memory
-  maxCode = gridSurveyCodes[-1]  # 2**number of grids-1
+  maxCode_orig = gridSurveyCodes_orig[-1]  # 2**number of grids-1
+  maxCode <- gridSurveyCodes[length(gridSurveyCodes)]  # 2**number of grids-1
   npDType = bi$None
   for(dt in c(np$uint8, np$uint16, np$uint32, np$uint64)) {  # loop potential data types
     info = np$iinfo(dt)  # get min and max of datetype
-    if (maxCode <= info$max){  # if the required integer < max of data type, keep
+    if (maxCode_orig <= info$max){  # if the required integer < max of data type, keep
       npDType = dt
       break
     }
@@ -751,15 +760,32 @@ readGridSurveyData <- function(self, gridSurveyFname = NULL, params = poa$params
   
   # reproject each dataset into a temproary file and
   # then read it in.
-  for(i in reticulate::py_to_r(np$arange(rawGridSurvey$size))){
+  # for(i in reticulate::py_to_r(np$arange(rawGridSurvey$size))){
+  for(i in seq_len(nrow(rawGridSurvey))){
+    # i <- 1
+    # browser()
     
     # get fname and code separately in for loop instead of zip() in py
-    fname <- rawGridSurvey['gridName']$tolist()[i]
+    fname_orig <- rawGridSurvey_orig['gridName']$tolist()[i-1]
+    fname <- rawGridSurvey[['gridName']][i]
+    code_orig <- gridSurveyCodes_orig[i-1]
     code <- gridSurveyCodes[i]
     
     # input
-    fname <- os$path$join(dirName, fname$decode())
-    src_ds <- gdal$Open(fname)
+    fname_orig <- os$path$join(dirName_orig, fname_orig$decode())
+    src_ds_orig <- gdal$Open(fname_orig)
+    fname <- file.path(dirName, fname)
+    src_ds <- terra::rast(fname)
+    # add lines to replace NaN values when importing raster using terra:rast()
+    # - python version uses gdal.Open() which sets 'no data' values to zero
+    terra::values(src_ds)[is.na(terra::values(src_ds))] <- 0
+
+    #-------------------------------------------------------------------------#
+    # quick check
+    # a <- as.matrix(src_ds_orig$GetRasterBand(np$int(1))$ReadAsArray())
+    # b <- terra::as.array(src_ds)[,,1]
+    # all(a == b)
+    #-------------------------------------------------------------------------#
     
     # temp file - maybe should be able to set directory?
     # original py lines:
@@ -767,22 +793,53 @@ readGridSurveyData <- function(self, gridSurveyFname = NULL, params = poa$params
     # os.close(handle)
     # R equivalent? - TODO this affects deleting the file at the end of the
     # script. Might only be a problem in the reticulated version ...
-    reprojFName = bi$str(tempfile(fileext = ".tif"))
+    reprojFName_orig = pytempfile$mkstemp(suffix='.tif')
+    reprojFName <- tempfile(fileext = ".tif")
     
-    reproj_ds <- gdal$GetDriverByName('GTiff')$Create(reprojFName, self$cols,
+    reproj_ds_orig <- gdal$GetDriverByName('GTiff')$Create(reprojFName, self$cols,
                                                       self$rows, np$int(1), gdal$GDT_Byte)
+    reproj_ds <- terra::rast(nrows = self$rows, ncols = self$cols)
+    terra::values(reproj_ds) <- 1
     
-    reproj_ds$SetGeoTransform(self$match_geotrans)
+    match_geotrans <- reticulate::py_to_r(self$match_geotrans)
+    xmin <- match_geotrans[[1]]
+    xmax <- match_geotrans[[1]] + self$cols * self$resol
+    ymin <- match_geotrans[[4]] - self$rows * self$resol
+    ymax <- match_geotrans[[4]]
+    terra::ext(reproj_ds) <- c(xmin, xmax, ymin, ymax)
+    
+    reproj_ds_orig$SetGeoTransform(self$match_geotrans)
     # spatial reference from making extent mask
-    reproj_ds$SetProjection(self$wkt)
+    reproj_ds_orig$SetProjection(self$wkt)
+    terra::crs(reproj_ds) <- paste("epsg", self$epsg, sep = ":")
     # Reproject the grid survey to the dimensions of the extent
-    gdal$ReprojectImage(src_ds, reproj_ds, self$wkt, self$wkt, gdalconst$GRA_NearestNeighbour)
+    gdal$ReprojectImage(src_ds_orig, reproj_ds_orig, self$wkt, self$wkt, gdalconst$GRA_NearestNeighbour)
+    reproj_ds <- terra::project(src_ds, reproj_ds, method = "near")
     
-    reproj_ds$FlushCache()
+    #-------------------------------------------------------------------------#
+    # quick check
+    # a <- as.matrix(reproj_ds_orig$GetRasterBand(np$int(1))$ReadAsArray())
+    # b <- terra::as.array(reproj_ds)[,,1]
+    # all(a == b)
+    #-------------------------------------------------------------------------#
     
-    data <- reproj_ds$GetRasterBand(np$int(1))$ReadAsArray()
+    reproj_ds_orig$FlushCache()
+    
+    data_orig <- reproj_ds_orig$GetRasterBand(np$int(1))$ReadAsArray()
+    data <- terra::as.array(reproj_ds)[,,1]
+    #-------------------------------------------------------------------------#
+    # quick check
+    all(as.matrix(data_orig) == data)
+    #-------------------------------------------------------------------------#
+    
+    
     # remove non-risk cells
-    data <- np$where(np$equal(tmpExtMask, 0), 0, data)
+    data_orig <- np$where(np$equal(tmpExtMask, 0), 0, data_orig)
+    data[] <- ifelse(reticulate::py_to_r(tmpExtMask) == 0, yes = 0, no = data)
+    #-------------------------------------------------------------------------#
+    # quick check
+    all(as.matrix(data_orig) == data)
+    #-------------------------------------------------------------------------#
     
     # is this the first one?
     # create empty 2d array of the right type for storing the codes
@@ -799,8 +856,8 @@ readGridSurveyData <- function(self, gridSurveyFname = NULL, params = poa$params
       # workaround for |=
       gridSurveyData <- reticulate::py_to_r(gridSurveyData)
       
-      gridSurveyData[reticulate::py_to_r(data) != 0] <- 
-        bitwOr(a = gridSurveyData[reticulate::py_to_r(data) != 0], reticulate::py_to_r(code))
+      gridSurveyData[data != 0] <- 
+        bitwOr(a = gridSurveyData[data != 0], code)
       
       gridSurveyData <- np$array(gridSurveyData, dtype = npDType)
       #------------------------------------------------------------------------#
