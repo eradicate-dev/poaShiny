@@ -748,6 +748,9 @@ server <- function(input, output, session) {
     # set temp files for zonesOutFName and relRiskRasterOutFName
     tmp.zonesOutFName <- tempfile(fileext = ".tif")
     tmp.relRiskRasterOutFName <- tempfile(fileext = ".tif")
+    # write out modified (or not) grid parameters to csv file
+    write.csv(set.grid.params(), paths$gridSurveyFname, row.names = FALSE, quote = FALSE)
+        
     rawdata <- 
       proofofabsence::RawData_R(zonesShapeFName = paths$zonesShapeFName,
                                 relativeRiskFName = paths$relativeRiskFName,
