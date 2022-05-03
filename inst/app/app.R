@@ -782,12 +782,12 @@ server <- function(input, output, session) {
                                                  rawdata$match_geotrans, rawdata$wkt, outputDataPath,
                                                  rawdata$RR_zone, rawdata$Pu_zone, rawdata$Name_zone)
 
-    SeU.rast <- zone.rast <- raster(".tmp/output/zones.tif")
-    raster::values(SeU.rast) <- py_to_r(result$sensitivityList)[[1]]
-    raster::values(SeU.rast)[raster::values(SeU.rast) == 0L] <- NA
-    SeU.rast <- mask(SeU.rast, zone.rast, maskvalue=0)
     
-    writeRaster(SeU.rast, ".tmp/output/meanSeuAllYears.tif", overwrite = TRUE)
+    # SeU.rast <- zone.rast <- raster(".tmp/output/zones.tif")
+    # raster::values(SeU.rast) <- py_to_r(result$sensitivityList)[[1]]
+    # raster::values(SeU.rast)[raster::values(SeU.rast) == 0L] <- NA
+    # SeU.rast <- mask(SeU.rast, zone.rast, maskvalue=0)
+    # writeRaster(SeU.rast, ".tmp/output/meanSeuAllYears.tif", overwrite = TRUE)
     
     return(result)
 
@@ -886,31 +886,30 @@ server <- function(input, output, session) {
                 xlab = "Probability of absence", ylab = "density")
   })
 
-  # server: add SSe raster --------------------------------------------------
 
     
+  # server: add meanSeU raster ----------------------------------------------
   observe({
-    input$GO
-    pyPOA()
-
-    library(raster)
-    meanSeu <- raster(".tmp/output/meanSeuAllYears.tif")
-
+    
+    req(pyPOA())
+    
+    # import using terra for performance
+    meanSeu <- terra::rast(as.character(pyPOA()$meanSeuTifPathName))
+    meanSeu_project <- terra::project(meanSeu, "epsg:3857")
+    meanSeu <- raster::raster(meanSeu_project)
+    
+    # set palette
     pal <- colorNumeric(palette = "viridis", domain = c(0,1.1),  # add 0.1 to upper limit
                         na.color = "transparent")
-
+   
+    # add to baseMap
     leafletProxy(session = session, mapId = "baseMap") %>%
-
-      # debugonce(pal); leaflet() %>%
       clearGroup(group = "SeU") %>%
       addRasterImage(x = meanSeu, layerId = "SeU", group = "SeU",
-                     opacity = input$rasterOpacity, colors = pal) %>%
-      addLegend(pal = pal, values = c(0,1), labels = c(0,1), layerId = "SeU") # %>%
-      # addLayersControl(overlayGroups = c("SeU"), position = "bottomleft",
-      #                  options = layersControlOptions(collapsed = FALSE))
-
-
-
+                     opacity = input$rasterOpacity, colors = pal, 
+                     project = FALSE) %>% 
+      addLegend(pal = pal, values = c(0,1), labels = c(0,1), layerId = "SeU")
+    
   })
   
   
