@@ -879,6 +879,13 @@ readGridSurveyData <- function(self, gridSurveyFname = NULL, params = poa$params
     # os.remove(reprojFName)
     
   }
+  
+  # convert R vectors back to numpy arrays
+  gridSurveyYears <- np$array(gridSurveyYears, dtype=np$int32)
+  gridSurveyMeans <- np$array(gridSurveyMeans, dtype=np$float32)
+  gridSurveySD <- np$array(gridSurveySD, dtype=np$float32)
+  gridSurveyCodes <- np$array(gridSurveyCodes, dtype=np$float64)
+  
   return(reticulate::tuple(gridSurveyYears, gridSurveyMeans, gridSurveySD, gridSurveyCodes,
                            gridSurveyData))
 }
