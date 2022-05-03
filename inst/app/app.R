@@ -805,13 +805,6 @@ server <- function(input, output, session) {
                                                  rawdata$match_geotrans, rawdata$wkt, outputDataPath,
                                                  rawdata$RR_zone, rawdata$Pu_zone, rawdata$Name_zone)
 
-    
-    # SeU.rast <- zone.rast <- raster(".tmp/output/zones.tif")
-    # raster::values(SeU.rast) <- py_to_r(result$sensitivityList)[[1]]
-    # raster::values(SeU.rast)[raster::values(SeU.rast) == 0L] <- NA
-    # SeU.rast <- mask(SeU.rast, zone.rast, maskvalue=0)
-    # writeRaster(SeU.rast, ".tmp/output/meanSeuAllYears.tif", overwrite = TRUE)
-    
     return(result)
 
   })
@@ -916,9 +909,30 @@ server <- function(input, output, session) {
     
     req(pyPOA())
     
-    # import using terra for performance
-    meanSeu <- terra::rast(as.character(pyPOA()$meanSeuTifPathName))
+    # get sensitivityList from calcProofOfAbsence result
+    sensitivityList <- py_to_r(pyPOA()$sensitivityList)
+    # get zone tif file path
+    extZoneTifName <- pyPOA()$extZoneTifName
+    
+    # read zone raster as template
+    rtemp <- terra::rast(as.character(extZoneTifName))
+    
+    # replace template values with cell mean SeU and replace zeroes with NA
+    rlist <- lapply(sensitivityList, function(vals){
+      r <- rtemp
+      vals[vals == 0L] <- NA
+      values(r) <- vals
+      r
+    })
+    
+    # stack rasters into layers
+    meanSeu <- do.call("c", rlist)
+    
+    # terra::writeRaster(x = meanSeu, filename = "meanSeu_usingGDAL.tif")
+    
+    # project to pseudo-WGS84 using terra package
     meanSeu_project <- terra::project(meanSeu, "epsg:3857")
+    # convert back to raster for use in leaflet
     meanSeu <- raster::raster(meanSeu_project)
     
     # set palette
