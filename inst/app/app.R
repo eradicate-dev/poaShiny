@@ -325,7 +325,7 @@ server <- function(input, output, session) {
   
   
 
-  # server: copy input files to temp folder ---------------------------------
+  # server: copy example files to temp folder ---------------------------------
   
   # - copy device folders
   observe({
@@ -472,6 +472,7 @@ server <- function(input, output, session) {
     }
   })
   
+  # server: render and update device parameters -----------------------------
   set.animal.params <- reactiveVal(NULL)
   observe({
     if(!is.null(devices())){
@@ -507,6 +508,9 @@ server <- function(input, output, session) {
   
   output$deviceUI <- DT::renderDT(deviceUI())
   output$table2 <- renderPrint(deviceUI())
+  
+  # server: render and update grid parameters -------------------------------
+
   set.grid.params <- reactiveVal(NULL)
   observe({
     if(!is.null(gridinfo())){
