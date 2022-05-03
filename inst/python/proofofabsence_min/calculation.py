@@ -332,7 +332,8 @@ def calcProofOfAbsence(poaparams, trapArray, RRArray, zoneArray, zoneCodes, matc
     result.sensitivityMatrix = SSeMat
     print('r.seMat size', SSeMat.nbytes / (1024 * 1024 * 1024))
 
-    # values associated with 'meanSeuAllYears.tif' raster
+    # swh: return values associated with 'meanSeuAllYears.tif' raster since it 
+    #      doesn't get exported if not using GDAL libs
     result.sensitivityList = sensitivityList
 
     result.poFMatrix = PoFMat
