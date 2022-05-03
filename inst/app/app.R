@@ -805,7 +805,8 @@ server <- function(input, output, session) {
                                                  rawdata$match_geotrans, rawdata$wkt, outputDataPath,
                                                  rawdata$RR_zone, rawdata$Pu_zone, rawdata$Name_zone)
 
-    return(result)
+    return(list(rawdata = rawdata,
+                result = result))
 
   })
   
@@ -827,7 +828,7 @@ server <- function(input, output, session) {
     uppint <- 1 - lowint
     
     # get results
-    result <- pyPOA()
+    result <- pyPOA()$result
     
     # Prior
     prior <- py_to_r(result$priorStore)
@@ -866,7 +867,7 @@ server <- function(input, output, session) {
   # observe({try(print(py_to_r(pyPOA()$poFMatrix)))})
   
   output$PoAtimeplot <- renderPlot({
-    result <- pyPOA()
+    result <- pyPOA()$result
     PoFmat <- py_to_r(result$poFMatrix)
     poa_mean <- rowMeans(PoFmat)
     poa_low <- apply(PoFmat, 1, quantile, 0.05)
@@ -891,7 +892,7 @@ server <- function(input, output, session) {
 
   output$PoAdensplot <- renderPlot({
     
-    res <- pyPOA()
+    res <- pyPOA()$result
     # browser()
     PoFmat <- py_to_r(res$poFMatrix)
     row.names(PoFmat) <- paste("Session", 1:nrow(PoFmat))
@@ -910,12 +911,12 @@ server <- function(input, output, session) {
     req(pyPOA())
     
     # get sensitivityList from calcProofOfAbsence result
-    sensitivityList <- py_to_r(pyPOA()$sensitivityList)
+    sensitivityList <- py_to_r(pyPOA()$result$sensitivityList)
     # get zone tif file path
-    extZoneTifName <- pyPOA()$extZoneTifName
+    extZoneTifName <- pyPOA()$result$extZoneTifName
     
     # read zone raster as template
-    rtemp <- terra::rast(as.character(extZoneTifName))
+    rtemp <- terra::rast(pyPOA()$rawdata$zonesOutFName)
     
     # replace template values with cell mean SeU and replace zeroes with NA
     rlist <- lapply(sensitivityList, function(vals){
