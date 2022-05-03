@@ -745,20 +745,26 @@ server <- function(input, output, session) {
     dir.create(path = ".tmp/output", recursive = TRUE, showWarnings = FALSE)
     
     # debugonce(RawData_R)
+    # set temp files for zonesOutFName and relRiskRasterOutFName
+    tmp.zonesOutFName <- tempfile(fileext = ".tif")
+    tmp.relRiskRasterOutFName <- tempfile(fileext = ".tif")
     rawdata <- 
       proofofabsence::RawData_R(zonesShapeFName = paths$zonesShapeFName,
                                 relativeRiskFName = paths$relativeRiskFName,
-                                zonesOutFName = ".tmp/output/zones.tif", #defaults$zonesOutFName$value, # "app\\www\\poa\\Kaitake\\Results\\Model_0\\zones.tif",
-                                relRiskRasterOutFName = ".tmp/output/relRiskRaster.tif", # "app\\www\\poa\\Kaitake\\Results\\Model_0\\relRiskRaster.tif",
+                                zonesOutFName = tmp.zonesOutFName,
+                                relRiskRasterOutFName = tmp.relRiskRasterOutFName,
                                 resolution = as.double(valid()$resolution),
                                 epsg = as.integer(input$epsg),
                                 surveyFName = paths$surveyFName,
                                 params = myParams, 
                                 gridSurveyFname = paths$gridSurveyFname)
     
+    # use temporary output data path
+    outputDataPath <- tempdir(check = TRUE)
+    
     result <- poa$calculation$calcProofOfAbsence(myParams, rawdata$survey,
                                                  rawdata$RelRiskExtent, rawdata$zoneArray, rawdata$zoneCodes,
-                                                 rawdata$match_geotrans, rawdata$wkt, "test_data/Results",
+                                                 rawdata$match_geotrans, rawdata$wkt, outputDataPath,
                                                  rawdata$RR_zone, rawdata$Pu_zone, rawdata$Name_zone)
 
     # browser()    # <- break into reactive object
