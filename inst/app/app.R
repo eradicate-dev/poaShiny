@@ -94,7 +94,7 @@ ui.inputs <- list(
   # Sidebar with a slider input for number of bins 
   
   wellPanel(
-    selectInput(inputId = "namedExample", label = "Select example set", choices = c("None", "Kaitake possums", "Mahia possums", "CK stoats"), multiple = FALSE),
+    selectInput(inputId = "namedExample", label = "Select example set", choices = c("None", "Kaitake possums", "Mahia possums", "CK stoats", "Nutria"), multiple = FALSE),
     conditionalPanel(condition = "input.namedExample == 'None'",{
       list(fileInput(inputId = "zonesShapeFName", label = "zonesShapeFName", multiple = TRUE),
            fileInput(inputId = "surveyFName", label = "surveyFName", multiple = FALSE),
@@ -340,6 +340,11 @@ server <- function(input, output, session) {
       paths$zonesShapeFName <- system.file("example_data/CK_stoats/extent.shp", package = "proofofabsence")
       paths$relativeRiskFName <- system.file("example_data/CK_stoats/relRisk.tif", package = "proofofabsence")
       paths$surveyFName <- system.file("example_data/CK_stoats/devices.csv", package = "proofofabsence")
+    } else if(input$namedExample == "Nutria"){
+      paths$zonesShapeFName <- system.file("example_data/Nutria/mngtZone_LowPu.shp", package = "proofofabsence")
+      paths$gridSurveyFname <- system.file("example_data/Nutria/gridPublicSur7.csv", package = "proofofabsence")
+      paths$surveyFName <- NULL # system.file("example_data/Nutria/AllNutriaSurvey_2024.csv", package = "proofofabsence", mustWork = TRUE)
+      updateNumericInput(inputId = "epsg", value = 26918)
     } else {
       unlink(".tmp/input/*")
     }
