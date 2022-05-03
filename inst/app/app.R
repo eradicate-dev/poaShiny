@@ -617,23 +617,32 @@ server <- function(input, output, session) {
   
   # copy loaded relative risk raster file to .tmp folder
   observe({
-    
-    if(!is.null(input$relativeRiskFName) & input$namedExample == "None"){
-      paths.to <- paste0(path.tmp, "/input/", 
-                         sub(".*(?=\\..*$)", "relRiskRaster", 
-                             normalizePath(input$relativeRiskFName$name), perl = TRUE))
-      file.copy(from = input$relativeRiskFName$datapath, to = normalizePath(paths.to), overwrite = T)
-      paths$relativeRiskFName <- normalizePath(list.files(".tmp/input", pattern = "relRiskRaster", full.names = T))
+    req(input$relativeRiskFName)
+
+    # rename to original name
+    newpath <- 
+      file.path(dirname(input$relativeRiskFName$datapath), 
+                input$relativeRiskFName$name)
+    renameOK <- 
+      file.rename(normalizePath(input$relativeRiskFName$datapath, mustWork = TRUE), 
+                  normalizePath(newpath, mustWork = FALSE))
+    # update paths reactive object with path to renamed relativeRisk
+    if(renameOK){
+      paths$relativeRiskFName <- newpath
     }
+  })
+  
+  # load relative risk map given in paths$relativeRiskFName
+  observe({   
+    req(paths$relativeRiskFName)
+    req(file.exists(paths$relativeRiskFName))
     
-    # load any relative risk files in .tmp folder
-    if(!is.null(paths$relativeRiskFName)){
-      message(paste("loading relative risk .tif file:", paths$relativeRiskFName))
-      r <- raster::raster(paths$relativeRiskFName)
-      raster::crs(r) <- sf::st_crs(input$epsg)[["wkt"]]
-      relRiskRaster(r)
-      rm(r)
-    }
+    # load relative risk map given in paths$relativeRiskFName
+    message(paste("loading relative risk .tif file:", paths$relativeRiskFName))
+    r <- terra::rast(paths$relativeRiskFName)
+    terra::crs(r) <- paste0("EPSG:", input$epsg)
+    relRiskRaster(r)
+    rm(r)
   })
   
   # # crop relative risk layer to zones if available
@@ -665,52 +674,54 @@ server <- function(input, output, session) {
   
   # server: add relative risk layer to map ----------------------------------
   observe({
-    if("RasterLayer" %in% class(relRiskRaster()) & input$renderRasts){
+    
+    req(relRiskRaster(), input$renderRasts)
       
-      rasterOptions(# chunksize = 1e+06, 
-        maxmemory = 2.5e+08)
-      
-      withProgress(message = 'Reprojecting raster', detail = 'This may take a while...',
-                   value = 0, {
-        # get layer and convert to WGS84
-        RRmap.3857 <- 
-          projectRaster(relRiskRaster(), crs = sf::st_crs(3857)[["wkt"]],
-                        method = "ngb")
-      
-      
-      incProgress(amount = 0.5, message = 'Mapping raster')
-      # get bounds (needs conversion to lat/long)
-      bb <- as.vector(extent(
-        raster::projectExtent(object = RRmap.3857, 
-                              crs = sp::CRS("+init=epsg:4326"))))
-      
-      # set values above MinRR to NA
-      RRmap.3857 <- raster::clamp(RRmap.3857, lower = input$setMinRR, useValues = FALSE)
-      valrng <- c(input$setMinRR, max(values(RRmap.3857), na.rm = T))
-
-      # make palette
-      pal <- colorNumeric(palette = "viridis",
-                          domain = valrng,
-                          na.color = "transparent")
-      
-      # update base map
-      leafletProxy(session = session, mapId = "baseMap") %>%
-        # leaflet() %>%
-        clearGroup(group = "Relative risk") %>%
-        addRasterImage(x = RRmap.3857, group = "Relative risk",
-                       opacity = 0.95, colors = pal, 
-                       project = FALSE, method = "ngb") %>%
-        fitBounds(lng1 = bb[1], lat1 = bb[3], lng2 = bb[2], lat2 = bb[4])
+    withProgress(
+      message = 'Reprojecting raster', detail = 'This may take a while...',
+      value = 0, 
+      {
         
+        # get layer and convert to epsg:3857
+        RRmap.3857 <- terra::project(relRiskRaster(), "epsg:3857")
+        
+        incProgress(amount = 0.5, message = 'Mapping raster')
+        
+        # get bounds
+        # - bounds from pseudo-mercator (epsg:3857) dont't work with fitBounds below
+        # - converting extent to WGS84 and storing bounds
+        e <- terra::ext(relRiskRaster())
+        re <- terra::rast(e, crs = crs(relRiskRaster()))
+        re_4326 <- terra::project(re, "epsg:4326")
+        bb <- as.vector(terra::ext(re_4326))
+        
+        # set values above MinRR to NA
+        RRmap.3857 <- terra::clamp(RRmap.3857, lower = input$setMinRR, values = FALSE)
+        valrng <- c(input$setMinRR, max(terra::values(RRmap.3857), na.rm = TRUE))
+        
+        # make palette
+        pal <- colorNumeric(palette = "viridis",
+                            domain = valrng,
+                            na.color = "transparent")
+        
+        # update base map
+        leafletProxy(session = session, mapId = "baseMap") %>%
+          clearGroup(group = "Relative risk") %>%
+          addRasterImage(x = raster::raster(RRmap.3857), 
+                         group = "Relative risk",
+                         opacity = 0.95, colors = pal, 
+                         project = FALSE) %>%
+          fitBounds(lng1 = bb[["xmin"]], lat1 = bb[["ymin"]], 
+                   lng2 = bb[["xmax"]], lat2 = bb[["ymax"]])
+
       })
-      # add legend if relative risk values vary 
-      if(diff(valrng) > 0){
-        leafletProxy(session = session, mapId = "baseMap") %>%  
-          addLegend(layerId = "RRlegend", pal = pal, values = valrng, bins = 5,
-                    title = "Relative risk",
-                    group = "Relative risk")
-      }
-      
+    
+    # add legend if relative risk values vary 
+    if(diff(valrng) > 0){
+      leafletProxy(session = session, mapId = "baseMap") %>%  
+        addLegend(layerId = "RRlegend", pal = pal, values = valrng, bins = 5,
+                  title = "Relative risk",
+                  group = "Relative risk")
     }
   })
   
