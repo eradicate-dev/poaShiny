@@ -762,6 +762,17 @@ server <- function(input, output, session) {
                                 params = myParams, 
                                 gridSurveyFname = paths$gridSurveyFname)
     
+    # check if grid survey components are available as numpy.ndarray
+    grids_available <- 
+      sapply(rawdata[c("gridSurveyYears", "gridSurveyData", "gridSurveyMeans", "gridSurveySD", "gridSurveyCodes")], 
+             function(x) "numpy.ndarray" %in% class(x))
+    # if all available set useGrids and add grid surveys to poa.params object
+    useGrids <- all(grids_available)
+    if(useGrids){
+      myParams$setGridSurvey(rawdata$gridSurveyYears, rawdata$gridSurveyData,
+                             rawdata$gridSurveyMeans, rawdata$gridSurveySD, rawdata$gridSurveyCodes)
+    }
+    
     # use temporary output data path
     outputDataPath <- tempdir(check = TRUE)
     
