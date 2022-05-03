@@ -744,13 +744,13 @@ server <- function(input, output, session) {
     dir.create(path = ".tmp/input", recursive = TRUE, showWarnings = FALSE)
     dir.create(path = ".tmp/output", recursive = TRUE, showWarnings = FALSE)
     
-    # debugonce(RawData_R)
     # set temp files for zonesOutFName and relRiskRasterOutFName
     tmp.zonesOutFName <- tempfile(fileext = ".tif")
     tmp.relRiskRasterOutFName <- tempfile(fileext = ".tif")
     # write out modified (or not) grid parameters to csv file
     write.csv(set.grid.params(), paths$gridSurveyFname, row.names = FALSE, quote = FALSE)
         
+    # create poa.RawData
     rawdata <- 
       proofofabsence::RawData_R(zonesShapeFName = paths$zonesShapeFName,
                                 relativeRiskFName = paths$relativeRiskFName,
@@ -776,13 +776,12 @@ server <- function(input, output, session) {
     # use temporary output data path
     outputDataPath <- tempdir(check = TRUE)
     
+    # calculate PoA using poa.calculation.calcProofOfAbsence
     result <- poa$calculation$calcProofOfAbsence(myParams, rawdata$survey,
                                                  rawdata$RelRiskExtent, rawdata$zoneArray, rawdata$zoneCodes,
                                                  rawdata$match_geotrans, rawdata$wkt, outputDataPath,
                                                  rawdata$RR_zone, rawdata$Pu_zone, rawdata$Name_zone)
 
-    # browser()    # <- break into reactive object
-    
     SeU.rast <- zone.rast <- raster(".tmp/output/zones.tif")
     raster::values(SeU.rast) <- py_to_r(result$sensitivityList)[[1]]
     raster::values(SeU.rast)[raster::values(SeU.rast) == 0L] <- NA
