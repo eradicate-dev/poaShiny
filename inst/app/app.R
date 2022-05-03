@@ -107,7 +107,8 @@ ui.inputs <- list(
     numericInput(inputId = "epsg", label = defaults$epsg$label, value = defaults$epsg$value)
   ),
   h4("Device parameters - double-click to adjust"),
-  DT::DTOutput(outputId = "deviceUI")
+  DT::DTOutput(outputId = "deviceUI"),
+  DT::DTOutput(outputId = "gridUI")
 )
 
 ## UI: priors ----
@@ -495,7 +496,33 @@ server <- function(input, output, session) {
   
   output$deviceUI <- DT::renderDT(deviceUI())
   output$table2 <- renderPrint(deviceUI())
+  set.grid.params <- reactiveVal(NULL)
+  observe({
+    if(!is.null(gridinfo())){
+      gridinfo()
+      set.grid.params(gridinfo())
+    }
+  })
     
+  gridUI <- reactive({
+    # browser()
+    dtOut <- DT::datatable(set.grid.params(), 
+                           editable = TRUE, 
+                           options = list(ordering=F, searching = F, paging = F))
+    return(dtOut)
+  })
+  
+  output$gridUI <- DT::renderDT(gridUI())
+  
+  observe({
+    if(!is.null(input$gridUI_cell_edit)){
+      # browser()
+      print(set.grid.params())
+      print(input$gridUI_cell_edit)
+      set.grid.params(DT::editData(data = set.grid.params(), 
+                                   info = input$gridUI_cell_edit))
+    }
+  })
   
   # 
   # leafletProxy(session = session, mapId = "baseMap") %>%
