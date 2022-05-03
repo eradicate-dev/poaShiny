@@ -98,7 +98,8 @@ ui.inputs <- list(
     conditionalPanel(condition = "input.namedExample == 'None'",{
       list(fileInput(inputId = "zonesShapeFName", label = "zonesShapeFName", multiple = TRUE),
            fileInput(inputId = "surveyFName", label = "surveyFName", multiple = FALSE),
-           fileInput(inputId = "relativeRiskFName", label = "relativeRiskFName", multiple = FALSE))
+           fileInput(inputId = "relativeRiskFName", label = "relativeRiskFName", multiple = FALSE),
+           fileInput(inputId = "gridSurveyFname", label = "gridSurveyFname", multiple = TRUE))
     }),
     radioButtons(inputId = "useMultiZone", label = "Use single or multiple zones?", 
                  choices = c("Single zone", "Multiple zones"), selected = "Multiple zones"),
@@ -278,7 +279,8 @@ server <- function(input, output, session) {
 
   paths <- reactiveValues(zonesShapeFName = NULL,
                           relativeRiskFName = NULL,
-                          surveyFName = NULL)
+                          surveyFName = NULL,
+                          gridSurveyFname = NULL)
   
   valid <- reactive({
     
@@ -378,6 +380,51 @@ server <- function(input, output, session) {
     }
     
   })
+
+  # server: load & format grids -------------------------------------------
+  gridinfo <- reactiveVal(NULL)
+
+  observe({
+    # if(!is.null(input$gridSurveyFname) & input$namedExample == "None"){
+    #   paths$gridSurveyFname <- normalizePath(input$gridSurveyFname$datapath)
+    # }
+    input$gridSurveyFname
+    
+    if(!is.null(input$gridSurveyFname) && file.exists(input$gridSurveyFname$datapath)){
+      
+      # get paths for multiple uploaded files
+      gridpaths <- input$gridSurveyFname$datapath
+      gridnames <- input$gridSurveyFname$name
+      # find csv file with grid info
+      infopath <- gridpaths[grepl("\\.csv$", gridpaths)]
+      infoname <- gridnames[grepl("\\.csv$", gridpaths)]
+      # read csv
+      gridcsv <- read.csv(infopath)
+      # check for required rasters in grid info csv
+      if(!all(gridcsv$gridName %in% gridnames)){
+        stop("raster file '", setdiff(gridcsv$gridName, "a"), 
+             "' specified in uploaded ", infoname, 
+             " is missing. Make sure both grid information and grid raster files are uploaded.")
+      }
+      
+      # fileInput drops file names renbame files back to original
+      newpaths <- file.path(dirname(gridpaths), gridnames)
+      file.rename(gridpaths, newpaths)
+      
+      # update reactives with new grid survey path
+      newinfopath <- newpaths[basename(newpaths) == infoname]
+      # update paths reactive object with path to renamed grid survey file
+      paths$gridSurveyFname <- normalizePath(newinfopath)
+      
+    }
+    
+    # update reactive gridinfo object
+    if(!is.null(paths$gridSurveyFname)){
+      gridinfo(read.csv(paths$gridSurveyFname))
+    }
+    
+  })
+  
     
   # observe({input$namedExample; input$}, {  
   #   # convert to spatial object
@@ -660,7 +707,7 @@ server <- function(input, output, session) {
                                 epsg = as.integer(input$epsg),
                                 surveyFName = paths$surveyFName,
                                 params = myParams, 
-                                gridSurveyFname = NULL)
+                                gridSurveyFname = paths$gridSurveyFname)
     
     result <- poa$calculation$calcProofOfAbsence(myParams, rawdata$survey,
                                                  rawdata$RelRiskExtent, rawdata$zoneArray, rawdata$zoneCodes,
