@@ -769,8 +769,9 @@ server <- function(input, output, session) {
     # set temp files for zonesOutFName and relRiskRasterOutFName
     tmp.zonesOutFName <- tempfile(fileext = ".tif")
     tmp.relRiskRasterOutFName <- tempfile(fileext = ".tif")
-    # write out modified (or not) grid parameters to csv file
-    write.csv(set.grid.params(), paths$gridSurveyFname, row.names = FALSE, quote = FALSE)
+    # write out modified (or not) grid parameters to temporary csv file
+    ind <- set.grid.params()$year %in% seq.int(input$startYear, input$endYear)
+    write.csv(set.grid.params()[ind,], paths$gridSurveyFname, row.names = FALSE, quote = FALSE)
         
     # create poa.RawData
     rawdata <- 
