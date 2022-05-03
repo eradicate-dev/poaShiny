@@ -142,8 +142,8 @@ ui.set.intro <-
   )
 
 ui.inputs.yrs <- 
-  fluidRow(column(numericInput(inputId = "yrStart", label = "Start year", value = 1), width = 6),
-           column(numericInput(inputId = "yrEnd", label = "End year", value = 1), width = 6))
+  fluidRow(column(numericInput(inputId = "startYear", label = "Start year", value = 1), width = 6),
+           column(numericInput(inputId = "endYear", label = "End year", value = 1), width = 6))
 
 # UI: advanced input ------------------------------------------------------
 ui.advinputs <- 
@@ -378,11 +378,6 @@ server <- function(input, output, session) {
       # devs.4326 <- st_transform(devs, crs = 4326)
       
       devices(devs)
-      
-      # update start and finish years
-      updateNumericInput(session, inputId = "yrStart", value = min(devs$Year))
-      updateNumericInput(session, inputId = "yrEnd", value = max(devs$Year))
-      
     }
     
   })
@@ -431,6 +426,22 @@ server <- function(input, output, session) {
     
   })
   
+
+  # server: update start and end years ---------------------------------------
+
+  observe({
+    # get years from devices & grids
+    deviceyrs <- devices()$Year
+    gridyrs <- gridinfo()$year
+    # combine years and update inputs
+    allyrs <- c(deviceyrs, gridyrs)
+    if(!is.null(allyrs) && is.numeric(allyrs)){
+      updateNumericInput(session, inputId = "startYear", 
+                         value = min(allyrs))
+      updateNumericInput(session, inputId = "endYear", 
+                         value = max(allyrs))
+    }
+  })
     
   # observe({input$namedExample; input$}, {  
   #   # convert to spatial object
@@ -710,7 +721,7 @@ server <- function(input, output, session) {
     myParams <- proofofabsence::makeParams(setMultipleZones = input$useMultiZone %in% "Multiple zones",
                                            setNumIterations = input$setNumIterations,
                                            setRRTrapDistance = input$setRRTrapDistance,
-                                           startYear = input$yrStart, endYear = input$yrEnd,
+                                           startYear = input$startYear, endYear = input$endYear,
                                            startPu = input$startPu, PuIncreaseRate = 0.0,
                                            setMinRR = input$setMinRR,
                                            setPrior = c(input$prior_min,input$prior_mode,input$prior_max),
