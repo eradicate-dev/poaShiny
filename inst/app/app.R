@@ -343,9 +343,20 @@ server <- function(input, output, session) {
       paths$surveyFName <- system.file("example_data/CK_stoats/devices.csv", package = "proofofabsence")
     } else if(input$namedExample == "Nutria"){
       paths$zonesShapeFName <- system.file("example_data/Nutria/mngtZone_LowPu.shp", package = "proofofabsence")
-      paths$gridSurveyFname <- system.file("example_data/Nutria/gridPublicSur7.csv", package = "proofofabsence")
       paths$surveyFName <- NULL # system.file("example_data/Nutria/AllNutriaSurvey_2024.csv", package = "proofofabsence", mustWork = TRUE)
       updateNumericInput(inputId = "epsg", value = 26918)
+      
+      # copy grid surveillance files to temporary folder
+      #  - csv gets rewritten when selecting start and end years
+      #  - unless the csv is copied the R system csvs are overwritten and the
+      #    changes becomes permanent
+      publicNutria <- system.file("example_data/Nutria/publicNutria.img", package = "proofofabsence")
+      tmp.publicNutria <- file.path(tempdir(), basename(publicNutria))
+      gridSurveyFname <- system.file("example_data/Nutria/gridPublicSur7.csv", package = "proofofabsence")
+      tmp.gridSurveyFname <- file.path(tempdir(), basename(gridSurveyFname))
+      file.copy(publicNutria, tmp.publicNutria)
+      file.copy(gridSurveyFname, tmp.gridSurveyFname)
+      paths$gridSurveyFname <- normalizePath(tmp.gridSurveyFname)
     } else {
       unlink(".tmp/input/*")
     }
