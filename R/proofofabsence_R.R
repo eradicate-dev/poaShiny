@@ -699,6 +699,17 @@ readGridSurveyData <- function(self, gridSurveyFname = NULL, params = poa$params
   req <- c("zoneArray")
   noreq <- sapply(self[req], is.null)
   if(any(noreq)) stop("missing self entries:", paste(req[noreq], collapse = " "))
+  
+  # load grid survey csv and check specified rasters exist in same folder
+  chkcsv <- read.csv(gridSurveyFname)
+  chkgridpaths <- file.path(dirname(gridSurveyFname), chkcsv$gridName)
+  missinggrids <- chkgridpaths[!file.exists(chkgridpaths)]
+  if(length(missinggrids) > 0){
+    stop("the following raster files specified in grid survey file are missing: ",
+         paste(unique(basename(missinggrids)), collapse = ","), 
+         ". Add the files to the same folder as the grid survey file, ", 
+         basename(gridSurveyFname), ".")
+  }
   #-------------------------------------------------------------------------#
   
   
