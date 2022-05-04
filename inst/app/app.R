@@ -345,7 +345,7 @@ server <- function(input, output, session) {
       paths$surveyFName <- system.file("example_data/CK_stoats/devices.csv", package = "proofofabsence")
     } else if(input$namedExample == "Nutria"){
       paths$zonesShapeFName <- system.file("example_data/Nutria/mngtZone_LowPu.shp", package = "proofofabsence")
-      paths$surveyFName <- NULL # system.file("example_data/Nutria/AllNutriaSurvey_2024.csv", package = "proofofabsence", mustWork = TRUE)
+      paths$surveyFName <- system.file("example_data/Nutria/AllNutriaSurvey_2024.csv", package = "proofofabsence", mustWork = TRUE)
       updateNumericInput(inputId = "epsg", value = 26918)
       
       # copy grid surveillance files to temporary folder
