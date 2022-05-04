@@ -13,7 +13,7 @@ Imports:
     reticulate,
     sf,
     sp,
-    raster,
+    raster (>= 3.5.15),
     fasterize,
     shiny,
     rgdal,

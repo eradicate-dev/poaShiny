@@ -153,6 +153,11 @@ RawData_R <- function(
         params = makeParams(),
         gridSurveyFname=bi$None){
 
+  # Set TRAP_PARAM_DTYPE - in py scripts this is set at the start of the preProcessing.py
+  TRAP_PARAM_DTYPE = bi$list(list(tuple('year', 'u4'), tuple('animal', 'u4'), tuple('detect', 'u4'), 
+                                  tuple('easting', 'f8'), tuple('northing', 'f8'), tuple('age', 'f8'), tuple('sex', 'u1'), 
+                                  tuple('trapnights', 'f8')))
+  
         # replace RawData class self object with an R list
         self <- list()
 
@@ -212,9 +217,13 @@ RawData_R <- function(
 
         # if gridSurveyFname is not None:
         if(!is.null(gridSurveyFname)){
-            # (self.gridSurveyYears, self.gridSurveyMeans, self.gridSurveySD,
-            #         self.gridSurveyCodes, self.gridSurveyData) = self.readGridSurveyData(
-            #         gridSurveyFname, params)
+          .tmp <- readGridSurveyData(self, gridSurveyFname, params)
+          self$gridSurveyYears <- .tmp[[0]]
+          self$gridSurveyMeans <- .tmp[[1]]
+          self$gridSurveySD <-    .tmp[[2]]
+          self$gridSurveyCodes <- .tmp[[3]]
+          self$gridSurveyData <-  .tmp[[4]]
+          rm(.tmp)
         } else {
             # not present
             self$gridSurveyYears = bi$None
@@ -673,6 +682,177 @@ makeMaskAndZones <- function(self, multipleZones, params){
               Name_zone = RR_zone))
 }
 
+#' readGridSurveyData
+#'
+#' @param self 
+#' @param gridSurveyFname 
+#' @param params 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+readGridSurveyData <- function(self, gridSurveyFname = NULL, params = poa$params){
+  
+  #-------------------------------------------------------------------------#
+  # check self for missing entries (py crashes if missing)
+  req <- c("zoneArray")
+  noreq <- sapply(self[req], is.null)
+  if(any(noreq)) stop("missing self entries:", paste(req[noreq], collapse = " "))
+  
+  # load grid survey csv and check specified rasters exist in same folder
+  chkcsv <- read.csv(gridSurveyFname)
+  chkgridpaths <- file.path(dirname(gridSurveyFname), chkcsv$gridName)
+  missinggrids <- chkgridpaths[!file.exists(chkgridpaths)]
+  if(length(missinggrids) > 0){
+    stop("the following raster files specified in grid survey file are missing: ",
+         paste(unique(basename(missinggrids)), collapse = ","), 
+         ". Add the files to the same folder as the grid survey file, ", 
+         basename(gridSurveyFname), ".")
+  }
+  #-------------------------------------------------------------------------#
+  
+  
+  # Read all the grid survey data and make sure it is converted to
+  # files of the correct spatial reference and extent.
+  
+  rawGridSurvey <- read.csv(as.character(gridSurveyFname), 
+                            colClasses = c("character", "integer", "numeric", "numeric"))
+  
+  gridSurveyYears = rawGridSurvey[['year']]
+  
+  nGrids <- length(gridSurveyYears)
+  #        print('gridyears', self.gridSurveyYears, 'type', type(self.gridSurveyYears),
+  #            'is scalar', np.isscalar(self.gridSurveyYears), 'gridsize', nGrids)
+  
+  gridSurveyMeans = rawGridSurvey[['mean']]
+  gridSurveySD = rawGridSurvey[['sd']]
+  # get an array of powers of 2 so we can encode
+  # each year in a raster as a bit
+  gridSurveyCodes <- 2 ^ (seq_len(nGrids) - 1)
+  dirName <- dirname(gridSurveyFname)
+  
+  # work out the data type to use - find the minimum data type we can use
+  # to save memory
+  maxCode <- gridSurveyCodes[length(gridSurveyCodes)]  # 2**number of grids-1
+  npDType = bi$None
+  for(dt in c(np$uint8, np$uint16, np$uint32, np$uint64)) {  # loop potential data types
+    info = np$iinfo(dt)  # get min and max of datetype
+    infomax <- as.numeric(as.character(info$max))
+    if (maxCode <= infomax){  # if the required integer < max of data type, keep
+      npDType = dt
+      break
+    }
+  }
+  
+  if (npDType == bi$None) {  # if have more than 61 grids, it will be error
+    stop('Too many grid survey years to store in an integer')
+  }
+  
+  message('chosen dtype', as.character(npDType))
+  
+  # have to create a mask to update the grid survey rasters
+  # this is not ideal because we do this in calculation.py
+  
+  tmpExtMask <- self$zoneArray$copy()
+  # tmpExtMask[self.RelRiskExtent < params.minRR] = 0
+  tmpExtMask <- np$where(np$less(self$RelRiskExtent, params$minRR), 0, tmpExtMask)
+  
+  # so we know when we got to the first one
+  gridSurveyData <- bi$None
+  
+  # reproject each dataset into a temproary file and
+  # then read it in.
+  # for(i in reticulate::py_to_r(np$arange(rawGridSurvey$size))){
+  for(i in seq_len(nrow(rawGridSurvey))){
+    # i <- 1
+    # browser()
+    
+    # get fname and code separately in for loop instead of zip() in py
+    fname <- rawGridSurvey[['gridName']][i]
+    code <- gridSurveyCodes[i]
+    
+    # input
+    fname <- file.path(dirName, fname)
+    src_ds <- terra::rast(fname)
+    
+    # add lines to replace NaN values when importing raster using terra:rast()
+    # - python version uses gdal.Open() which sets 'no data' values to zero
+    terra::values(src_ds)[is.na(terra::values(src_ds))] <- 0
+
+    #-------------------------------------------------------------------------#
+    # quick check
+    # a <- as.matrix(src_ds_orig$GetRasterBand(np$int(1))$ReadAsArray())
+    # b <- terra::as.array(src_ds)[,,1]
+    # all(a == b)
+    #-------------------------------------------------------------------------#
+    
+    # temp file - maybe should be able to set directory?
+    # original py lines:
+    # handle, reprojFName = tempfile.mkstemp(suffix='.tif')
+    # os.close(handle)
+    # R equivalent? - TODO this affects deleting the file at the end of the
+    # script. Might only be a problem in the reticulated version ...
+    reprojFName <- tempfile(fileext = ".tif")
+    
+    reproj_ds <- terra::rast(nrows = self$rows, ncols = self$cols)
+    terra::values(reproj_ds) <- 1
+    
+    # get extent values from geotrans
+    match_geotrans <- reticulate::py_to_r(self$match_geotrans)
+    xmin <- match_geotrans[[1]]
+    xmax <- xmin + self$cols * self$resol
+    ymax <- match_geotrans[[4]]
+    ymin <- ymax - self$rows * self$resol
+    terra::ext(reproj_ds) <- c(xmin, xmax, ymin, ymax)
+    
+    # spatial reference from making extent mask
+    terra::crs(reproj_ds) <- paste("epsg", self$epsg, sep = ":")
+    # Reproject the grid survey to the dimensions of the extent
+    reproj_ds <- terra::project(src_ds, reproj_ds, method = "near")
+    
+    data <- terra::as.array(reproj_ds)[,,1]
+    
+    # remove non-risk cells
+    data[] <- ifelse(as.matrix(tmpExtMask) == 0, yes = 0, no = data)
+    
+    # is this the first one?
+    # create empty 2d array of the right type for storing the codes
+    if("python.builtin.NoneType" %in% class(gridSurveyData)){
+      gridSurveyData <- np$zeros_like(data, dtype=npDType)
+      gridSurveyData <- np$where(np$not_equal(data, 0), code, gridSurveyData)
+    } else {
+      
+      # subsequent - bitwise or the code in
+      # gridSurveyData[data != 0] |= code
+      
+      #------------------------------------------------------------------------#
+      # converting to R matrix an and back to np.array
+      # workaround for |=
+      gridSurveyData <- reticulate::py_to_r(gridSurveyData)
+      
+      gridSurveyData[data != 0] <- 
+        bitwOr(a = gridSurveyData[data != 0], code)
+      
+      gridSurveyData <- np$array(gridSurveyData, dtype = npDType)
+      #------------------------------------------------------------------------#
+    }
+    
+    # del reproj_ds
+    # del src_ds
+    # os.remove(reprojFName)
+    
+  }
+  
+  # convert R vectors back to numpy arrays
+  gridSurveyYears <- np$array(gridSurveyYears, dtype=np$int32)
+  gridSurveyMeans <- np$array(gridSurveyMeans, dtype=np$float32)
+  gridSurveySD <- np$array(gridSurveySD, dtype=np$float32)
+  gridSurveyCodes <- np$array(gridSurveyCodes, dtype=np$float64)
+  
+  return(reticulate::tuple(gridSurveyYears, gridSurveyMeans, gridSurveySD, gridSurveyCodes,
+                           gridSurveyData))
+}
 
 #' makeRelativeRiskTif
 #'

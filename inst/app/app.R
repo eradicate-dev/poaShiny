@@ -94,11 +94,12 @@ ui.inputs <- list(
   # Sidebar with a slider input for number of bins 
   
   wellPanel(
-    selectInput(inputId = "namedExample", label = "Select example set", choices = c("None", "Kaitake possums", "Mahia possums", "CK stoats"), multiple = FALSE),
+    selectInput(inputId = "namedExample", label = "Select example set", choices = c("None", "Kaitake possums", "Mahia possums", "CK stoats", "Nutria"), multiple = FALSE),
     conditionalPanel(condition = "input.namedExample == 'None'",{
       list(fileInput(inputId = "zonesShapeFName", label = "zonesShapeFName", multiple = TRUE),
            fileInput(inputId = "surveyFName", label = "surveyFName", multiple = FALSE),
-           fileInput(inputId = "relativeRiskFName", label = "relativeRiskFName", multiple = FALSE))
+           fileInput(inputId = "relativeRiskFName", label = "relativeRiskFName", multiple = FALSE),
+           fileInput(inputId = "gridSurveyFname", label = "gridSurveyFname", multiple = TRUE))
     }),
     radioButtons(inputId = "useMultiZone", label = "Use single or multiple zones?", 
                  choices = c("Single zone", "Multiple zones"), selected = "Multiple zones"),
@@ -106,7 +107,8 @@ ui.inputs <- list(
     numericInput(inputId = "epsg", label = defaults$epsg$label, value = defaults$epsg$value)
   ),
   h4("Device parameters - double-click to adjust"),
-  DT::DTOutput(outputId = "deviceUI")
+  DT::DTOutput(outputId = "deviceUI"),
+  DT::DTOutput(outputId = "gridUI")
 )
 
 ## UI: priors ----
@@ -140,8 +142,8 @@ ui.set.intro <-
   )
 
 ui.inputs.yrs <- 
-  fluidRow(column(numericInput(inputId = "yrStart", label = "Start year", value = 1), width = 6),
-           column(numericInput(inputId = "yrEnd", label = "End year", value = 1), width = 6))
+  fluidRow(column(numericInput(inputId = "startYear", label = "Start year", value = 1), width = 6),
+           column(numericInput(inputId = "endYear", label = "End year", value = 1), width = 6))
 
 # UI: advanced input ------------------------------------------------------
 ui.advinputs <- 
@@ -178,7 +180,7 @@ ui.output <-
     # h3("runpypress"),
     # verbatimTextOutput("runpypress"), 
     h3("----------DEBUGGING-----------"),
-    checkboxInput(inputId = "renderPts", label = "render map points", value = TRUE),
+    checkboxInput(inputId = "renderPts", label = "render map points", value = FALSE),
     checkboxInput(inputId = "renderRasts", label = "render map rasters", value = TRUE),
     h3("inputTable"),
     htmlOutput("inputTable"))
@@ -278,7 +280,8 @@ server <- function(input, output, session) {
 
   paths <- reactiveValues(zonesShapeFName = NULL,
                           relativeRiskFName = NULL,
-                          surveyFName = NULL)
+                          surveyFName = NULL,
+                          gridSurveyFname = NULL)
   
   valid <- reactive({
     
@@ -322,7 +325,7 @@ server <- function(input, output, session) {
   
   
 
-  # server: copy input files to temp folder ---------------------------------
+  # server: copy example files to temp folder ---------------------------------
   
   # - copy device folders
   observe({
@@ -338,6 +341,22 @@ server <- function(input, output, session) {
       paths$zonesShapeFName <- system.file("example_data/CK_stoats/extent.shp", package = "proofofabsence")
       paths$relativeRiskFName <- system.file("example_data/CK_stoats/relRisk.tif", package = "proofofabsence")
       paths$surveyFName <- system.file("example_data/CK_stoats/devices.csv", package = "proofofabsence")
+    } else if(input$namedExample == "Nutria"){
+      paths$zonesShapeFName <- system.file("example_data/Nutria/mngtZone_LowPu.shp", package = "proofofabsence")
+      paths$surveyFName <- NULL # system.file("example_data/Nutria/AllNutriaSurvey_2024.csv", package = "proofofabsence", mustWork = TRUE)
+      updateNumericInput(inputId = "epsg", value = 26918)
+      
+      # copy grid surveillance files to temporary folder
+      #  - csv gets rewritten when selecting start and end years
+      #  - unless the csv is copied the R system csvs are overwritten and the
+      #    changes becomes permanent
+      publicNutria <- system.file("example_data/Nutria/publicNutria.img", package = "proofofabsence")
+      tmp.publicNutria <- file.path(tempdir(), basename(publicNutria))
+      gridSurveyFname <- system.file("example_data/Nutria/gridPublicSur7.csv", package = "proofofabsence")
+      tmp.gridSurveyFname <- file.path(tempdir(), basename(gridSurveyFname))
+      file.copy(publicNutria, tmp.publicNutria)
+      file.copy(gridSurveyFname, tmp.gridSurveyFname)
+      paths$gridSurveyFname <- normalizePath(tmp.gridSurveyFname)
     } else {
       unlink(".tmp/input/*")
     }
@@ -370,13 +389,69 @@ server <- function(input, output, session) {
       # devs.4326 <- st_transform(devs, crs = 4326)
       
       devices(devs)
+    }
+    
+  })
+
+  # server: load & format grids -------------------------------------------
+  gridinfo <- reactiveVal(NULL)
+
+  observe({
+    # if(!is.null(input$gridSurveyFname) & input$namedExample == "None"){
+    #   paths$gridSurveyFname <- normalizePath(input$gridSurveyFname$datapath)
+    # }
+    input$gridSurveyFname
+    
+    if(!is.null(input$gridSurveyFname) && file.exists(input$gridSurveyFname$datapath)){
       
-      # update start and finish years
-      updateNumericInput(session, inputId = "yrStart", value = min(devs$Year))
-      updateNumericInput(session, inputId = "yrEnd", value = max(devs$Year))
+      # get paths for multiple uploaded files
+      gridpaths <- input$gridSurveyFname$datapath
+      gridnames <- input$gridSurveyFname$name
+      # find csv file with grid info
+      infopath <- gridpaths[grepl("\\.csv$", gridpaths)]
+      infoname <- gridnames[grepl("\\.csv$", gridpaths)]
+      # read csv
+      gridcsv <- read.csv(infopath)
+      # check for required rasters in grid info csv
+      if(!all(gridcsv$gridName %in% gridnames)){
+        stop("raster file '", setdiff(gridcsv$gridName, "a"), 
+             "' specified in uploaded ", infoname, 
+             " is missing. Make sure both grid information and grid raster files are uploaded.")
+      }
+      
+      # fileInput drops file names renbame files back to original
+      newpaths <- file.path(dirname(gridpaths), gridnames)
+      file.rename(gridpaths, newpaths)
+      
+      # update reactives with new grid survey path
+      newinfopath <- newpaths[basename(newpaths) == infoname]
+      # update paths reactive object with path to renamed grid survey file
+      paths$gridSurveyFname <- normalizePath(newinfopath)
       
     }
     
+    # update reactive gridinfo object
+    if(!is.null(paths$gridSurveyFname)){
+      gridinfo(read.csv(paths$gridSurveyFname))
+    }
+    
+  })
+  
+
+  # server: update start and end years ---------------------------------------
+
+  observe({
+    # get years from devices & grids
+    deviceyrs <- devices()$Year
+    gridyrs <- gridinfo()$year
+    # combine years and update inputs
+    allyrs <- c(deviceyrs, gridyrs)
+    if(!is.null(allyrs) && is.numeric(allyrs)){
+      updateNumericInput(session, inputId = "startYear", 
+                         value = min(allyrs))
+      updateNumericInput(session, inputId = "endYear", 
+                         value = max(allyrs))
+    }
   })
     
   # observe({input$namedExample; input$}, {  
@@ -408,6 +483,7 @@ server <- function(input, output, session) {
     }
   })
   
+  # server: render and update device parameters -----------------------------
   set.animal.params <- reactiveVal(NULL)
   observe({
     if(!is.null(devices())){
@@ -443,7 +519,36 @@ server <- function(input, output, session) {
   
   output$deviceUI <- DT::renderDT(deviceUI())
   output$table2 <- renderPrint(deviceUI())
+  
+  # server: render and update grid parameters -------------------------------
+
+  set.grid.params <- reactiveVal(NULL)
+  observe({
+    if(!is.null(gridinfo())){
+      gridinfo()
+      set.grid.params(gridinfo())
+    }
+  })
     
+  gridUI <- reactive({
+    # browser()
+    dtOut <- DT::datatable(set.grid.params(), 
+                           editable = TRUE, 
+                           options = list(ordering=F, searching = F, paging = F))
+    return(dtOut)
+  })
+  
+  output$gridUI <- DT::renderDT(gridUI())
+  
+  observe({
+    if(!is.null(input$gridUI_cell_edit)){
+      # browser()
+      print(set.grid.params())
+      print(input$gridUI_cell_edit)
+      set.grid.params(DT::editData(data = set.grid.params(), 
+                                   info = input$gridUI_cell_edit))
+    }
+  })
   
   # 
   # leafletProxy(session = session, mapId = "baseMap") %>%
@@ -523,23 +628,32 @@ server <- function(input, output, session) {
   
   # copy loaded relative risk raster file to .tmp folder
   observe({
-    
-    if(!is.null(input$relativeRiskFName) & input$namedExample == "None"){
-      paths.to <- paste0(path.tmp, "/input/", 
-                         sub(".*(?=\\..*$)", "relRiskRaster", 
-                             normalizePath(input$relativeRiskFName$name), perl = TRUE))
-      file.copy(from = input$relativeRiskFName$datapath, to = normalizePath(paths.to), overwrite = T)
-      paths$relativeRiskFName <- normalizePath(list.files(".tmp/input", pattern = "relRiskRaster", full.names = T))
+    req(input$relativeRiskFName)
+
+    # rename to original name
+    newpath <- 
+      file.path(dirname(input$relativeRiskFName$datapath), 
+                input$relativeRiskFName$name)
+    renameOK <- 
+      file.rename(normalizePath(input$relativeRiskFName$datapath, mustWork = TRUE), 
+                  normalizePath(newpath, mustWork = FALSE))
+    # update paths reactive object with path to renamed relativeRisk
+    if(renameOK){
+      paths$relativeRiskFName <- newpath
     }
+  })
+  
+  # load relative risk map given in paths$relativeRiskFName
+  observe({   
+    req(paths$relativeRiskFName)
+    req(file.exists(paths$relativeRiskFName))
     
-    # load any relative risk files in .tmp folder
-    if(!is.null(paths$relativeRiskFName)){
-      message(paste("loading relative risk .tif file:", paths$relativeRiskFName))
-      r <- raster::raster(paths$relativeRiskFName)
-      raster::crs(r) <- sf::st_crs(input$epsg)[["wkt"]]
-      relRiskRaster(r)
-      rm(r)
-    }
+    # load relative risk map given in paths$relativeRiskFName
+    message(paste("loading relative risk .tif file:", paths$relativeRiskFName))
+    r <- terra::rast(paths$relativeRiskFName)
+    terra::crs(r) <- paste0("EPSG:", input$epsg)
+    relRiskRaster(r)
+    rm(r)
   })
   
   # # crop relative risk layer to zones if available
@@ -571,52 +685,54 @@ server <- function(input, output, session) {
   
   # server: add relative risk layer to map ----------------------------------
   observe({
-    if("RasterLayer" %in% class(relRiskRaster()) & input$renderRasts){
+    
+    req(relRiskRaster(), input$renderRasts)
       
-      rasterOptions(# chunksize = 1e+06, 
-        maxmemory = 2.5e+08)
-      
-      withProgress(message = 'Reprojecting raster', detail = 'This may take a while...',
-                   value = 0, {
-        # get layer and convert to WGS84
-        RRmap.3857 <- 
-          projectRaster(relRiskRaster(), crs = sf::st_crs(3857)[["wkt"]],
-                        method = "ngb")
-      
-      
-      incProgress(amount = 0.5, message = 'Mapping raster')
-      # get bounds (needs conversion to lat/long)
-      bb <- as.vector(extent(
-        raster::projectExtent(object = RRmap.3857, 
-                              crs = sp::CRS("+init=epsg:4326"))))
-      
-      # set values above MinRR to NA
-      RRmap.3857 <- raster::clamp(RRmap.3857, lower = input$setMinRR, useValues = FALSE)
-      valrng <- c(input$setMinRR, max(values(RRmap.3857), na.rm = T))
-
-      # make palette
-      pal <- colorNumeric(palette = "viridis",
-                          domain = valrng,
-                          na.color = "transparent")
-      
-      # update base map
-      leafletProxy(session = session, mapId = "baseMap") %>%
-        # leaflet() %>%
-        clearGroup(group = "Relative risk") %>%
-        addRasterImage(x = RRmap.3857, group = "Relative risk",
-                       opacity = 0.95, colors = pal, 
-                       project = FALSE, method = "ngb") %>%
-        fitBounds(lng1 = bb[1], lat1 = bb[3], lng2 = bb[2], lat2 = bb[4])
+    withProgress(
+      message = 'Reprojecting raster', detail = 'This may take a while...',
+      value = 0, 
+      {
         
+        # get layer and convert to epsg:3857
+        RRmap.3857 <- terra::project(relRiskRaster(), "epsg:3857")
+        
+        incProgress(amount = 0.5, message = 'Mapping raster')
+        
+        # get bounds
+        # - bounds from pseudo-mercator (epsg:3857) dont't work with fitBounds below
+        # - converting extent to WGS84 and storing bounds
+        e <- terra::ext(relRiskRaster())
+        re <- terra::rast(e, crs = crs(relRiskRaster()))
+        re_4326 <- terra::project(re, "epsg:4326")
+        bb <- as.vector(terra::ext(re_4326))
+        
+        # set values above MinRR to NA
+        RRmap.3857 <- terra::clamp(RRmap.3857, lower = input$setMinRR, values = FALSE)
+        valrng <- c(input$setMinRR, max(terra::values(RRmap.3857), na.rm = TRUE))
+        
+        # make palette
+        pal <- colorNumeric(palette = "viridis",
+                            domain = valrng,
+                            na.color = "transparent")
+        
+        # update base map
+        leafletProxy(session = session, mapId = "baseMap") %>%
+          clearGroup(group = "Relative risk") %>%
+          addRasterImage(x = raster::raster(RRmap.3857), 
+                         group = "Relative risk",
+                         opacity = 0.95, colors = pal, 
+                         project = FALSE) %>%
+          fitBounds(lng1 = bb[["xmin"]], lat1 = bb[["ymin"]], 
+                   lng2 = bb[["xmax"]], lat2 = bb[["ymax"]])
+
       })
-      # add legend if relative risk values vary 
-      if(diff(valrng) > 0){
-        leafletProxy(session = session, mapId = "baseMap") %>%  
-          addLegend(layerId = "RRlegend", pal = pal, values = valrng, bins = 5,
-                    title = "Relative risk",
-                    group = "Relative risk")
-      }
-      
+    
+    # add legend if relative risk values vary 
+    if(diff(valrng) > 0){
+      leafletProxy(session = session, mapId = "baseMap") %>%  
+        addLegend(layerId = "RRlegend", pal = pal, values = valrng, bins = 5,
+                  title = "Relative risk",
+                  group = "Relative risk")
     }
   })
   
@@ -626,12 +742,12 @@ server <- function(input, output, session) {
     
     print("runpy press detected")
     
-    proofofabsence::poa_paks_min()
+    proofofabsence::poa_paks(modules = "full")
     
     myParams <- proofofabsence::makeParams(setMultipleZones = input$useMultiZone %in% "Multiple zones",
                                            setNumIterations = input$setNumIterations,
                                            setRRTrapDistance = input$setRRTrapDistance,
-                                           startYear = input$yrStart, endYear = input$yrEnd,
+                                           startYear = input$startYear, endYear = input$endYear,
                                            startPu = input$startPu, PuIncreaseRate = 0.0,
                                            setMinRR = input$setMinRR,
                                            setPrior = c(input$prior_min,input$prior_mode,input$prior_max),
@@ -650,33 +766,49 @@ server <- function(input, output, session) {
     dir.create(path = ".tmp/input", recursive = TRUE, showWarnings = FALSE)
     dir.create(path = ".tmp/output", recursive = TRUE, showWarnings = FALSE)
     
-    # debugonce(RawData_R)
+    # set temp files for zonesOutFName and relRiskRasterOutFName
+    tmp.zonesOutFName <- tempfile(fileext = ".tif")
+    tmp.relRiskRasterOutFName <- tempfile(fileext = ".tif")
+    # write out modified (or not) grid parameters to temporary csv file
+    if(!is.null(set.grid.params())){
+      ind <- set.grid.params()$year %in% seq.int(input$startYear, input$endYear)
+      write.csv(set.grid.params()[ind,], paths$gridSurveyFname, row.names = FALSE, quote = FALSE)
+    }    
+    
+    # create poa.RawData
     rawdata <- 
       proofofabsence::RawData_R(zonesShapeFName = paths$zonesShapeFName,
                                 relativeRiskFName = paths$relativeRiskFName,
-                                zonesOutFName = ".tmp/output/zones.tif", #defaults$zonesOutFName$value, # "app\\www\\poa\\Kaitake\\Results\\Model_0\\zones.tif",
-                                relRiskRasterOutFName = ".tmp/output/relRiskRaster.tif", # "app\\www\\poa\\Kaitake\\Results\\Model_0\\relRiskRaster.tif",
+                                zonesOutFName = tmp.zonesOutFName,
+                                relRiskRasterOutFName = tmp.relRiskRasterOutFName,
                                 resolution = as.double(valid()$resolution),
                                 epsg = as.integer(input$epsg),
                                 surveyFName = paths$surveyFName,
                                 params = myParams, 
-                                gridSurveyFname = NULL)
+                                gridSurveyFname = paths$gridSurveyFname)
     
+    # check if grid survey components are available as numpy.ndarray
+    grids_available <- 
+      sapply(rawdata[c("gridSurveyYears", "gridSurveyData", "gridSurveyMeans", "gridSurveySD", "gridSurveyCodes")], 
+             function(x) "numpy.ndarray" %in% class(x))
+    # if all available set useGrids and add grid surveys to poa.params object
+    useGrids <- all(grids_available)
+    if(useGrids){
+      myParams$setGridSurvey(rawdata$gridSurveyYears, rawdata$gridSurveyData,
+                             rawdata$gridSurveyMeans, rawdata$gridSurveySD, rawdata$gridSurveyCodes)
+    }
+    
+    # use temporary output data path
+    outputDataPath <- tempdir(check = TRUE)
+    
+    # calculate PoA using poa.calculation.calcProofOfAbsence
     result <- poa$calculation$calcProofOfAbsence(myParams, rawdata$survey,
                                                  rawdata$RelRiskExtent, rawdata$zoneArray, rawdata$zoneCodes,
-                                                 rawdata$match_geotrans, rawdata$wkt, "test_data/Results",
+                                                 rawdata$match_geotrans, rawdata$wkt, outputDataPath,
                                                  rawdata$RR_zone, rawdata$Pu_zone, rawdata$Name_zone)
 
-    # browser()    # <- break into reactive object
-    
-    SeU.rast <- zone.rast <- raster(".tmp/output/zones.tif")
-    raster::values(SeU.rast) <- py_to_r(result$sensitivityList)[[1]]
-    raster::values(SeU.rast)[raster::values(SeU.rast) == 0L] <- NA
-    SeU.rast <- mask(SeU.rast, zone.rast, maskvalue=0)
-    
-    writeRaster(SeU.rast, ".tmp/output/meanSeuAllYears.tif", overwrite = TRUE)
-    
-    return(result)
+    return(list(rawdata = rawdata,
+                result = result))
 
   })
   
@@ -698,7 +830,7 @@ server <- function(input, output, session) {
     uppint <- 1 - lowint
     
     # get results
-    result <- pyPOA()
+    result <- pyPOA()$result
     
     # Prior
     prior <- py_to_r(result$priorStore)
@@ -737,7 +869,7 @@ server <- function(input, output, session) {
   # observe({try(print(py_to_r(pyPOA()$poFMatrix)))})
   
   output$PoAtimeplot <- renderPlot({
-    result <- pyPOA()
+    result <- pyPOA()$result
     PoFmat <- py_to_r(result$poFMatrix)
     poa_mean <- rowMeans(PoFmat)
     poa_low <- apply(PoFmat, 1, quantile, 0.05)
@@ -762,7 +894,7 @@ server <- function(input, output, session) {
 
   output$PoAdensplot <- renderPlot({
     
-    res <- pyPOA()
+    res <- pyPOA()$result
     # browser()
     PoFmat <- py_to_r(res$poFMatrix)
     row.names(PoFmat) <- paste("Session", 1:nrow(PoFmat))
@@ -773,31 +905,51 @@ server <- function(input, output, session) {
                 xlab = "Probability of absence", ylab = "density")
   })
 
-  # server: add SSe raster --------------------------------------------------
 
     
+  # server: add meanSeU raster ----------------------------------------------
   observe({
-    input$GO
-    pyPOA()
-
-    library(raster)
-    meanSeu <- raster(".tmp/output/meanSeuAllYears.tif")
-
+    
+    req(pyPOA())
+    
+    # get sensitivityList from calcProofOfAbsence result
+    sensitivityList <- py_to_r(pyPOA()$result$sensitivityList)
+    # get zone tif file path
+    extZoneTifName <- pyPOA()$result$extZoneTifName
+    
+    # read zone raster as template
+    rtemp <- terra::rast(pyPOA()$rawdata$zonesOutFName)
+    
+    # replace template values with cell mean SeU and replace zeroes with NA
+    rlist <- lapply(sensitivityList, function(vals){
+      r <- rtemp
+      vals[vals == 0L] <- NA
+      values(r) <- vals
+      r
+    })
+    
+    # stack rasters into layers
+    meanSeu <- do.call("c", rlist)
+    
+    # terra::writeRaster(x = meanSeu, filename = "meanSeu_usingGDAL.tif")
+    
+    # project to pseudo-WGS84 using terra package
+    meanSeu_project <- terra::project(meanSeu, "epsg:3857")
+    # convert back to raster for use in leaflet
+    meanSeu <- raster::raster(meanSeu_project)
+    
+    # set palette
     pal <- colorNumeric(palette = "viridis", domain = c(0,1.1),  # add 0.1 to upper limit
                         na.color = "transparent")
-
+   
+    # add to baseMap
     leafletProxy(session = session, mapId = "baseMap") %>%
-
-      # debugonce(pal); leaflet() %>%
       clearGroup(group = "SeU") %>%
       addRasterImage(x = meanSeu, layerId = "SeU", group = "SeU",
-                     opacity = input$rasterOpacity, colors = pal) %>%
-      addLegend(pal = pal, values = c(0,1), labels = c(0,1), layerId = "SeU") # %>%
-      # addLayersControl(overlayGroups = c("SeU"), position = "bottomleft",
-      #                  options = layersControlOptions(collapsed = FALSE))
-
-
-
+                     opacity = input$rasterOpacity, colors = pal, 
+                     project = FALSE) %>% 
+      addLegend(pal = pal, values = c(0,1), labels = c(0,1), layerId = "SeU")
+    
   })
   
   
