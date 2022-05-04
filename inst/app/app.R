@@ -44,16 +44,6 @@ library(proofofabsence)
 # Define any Python packages needed for the app here:
 PYTHON_DEPENDENCIES = c("numpy==1.18.4", "llvmlite==0.31.0", "numba==0.47.0")
 
-# file paths --------------------------------------------------------------
-
-path.tmp <- paste0(getwd(), "/.tmp")
-path.tmp.input <- paste0(path.tmp, "/input")
-path.tmp.output <- paste0(path.tmp, "/output")
-dir.create(path.tmp.input, recursive = T)
-dir.create(path.tmp.output, recursive = T)
-
-unlink(paste0(path.tmp.input, "/*"))
-unlink(paste0(path.tmp.output, "/*"))
 
 # app defaults ------------------------------------------------------------
 defaults <- 
@@ -359,8 +349,6 @@ server <- function(input, output, session) {
       file.copy(publicNutria, tmp.publicNutria)
       file.copy(gridSurveyFname, tmp.gridSurveyFname)
       paths$gridSurveyFname <- normalizePath(tmp.gridSurveyFname)
-    } else {
-      unlink(".tmp/input/*")
     }
   })
   
@@ -369,14 +357,24 @@ server <- function(input, output, session) {
   # server: load & format devices -------------------------------------------
   devices <- reactiveVal(NULL)
   
-  # copy loaded device file to .tmp folder
+  # rename uploaded point surveillance file and set reactive paths$surveyFName
   observe({
-    if(!is.null(input$surveyFName) & input$namedExample == "None"){
-      paths.to <- paste0(path.tmp, "/input/", sub(".*(?=\\..*$)", "devices", normalizePath(input$surveyFName$name), perl = TRUE))
-      file.copy(from = input$surveyFName$datapath, to = normalizePath(paths.to), overwrite = TRUE)
-      paths$surveyFName <- normalizePath(".tmp/input/devices.csv")
-    } 
+    req(input$surveyFName)
     
+    # rename to original name
+    newpath <- 
+      file.path(dirname(input$surveyFName$datapath), 
+                input$surveyFName$name)
+    renameOK <- 
+      file.rename(normalizePath(input$surveyFName$datapath, mustWork = TRUE), 
+                  normalizePath(newpath, mustWork = FALSE))
+    # update paths reactive object with path to renamed survey file
+    if(renameOK){
+      paths$surveyFName <- newpath
+    }
+  })
+  
+  observe({
     if(!is.null(paths$surveyFName)){
       # load devices as spatial object
       devs <- read.csv(paths$surveyFName, stringsAsFactors = FALSE)
@@ -394,7 +392,6 @@ server <- function(input, output, session) {
       # set devices reactive object
       devices(devs)
     }
-    
   })
 
   # server: load & format grids -------------------------------------------
@@ -568,16 +565,26 @@ server <- function(input, output, session) {
   
   # server: zonesShape ------------------------------------------------------
   
+  # rename uploaded shapefile and set reactive paths$zonesShapeFName
+  observe({
+    req(input$zonesShapeFName)
+    
+    # rename to original name
+    newpath <- 
+      file.path(dirname(input$zonesShapeFName$datapath), 
+                input$zonesShapeFName$name)
+    renameOK <- 
+      file.rename(normalizePath(input$zonesShapeFName$datapath, mustWork = TRUE), 
+                  normalizePath(newpath, mustWork = FALSE))
+    # update paths reactive object with path to renamed shapefile
+    if(all(renameOK)){
+      paths$zonesShapeFName <- newpath[grepl("shp$", newpath)]
+    }
+  })
+  
   zonesShape <- reactiveVal(NULL)
   
-  # copy loaded extent file to .tmp folder
   observe({
-    
-    if(!is.null(input$zonesShapeFName) & input$namedExample == "None"){
-      paths.to <- paste0(path.tmp, "/input/", sub(".*(?=\\..*$)", "extent", normalizePath(input$zonesShapeFName$datapath), perl = TRUE))
-      file.copy(from = input$zonesShapeFName$datapath, to = normalizePath(paths.to), overwrite = T)
-      paths$zonesShapeFName <- normalizePath(".tmp/input/extent.shp")
-    }
     
     path.ext <- paths$zonesShapeFName
     if(!is.null(paths$zonesShapeFName)){
@@ -632,8 +639,8 @@ server <- function(input, output, session) {
   # server: relative risk map -----------------------------------------------
 
   relRiskRaster <- reactiveVal(NULL)
-  
-  # copy loaded relative risk raster file to .tmp folder
+
+  # rename uploaded relative risk raster and set reactive paths$relativeRiskFName
   observe({
     req(input$relativeRiskFName)
 
@@ -769,9 +776,6 @@ server <- function(input, output, session) {
     
     
     # create rawdata using preProcessing.RawData() ----------------------------
-    
-    dir.create(path = ".tmp/input", recursive = TRUE, showWarnings = FALSE)
-    dir.create(path = ".tmp/output", recursive = TRUE, showWarnings = FALSE)
     
     # set temp files for zonesOutFName and relRiskRasterOutFName
     tmp.zonesOutFName <- tempfile(fileext = ".tif")
