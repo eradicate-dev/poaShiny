@@ -379,17 +379,19 @@ server <- function(input, output, session) {
     
     if(!is.null(paths$surveyFName)){
       # load devices as spatial object
-      devs <- st_sf(st_as_sf(read.csv(paths$surveyFName, stringsAsFactors = FALSE), 
-                             coords = c("Easting", "Northing")), crs = input$epsg)
-      # get number devives types and sessions
+      devs <- read.csv(paths$surveyFName, stringsAsFactors = FALSE)
+      # get number device types and sessions
       ntypes <- length(unique(devs$Species))
       nsession <- length(unique(devs$Year))
       
       # message console when loaded
-      print(sprintf("device file loaded: %s rows - %s device types - %s sessions detected", nrow(devs), ntypes, nsession))
+      message("device file loaded: ", nrow(devs), " rows; ",
+              ntypes, " device types; ",
+              nsession, " sessions detected")
       
       # devs.4326 <- st_transform(devs, crs = 4326)
       
+      # set devices reactive object
       devices(devs)
     }
     
@@ -469,20 +471,23 @@ server <- function(input, output, session) {
   # server: add devices to map ----------------------------------------------
   observe({
     
-    if("sf" %in% class(devices()) & input$renderPts){
-      
-      devs <- st_transform(devices(), crs = 4326)
-      # set color palette
-      pal.device <- colorFactor(palette = "Set2", domain = unique(devs$Species))
-      
-      leafletProxy(session = session, mapId = "baseMap") %>%
-        # leaflet() %>%
-        # addLayersControl(overlayGroups = c("Devices"), options = layersControlOptions(collapsed = FALSE)) %>% 
-        clearGroup("Devices") %>% 
-        addCircles(data = devs, group = "Devices",
-                   radius = 20, weight = 1, opacity = 1, fillOpacity = 1, color = ~pal.device(devs$Species)) %>%
-        addLegend(layerId = "Devices", pal = pal.device, values = unique(devs$Species), group = "Devices") 
-    }
+    req(input$renderPts)
+    req(paths$zonesShapeFName)
+    req(devices())
+    
+    devs_orig <- st_sf(st_as_sf(devices(), coords = c("Easting", "Northing")), crs = input$epsg)
+    devs <- st_transform(devs_orig, crs = 4326)
+    # set color palette
+    pal.device <- colorFactor(palette = "Set2", domain = unique(devs$Species))
+    
+    leafletProxy(session = session, mapId = "baseMap") %>%
+      # leaflet() %>%
+      # addLayersControl(overlayGroups = c("Devices"), options = layersControlOptions(collapsed = FALSE)) %>% 
+      clearGroup("Devices") %>% 
+      addCircles(data = devs, group = "Devices",
+                 radius = 20, weight = 1, opacity = 1, fillOpacity = 1, color = ~pal.device(devs$Species)) %>%
+      addLegend(layerId = "Devices", pal = pal.device, values = unique(devs$Species), group = "Devices") 
+
   })
   
   # server: render and update device parameters -----------------------------
