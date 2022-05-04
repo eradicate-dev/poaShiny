@@ -147,11 +147,11 @@ RawData_R <- function(
         relativeRiskFName,
         zonesOutFName,
         relRiskRasterOutFName,
-        resolution = 100.0,
+        resolution,
         epsg,
         surveyFName,
-        params = makeParams(),
-        gridSurveyFname=bi$None){
+        params,
+        gridSurveyFname){
 
   # Set TRAP_PARAM_DTYPE - in py scripts this is set at the start of the preProcessing.py
   TRAP_PARAM_DTYPE = bi$list(list(tuple('year', 'u4'), tuple('animal', 'u4'), tuple('detect', 'u4'), 
