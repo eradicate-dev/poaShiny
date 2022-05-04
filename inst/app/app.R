@@ -776,11 +776,26 @@ server <- function(input, output, session) {
     # set temp files for zonesOutFName and relRiskRasterOutFName
     tmp.zonesOutFName <- tempfile(fileext = ".tif")
     tmp.relRiskRasterOutFName <- tempfile(fileext = ".tif")
+    
     # write out modified (or not) grid parameters to temporary csv file
+    #  - otherwise grid surveys from all years are pre-processed
     if(!is.null(set.grid.params())){
       ind <- set.grid.params()$year %in% seq.int(input$startYear, input$endYear)
-      write.csv(set.grid.params()[ind,], paths$gridSurveyFname, row.names = FALSE, quote = FALSE)
-    }    
+      tmp.gridSurveyFname <- tempfile(fileext = ".csv")
+      write.csv(set.grid.params()[ind,], tmp.gridSurveyFname, row.names = FALSE, quote = FALSE)
+    } else { 
+      tmp.gridSurveyFname <- NULL 
+    }
+    # write out modified (or not) point locations parameters to temporary csv file
+    #  - otherwise grid surveys from all years are pre-processed
+    if(!is.null(paths$surveyFName) && !is.null(devices())){
+      tmp.surveyFName <- tempfile(fileext = ".csv")
+      write.csv(subset(devices(), Year %in% seq.int(input$startYear, input$endYear)),
+                tmp.surveyFName, row.names = FALSE, quote = FALSE)
+    } else {
+      tmp.surveyFName <- NULL
+    }
+    
     
     # create poa.RawData
     rawdata <- 
@@ -790,9 +805,9 @@ server <- function(input, output, session) {
                                 relRiskRasterOutFName = tmp.relRiskRasterOutFName,
                                 resolution = as.double(valid()$resolution),
                                 epsg = as.integer(input$epsg),
-                                surveyFName = paths$surveyFName,
+                                surveyFName = tmp.surveyFName,
                                 params = myParams, 
-                                gridSurveyFname = paths$gridSurveyFname)
+                                gridSurveyFname = tmp.gridSurveyFname)
     
     # check if grid survey components are available as numpy.ndarray
     grids_available <- 
