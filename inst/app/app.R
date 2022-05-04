@@ -37,6 +37,8 @@ library(shiny)
 
 library(DT)
 
+library(proofofabsence)
+
 # devtools::install_github(repo = "eradicate-dev/poaShiny", ref = "convert_to_R_package")
 
 # Define any Python packages needed for the app here:
