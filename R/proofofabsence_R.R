@@ -141,7 +141,7 @@ poa_paks <- function(modules = "minimal"){
 #'   epsg = 2193,
 #'   surveyFName = bi$str(surveyFName),
 #'   params = myParams,
-#'   gridSurveyFname=bi$None)
+#'   gridSurveyFname=NULL)
 RawData_R <- function(
         zonesShapeFName,
         relativeRiskFName,
