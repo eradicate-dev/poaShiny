@@ -329,6 +329,9 @@ server <- function(input, output, session) {
   # server: base map --------------------------------------------------------
   output$baseMap <- 
     renderLeaflet({
+      
+      validate(need(zonesShape(), message = "\n\nUpload a shapefile of the geographic boundaries of the treatment area to get started"))
+      
       leaflet() %>% 
         addProviderTiles(group = "Topo", provider = providers$OpenTopoMap) %>% 
         addLayersControl(overlayGroups = c("Topo", "Zones", "Devices", "Relative risk", "SeU"), 
