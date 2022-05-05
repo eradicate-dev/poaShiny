@@ -160,7 +160,7 @@ ui.output <-
               #Map tab
               tabPanel(title="Maps", value="panel1",
                        leafletOutput("baseMap", height = 700),   
-                       checkboxInput(inputId = "renderPts", label = "render map points", value = TRUE),
+                       checkboxInput(inputId = "renderPts", label = "render map points", value = FALSE),
                        checkboxInput(inputId = "renderRasts", label = "render map rasters", value = TRUE)
                        
               ),
