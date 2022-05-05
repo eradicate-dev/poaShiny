@@ -45,6 +45,10 @@ library(proofofabsence)
 PYTHON_DEPENDENCIES = c("numpy==1.18.4", "llvmlite==0.31.0", "numba==0.47.0")
 
 
+# set shiny options -------------------------------------------------------
+
+options(shiny.maxRequestSize=100*1024^2)
+
 # app defaults ------------------------------------------------------------
 defaults <- 
   list(zonesShapeFName = list(desc = "", label = "", value = "app\\www\\poa\\Kaitake\\Data\\extent.shp"),
