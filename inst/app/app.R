@@ -78,7 +78,9 @@ ui.troubleshooting <- tabPanel(title = "Troubleshooting",
                                       list(h4("Run R commands"), 
                                            fluidRow(column(textInput(inputId = "consoleIn", label = "consoleIn", value = "getwd()"), width = 6), 
                                                     column(actionButton(inputId = "runLine", label = "runLine"), width = 6)),
-                                           verbatimTextOutput("consoleOut")
+                                           verbatimTextOutput("consoleOut"),
+                                           h3("inputTable"),
+                                           htmlOutput("inputTable")
                                       )
                                     ))
 
@@ -1005,7 +1007,9 @@ server <- function(input, output, session) {
   })
   
   
-  # server: inputTable() ----------------------------------------------------
+
+  # server: inputs table for debugging --------------------------------------
+
   inputTable <- reactive({
 
     input.ls <- reactiveValuesToList(input)
@@ -1020,9 +1024,6 @@ server <- function(input, output, session) {
     return(kable(inputs.df, row.names = FALSE))
   })
   
-
-  
-  # server: output$inputTable -----------------------------------------------
   output$inputTable <- renderText(inputTable())
   
   validTable <- reactive({
