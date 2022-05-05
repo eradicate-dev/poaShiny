@@ -1,0 +1,26 @@
+Package: proofofabsence
+Type: Package
+Title: Python wrappers and R-equivalent functions for Proof of Absence utility
+Version: 0.1.0
+Author: Simon Howard
+Maintainer: Simon Howard <howards@landcareresearch.co.nz>
+Description: Package to support running Proof of Absence models using R. Replaces some pre-processing steps from the original Python code with equivalent R functions.
+License: GPL (>= 3)
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.1.2
+Imports: 
+    reticulate,
+    sf,
+    sp,
+    raster (>= 3.5.15),
+    fasterize,
+    shiny,
+    rgdal,
+    kableExtra,
+    leaflet,
+    DT
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Roxygen: list(markdown = TRUE)
