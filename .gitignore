@@ -1,3 +1,4 @@
+# R and Rstudio files
 .Rproj.user
 *.Rproj
 .Rhistory
@@ -6,31 +7,15 @@
 .Rbuildignore
 .Renviron
 rsconnect
-.tmp
+# folders
+man
+tests
+# filetypes
 *.pkl
 *.zip
 *.exe
 *.yml
-Using reticulate in an R Package.url
-landcareresearch-dean_poa-e7299c4def57.zip
-__pycache__
-poa_objs.R
-preProcessing_R.R
-preProcessing_shinyPOA.R
-results/*
-man
-inst/app/.Rprofile
-inst/example_data
-inst/Nutria example from Dean/
-Anaconda Prompt (proofofabsence).lnk
-faster_transform.R
-RawData_R_ex.R
-Screenshot*.png
-Untitled1.R
-Untitled2.R
-Untitled3.R
-Rpackages_howards.csv
-inst/python/Nutria example from Dean/proofofabsence
-inst/app/00_preProcessing_reticulated.R
+# files
 inst/device_pars.csv
-tests/
+inst/app/.Rprofile
+TODO.txt
