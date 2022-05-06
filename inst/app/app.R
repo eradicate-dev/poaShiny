@@ -56,7 +56,7 @@ defaults <-
        zonesOutFName = list(desc = "", label = "", value = "app\\www\\poa\\Kaitake\\Results\\Model_0\\zones.tif"),
        relRiskRasterOutFName = list(desc = "", label = "", value = "app\\www\\poa\\Kaitake\\Results\\Model_0\\relRiskRaster.tif"),
        resolution = list(desc = "", label = "Raster resolution", value = as.double(100)),
-       epsg = list(desc = "", label = "epsg", value = as.integer(2193)),
+       epsg = list(desc = "", label = "epsg", value = NULL),
        surveyFName = list(desc = "", label = "surveyFName", value = "app\\www\\poa\\Kaitake\\Data\\devices.csv"),
        gridSurveyFname = list(desc = "", label = "gridSurveyFname", value = NULL),
        prior_min = list(desc = "", label = "Prior min", value = 0.2),
@@ -621,9 +621,18 @@ server <- function(input, output, session) {
       zonesShape(zonesShape.sf)
     }
     
-    if(!is.null(zonesShape())) {
-      updateNumericInput(session, inputId = "epsg", value = st_crs(zonesShape())$epsg)
-    }
+    # if(!is.null(zonesShape())) {
+    #   
+    #   detected_epsg <- st_crs(zonesShape())$epsg
+    #   
+    #   if(is.na(detected_epsg)){
+    #     showModal(modalDialog(title = "Invalid coordinate reference system in uploaded shape file", 
+    #                           p("Some common spatial libraries have been updated recently."),
+    #                           p("Try updating your GIS software, re-export the file, then reuploading the shape file.")))
+    #   } else {
+    #     updateNumericInput(session, inputId = "epsg", value = detected_epsg)  
+    #   }
+    # }
     # set to use single zone if a single feature shape file loaded
     if(!is.null(zonesShape())) if(nrow(zonesShape()) == 1){
       updateRadioButtons(session = session, 
@@ -639,7 +648,25 @@ server <- function(input, output, session) {
     
   })
   
+
+  # server: update epsg input using uploaded shapefile ----------------------
   observe({
+    req(zonesShape())
+
+    detected_epsg <- st_crs(zonesShape())$epsg
+    
+    if(is.na(detected_epsg)){
+      showModal(modalDialog(title = "Invalid coordinate reference system in uploaded shape file", 
+                            p("Some common spatial libraries have been updated recently."),
+                            p("Try updating your GIS software, re-export the file, then reuploading the shape file.")))
+    } else {
+      updateNumericInput(session, inputId = "epsg", value = detected_epsg)  
+    }
+  })
+  
+  observe({
+    
+    req(input$epsg)
     
     # make reactive to selecting examples
     input$namedExample
