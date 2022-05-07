@@ -42,6 +42,11 @@ library(proofofabsence)
 # Define any Python packages needed for the app here:
 PYTHON_DEPENDENCIES = c("numpy==1.18.4", "llvmlite==0.31.0", "numba==0.47.0")
 
+# print loaded package versions
+loaded.paks <- as.character(.packages())
+loaded.paks.vers <- sapply(sapply(loaded.paks, utils::packageVersion, simplify = F), as.character)
+loaded.paks.vers <- mapply(paste, names(loaded.paks.vers), loaded.paks.vers, sep = ":", SIMPLIFY = F)
+message(paste(loaded.paks.vers, collapse = "\n"))
 
 # set shiny options -------------------------------------------------------
 
