@@ -16,7 +16,6 @@ Imports:
     raster (>= 3.5.15),
     fasterize,
     shiny,
-    rgdal,
     kableExtra,
     leaflet,
     DT

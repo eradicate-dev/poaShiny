@@ -23,8 +23,6 @@
 # devtools::install_github("rstudio/reticulate")
 library(reticulate)
 
-library(rgdal)
-
 library(raster)
 
 library(kableExtra)
