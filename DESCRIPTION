@@ -11,7 +11,7 @@ LazyData: true
 RoxygenNote: 7.1.2
 Imports: 
     reticulate,
-    sf,
+    sf (>= 1.0.7),
     sp,
     raster (>= 3.5.15),
     fasterize,
