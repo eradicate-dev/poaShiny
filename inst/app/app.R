@@ -39,7 +39,7 @@ library(DT)
 
 library(proofofabsence)
 
-# devtools::install_github(repo = "eradicate-dev/poaShiny", ref = "convert_to_R_package")
+# devtools::install_github(repo = "eradicate-dev/poaShiny", ref = "master")
 
 # Define any Python packages needed for the app here:
 PYTHON_DEPENDENCIES = c("numpy==1.18.4", "llvmlite==0.31.0", "numba==0.47.0")
