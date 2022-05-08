@@ -340,7 +340,7 @@ server <- function(input, output, session) {
       validate(need(zonesShape(), message = "\n\nUpload a shapefile of the geographic boundaries of the treatment area to get started"))
       
       leaflet() %>% 
-        addProviderTiles(group = "Topo", provider = providers$OpenTopoMap) %>% 
+        addProviderTiles(group = "Topo", provider = providers$OpenTopoMap, options = providerTileOptions(opacity = 0.4)) %>% 
         addLayersControl(overlayGroups = c("Topo", "Zones", "Devices", "Relative risk", "SeU"), 
                          options = layersControlOptions(collapsed = FALSE), position = "bottomleft")
     })
@@ -537,14 +537,14 @@ server <- function(input, output, session) {
     devs_orig <- st_sf(st_as_sf(devs_orig, coords = c("Easting", "Northing")), crs = input$epsg)
     devs <- st_transform(devs_orig, crs = 4326)
     # set color palette
-    pal.device <- colorFactor(palette = "Set2", domain = unique(devs$Species))
+    pal.device <- colorFactor(palette = "Set1", domain = unique(devs$Species))
     
     leafletProxy(session = session, mapId = "baseMap") %>%
       # leaflet() %>%
       # addLayersControl(overlayGroups = c("Devices"), options = layersControlOptions(collapsed = FALSE)) %>% 
       clearGroup("Devices") %>% 
       addCircles(data = devs, group = "Devices", 
-                 weight = 1, opacity = 1, fillOpacity = 1, color = ~pal.device(devs$Species)) %>%
+                 weight = 4, opacity = 1, fillOpacity = 1, color = ~pal.device(devs$Species)) %>%
       addLegend(layerId = "Devices", pal = pal.device, values = unique(devs$Species), group = "Devices") 
 
   })
@@ -745,8 +745,8 @@ server <- function(input, output, session) {
       leafletProxy(session = session, mapId = "baseMap") %>%
         # leaflet() %>% addProviderTiles(group = "Topo", provider = providers$OpenTopoMap) %>% 
         clearGroup(group = "Zones") %>% 
-        addPolygons(data = zonesShape.4326, fill = T, weight = 2, # popup = ~poptxt, 
-                    group = "Zones") %>% 
+        addPolygons(data = zonesShape.4326, fill = T, weight = 2, 
+                    group = "Zones", opacity = 0.6, fillOpacity = 0.05) %>% 
         fitBounds(lng1 = bb[1], lat1 = bb[2], lng2 = bb[3], lat2 = bb[4])
     }
   })
