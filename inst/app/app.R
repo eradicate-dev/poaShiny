@@ -737,16 +737,18 @@ server <- function(input, output, session) {
       # get bounds
       bb <- as.numeric(st_bbox(zonesShape.4326))
       
-      # make popup text
-      # try({zonesShape.4326$poptxt <- 
-      #   sapply(split(zonesShape.4326, zonesShape.4326$zoneName), 
-      #          function(x) kableExtra::kable(st_drop_geometry(x), escape = TRUE, format = "html", row.names = FALSE))
-      # })
+      zonesShape.4326$poptxt <- 
+        paste("zoneName: ", zonesShape.4326$zoneName, br(), 
+              "zoneID:   ", zonesShape.4326$zoneID, br(),
+              "RR_zone:  ", zonesShape.4326$RR_zone, br(),
+              "Pu_zone:  ", zonesShape.4326$Pu_zone)
+      
       # update base map
       leafletProxy(session = session, mapId = "baseMap") %>%
         # leaflet() %>% addProviderTiles(group = "Topo", provider = providers$OpenTopoMap) %>% 
         clearGroup(group = "Zones") %>% 
         addPolygons(data = zonesShape.4326, fill = T, weight = 2, 
+                    popup = ~ poptxt, 
                     group = "Zones", opacity = 0.6, fillOpacity = 0.05) %>% 
         fitBounds(lng1 = bb[1], lat1 = bb[2], lng2 = bb[3], lat2 = bb[4])
     }
