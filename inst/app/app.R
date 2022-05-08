@@ -720,6 +720,7 @@ server <- function(input, output, session) {
     }
   })
   
+  # server: add zones to map ------------------------------------------------
   observe({
     
     req(input$epsg)
