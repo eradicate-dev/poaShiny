@@ -51,7 +51,7 @@ message(paste(loaded.paks.vers, collapse = "\n"))
 
 options(shiny.maxRequestSize=100*1024^2)
 
-# app defaults ------------------------------------------------------------
+# UI: input defaults ------------------------------------------------------
 defaults <- 
   list(zonesShapeFName = list(desc = "", label = "", value = "app\\www\\poa\\Kaitake\\Data\\extent.shp"),
        relativeRiskFName = list(desc = "", label = "", value = "app\\www\\poa\\Kaitake\\Data\\relRiskRaster.tif"),
@@ -68,7 +68,8 @@ defaults <-
        setRRTrapDistance = list(desc = "", label = "Relative risk distance", value = 1),
        setMinRR = list(desc = "", label = "Minimum relative risk value", value = 1),
        setYears = list(desc = "", label = "setYears", value = 2),
-       startPu = list(desc = "", label = "startPu", value = 1),
+       startPu = list(desc = "", label = "startPu", value = 1.00),
+       PuIncreaseRate = list(desc = "", label = "PuIncreaseRate", value = 0.00),
        summaryCIs = list(desc = "", label = "Summary table credible intervals", value = 0.95))
 
 
@@ -156,6 +157,7 @@ ui.advinputs <-
                numericInput(inputId = "setRRTrapDistance", label = defaults$setRRTrapDistance$label, value = defaults$setRRTrapDistance$value),
                numericInput(inputId = "setYears", label = defaults$setYears$label, value = defaults$setYears$value),
                numericInput(inputId = "startPu", label = defaults$startPu$label, value = defaults$startPu$value),
+               numericInput(inputId = "PuIncreaseRate", label = defaults$PuIncreaseRate$label, value = defaults$PuIncreaseRate$value),
                numericInput(inputId = "summaryCIs", label = defaults$summaryCIs$label, value = defaults$summaryCIs$value)
              )))
 
@@ -880,7 +882,8 @@ server <- function(input, output, session) {
                                            setNumIterations = input$setNumIterations,
                                            setRRTrapDistance = input$setRRTrapDistance,
                                            startYear = input$startYear, endYear = input$endYear,
-                                           startPu = input$startPu, PuIncreaseRate = 0.0,
+                                           startPu = input$startPu, 
+                                           PuIncreaseRate = input$PuIncreaseRate,
                                            setMinRR = input$setMinRR,
                                            setPrior = c(input$prior_min,input$prior_mode,input$prior_max),
                                            setIntro = c(input$intro_min,input$intro_mode,input$intro_max))
