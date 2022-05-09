@@ -875,7 +875,7 @@ server <- function(input, output, session) {
   # server: run py code -----------------------------------------------------
   pyPOA <- eventReactive(input$runpy, {
     
-    print("runpy press detected")
+    message("runpy press detected")
     
     proofofabsence::poa_paks(modules = "minimal", delay_load = FALSE)
     
@@ -887,6 +887,7 @@ server <- function(input, output, session) {
                                            setMinRR = input$setMinRR,
                                            setPrior = c(input$prior_min,input$prior_mode,input$prior_max),
                                            setIntro = c(input$intro_min,input$intro_mode,input$intro_max))
+    message("makeParams complete")
     
     myParams <- proofofabsence::addAnimalParams(myParams,
                                                 deviceName = row.names(set.animal.params()),
@@ -894,7 +895,7 @@ server <- function(input, output, session) {
                                                 g0sd = set.animal.params()$`Stdev g0`,
                                                 sig = set.animal.params()$`Mean sigma`, 
                                                 sigsd = set.animal.params()$`Stdev sigma`)
-    
+    message("addAnimalParams complete")
     
     # create rawdata using preProcessing.RawData() ----------------------------
     
@@ -933,6 +934,7 @@ server <- function(input, output, session) {
                                 surveyFName = tmp.surveyFName,
                                 params = myParams, 
                                 gridSurveyFname = tmp.gridSurveyFname)
+    message("RawData_R complete")
     
     # check if grid survey components are available as numpy.ndarray
     grids_available <- 
