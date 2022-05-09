@@ -171,7 +171,6 @@ ui.output <-
               #Map tab
               tabPanel(title="Maps", value="panel1",
                        leafletOutput("baseMap", height = 700),   
-                       checkboxInput(inputId = "renderRasts", label = "render map rasters", value = TRUE),
                        selectInput(inputId = "selectYear", label = "selectYear", choices = NULL),
                        selectInput(inputId = "selectDevices", label = "selectDevices", 
                                    choices = NULL, selectize = TRUE, multiple = TRUE)
@@ -818,7 +817,7 @@ server <- function(input, output, session) {
   # server: add relative risk layer to map ----------------------------------
   observe({
     
-    req(relRiskRaster(), input$renderRasts)
+    req(relRiskRaster())
       
     withProgress(
       message = 'Reprojecting raster', detail = 'This may take a while...',
