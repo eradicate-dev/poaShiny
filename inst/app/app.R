@@ -252,6 +252,9 @@ server <- function(input, output, session) {
   # check if on shiny server and install modules in 'PYTHON_DEPENDENCIES'
   if(Sys.info()[['user']] == 'shiny'){
     
+    showNotification(id = "venvload", duration = NULL,
+                     ui = strong("Loading python & installing dependencies ..."))
+    
     virtualenv_dir = Sys.getenv('VIRTUALENV_NAME')
     python_path = Sys.getenv('PYTHON_PATH')
   
@@ -260,11 +263,18 @@ server <- function(input, output, session) {
     reticulate::virtualenv_install(virtualenv_dir, packages = PYTHON_DEPENDENCIES)
     reticulate::use_virtualenv(virtualenv_dir, required = T)
     
+    removeNotification(id = "venvload")
+    
   } else if(!is.null(reticulate::conda_binary())){ 
+    
+    showNotification(id = "condaload",  duration = NULL,
+                     ui = strong("Loading python ..."))
     
     # check if conda available and use 'proofofabsence' environment
     reticulate::use_condaenv(condaenv = "proofofabsence", required = TRUE)
     print(reticulate::py_config())
+    
+    removeNotification(id = "condaload")
     
   } else {
     # use python on system path
