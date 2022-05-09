@@ -67,10 +67,10 @@ defaults <-
        setNumIterations = list(desc = "", label = "Number of iterations", value = 100),
        setRRTrapDistance = list(desc = "", label = "Relative risk distance", value = 1),
        setMinRR = list(desc = "", label = "Minimum relative risk value", value = 1),
-       setYears = list(desc = "", label = "setYears", value = 2),
        startPu = list(desc = "", label = "startPu", value = 1.00),
        PuIncreaseRate = list(desc = "", label = "PuIncreaseRate", value = 0.00),
        summaryCIs = list(desc = "", label = "Summary table credible intervals", value = 0.95))
+
 
 
 # Define UI
@@ -155,7 +155,6 @@ ui.advinputs <-
                numericInput(inputId = "resolution", label = defaults$resolution$label, value = defaults$resolution$value),
                numericInput(inputId = "setNumIterations", label = defaults$setNumIterations$label, value = defaults$setNumIterations$value),
                numericInput(inputId = "setRRTrapDistance", label = defaults$setRRTrapDistance$label, value = defaults$setRRTrapDistance$value),
-               numericInput(inputId = "setYears", label = defaults$setYears$label, value = defaults$setYears$value),
                numericInput(inputId = "startPu", label = defaults$startPu$label, value = defaults$startPu$value),
                numericInput(inputId = "PuIncreaseRate", label = defaults$PuIncreaseRate$label, value = defaults$PuIncreaseRate$value),
                numericInput(inputId = "summaryCIs", label = defaults$summaryCIs$label, value = defaults$summaryCIs$value)
@@ -296,10 +295,6 @@ server <- function(input, output, session) {
   # })
   
 
-  # server: set reactive values ---------------------------------------------
-  setYears <- reactiveVal(NULL)
-  
-  
   # server: set file paths --------------------------------------------------
 
   paths <- reactiveValues(zonesShapeFName = NULL,
@@ -315,7 +310,6 @@ server <- function(input, output, session) {
                      resolution = input$resolution,
                      setNumIterations = input$setNumIterations,
                      setRRTrapDistance = input$setRRTrapDistance,
-                     setYears = input$setYears,
                      startPu = input$startPu,
                      sigmean = input$sigmean,
                      sigsd = input$sigsd
@@ -430,7 +424,6 @@ server <- function(input, output, session) {
       # update start and finish years
       updateNumericInput(session, inputId = "yrStart", value = min(devs$Year))
       updateNumericInput(session, inputId = "yrEnd", value = max(devs$Year))
-      updateNumericInput(session, inputId = "setYears", value = max(devs$Year)-min(devs$Year)+1)
     }
   })
 
@@ -495,16 +488,6 @@ server <- function(input, output, session) {
     }
   })
     
-  # observe({input$namedExample; input$}, {  
-  #   # convert to spatial object
-  #   
-  #   
-  #   # setYears(length(unique(devs.4326$Year)))    # get number of years from devices
-  #   
-  #   # return(setYears)
-  # })
-  
-
   # server: add devices to map ----------------------------------------------
   
   # update inputs for selecting year and device types to display
