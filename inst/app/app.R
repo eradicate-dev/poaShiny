@@ -236,21 +236,12 @@ options(shiny.reactlog = TRUE)   # press CTRL + F3 to view react log
 
 # server ------------------------------------------------------------------
 
-# Define server logic required to draw a histogram
 server <- function(input, output, session) {
   
   runpypress <- reactive({input$runpy})
-  
   output$runpypress <- renderPrint(runpypress())
-  
 
-  
-  
   # manage python versions and modules --------------------------------------
-  
-  # import python packages
-  os <- reticulate::import("os", delay_load = TRUE)
-  pickle <- reticulate::import("pickle", delay_load = TRUE)
   
   # ------------------ App virtualenv setup (Do not edit) ------------------- #
   # adapted from - 'https://github.com/ranikay/shiny-reticulate-app'
