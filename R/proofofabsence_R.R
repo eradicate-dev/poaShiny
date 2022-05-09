@@ -8,10 +8,11 @@
 #' @param modules Select the the full set of proofofabsence modules (default =
 #'   "full") to load from python scripts or a minimal set primarily for handling
 #'   calculations ("minimal")
-#'
+#' @param delay_load Pass delay_load to reticulate import functions
+#' 
 #' @return
 #' @export
-poa_paks <- function(modules = "minimal"){
+poa_paks <- function(modules = "minimal", delay_load = TRUE){
 
   # check modules argument
   if(!modules %in% c("full", "minimal")) stop("modules argument must be 'full' or 'minimal'")
@@ -38,25 +39,25 @@ poa_paks <- function(modules = "minimal"){
   
   # load required modules and assign to .GlobalEnv
   if(modules == "full"){
-    os <<- reticulate::import(module = "os", convert = FALSE, delay_load = TRUE)
-    np <<- reticulate::import(module = "numpy", convert = FALSE, delay_load = TRUE)
-    pickle <<- reticulate::import(module = "pickle", convert = FALSE, delay_load = TRUE)
-    pytempfile <<- reticulate::import(module = "tempfile", convert = FALSE, delay_load = TRUE)
-    gdal <<- reticulate::import(module = "osgeo.gdal", convert = FALSE, delay_load = TRUE)
-    ogr <<- reticulate::import(module = "osgeo.ogr", convert = FALSE, delay_load = TRUE)
-    osr <<- reticulate::import(module = "osgeo.osr", convert = FALSE, delay_load = TRUE)
-    gdalconst <<- reticulate::import(module = "osgeo.gdalconst", convert = FALSE, delay_load = TRUE)
-    njit <<- reticulate::import(module = "numba", convert = FALSE, delay_load = TRUE)$njit
-    jit <<- reticulate::import(module = "numba", convert = FALSE, delay_load = TRUE)$jit
+    os <<- reticulate::import(module = "os", convert = FALSE, delay_load = delay_load)
+    np <<- reticulate::import(module = "numpy", convert = FALSE, delay_load = delay_load)
+    pickle <<- reticulate::import(module = "pickle", convert = FALSE, delay_load = delay_load)
+    pytempfile <<- reticulate::import(module = "tempfile", convert = FALSE, delay_load = delay_load)
+    gdal <<- reticulate::import(module = "osgeo.gdal", convert = FALSE, delay_load = delay_load)
+    ogr <<- reticulate::import(module = "osgeo.ogr", convert = FALSE, delay_load = delay_load)
+    osr <<- reticulate::import(module = "osgeo.osr", convert = FALSE, delay_load = delay_load)
+    gdalconst <<- reticulate::import(module = "osgeo.gdalconst", convert = FALSE, delay_load = delay_load)
+    njit <<- reticulate::import(module = "numba", convert = FALSE, delay_load = delay_load)$njit
+    jit <<- reticulate::import(module = "numba", convert = FALSE, delay_load = delay_load)$jit
   }
   
   if(modules == "minimal"){
-    os <<- reticulate::import(module = "os", convert = FALSE, delay_load = TRUE) 
-    np <<- reticulate::import(module = "numpy", convert = FALSE, delay_load = TRUE)
-    pickle <<- reticulate::import(module = "pickle", convert = FALSE, delay_load = TRUE)
-    pytempfile <<- reticulate::import(module = "tempfile", convert = FALSE, delay_load = TRUE)
-    njit <<- reticulate::import(module = "numba", convert = FALSE, delay_load = TRUE)$njit
-    jit <<- reticulate::import(module = "numba", convert = FALSE, delay_load = TRUE)$jit
+    os <<- reticulate::import(module = "os", convert = FALSE, delay_load = delay_load) 
+    np <<- reticulate::import(module = "numpy", convert = FALSE, delay_load = delay_load)
+    pickle <<- reticulate::import(module = "pickle", convert = FALSE, delay_load = delay_load)
+    pytempfile <<- reticulate::import(module = "tempfile", convert = FALSE, delay_load = delay_load)
+    njit <<- reticulate::import(module = "numba", convert = FALSE, delay_load = delay_load)$njit
+    jit <<- reticulate::import(module = "numba", convert = FALSE, delay_load = delay_load)$jit
   }
   
   # always load builtin modules
@@ -71,11 +72,17 @@ poa_paks <- function(modules = "minimal"){
   pypath <- file.path(system.file("python", package = "proofofabsence"), pydir)
   
   # load proofofabsence module
+  # - run once without assigning to build __pycache__
+  reticulate::import_from_path(
+    path = system.file("python", package = "proofofabsence"),
+    module = pydir, 
+    convert = FALSE, delay_load = FALSE)
+  # - then assign to globalEnv
   poa <<- 
     reticulate::import_from_path(
       path = system.file("python", package = "proofofabsence"),
       module = pydir, 
-      convert = FALSE, delay_load = TRUE)
+      convert = FALSE, delay_load = delay_load)
   
   # list and module files in package directory python folder
   module_files <- list.files(pypath, pattern = ".py$")
