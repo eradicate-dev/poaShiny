@@ -171,8 +171,10 @@ ui.output <-
               #Map tab
               tabPanel(title="Maps", value="panel1",
                        leafletOutput("baseMap", height = 700),   
-                       checkboxInput(inputId = "renderPts", label = "render map points", value = FALSE),
-                       checkboxInput(inputId = "renderRasts", label = "render map rasters", value = TRUE)
+                       checkboxInput(inputId = "renderRasts", label = "render map rasters", value = TRUE),
+                       selectInput(inputId = "selectYear", label = "selectYear", choices = NULL),
+                       selectInput(inputId = "selectDevices", label = "selectDevices", 
+                                   choices = NULL, selectize = TRUE, multiple = TRUE)
                        
               ),
               tabPanel(title="Probability of absence", value="panel2",
@@ -474,17 +476,19 @@ server <- function(input, output, session) {
 
   # server: update start and end years ---------------------------------------
 
+  allyrs <- reactiveVal()
   observe({
+    
     # get years from devices & grids
     deviceyrs <- devices()$Year
     gridyrs <- gridinfo()$year
     # combine years and update inputs
-    allyrs <- c(deviceyrs, gridyrs)
-    if(!is.null(allyrs) && is.numeric(allyrs)){
+    allyrs(c(deviceyrs, gridyrs))
+    if(!is.null(allyrs()) && is.numeric(allyrs())){
       updateNumericInput(session, inputId = "startYear", 
-                         value = min(allyrs))
+                         value = min(allyrs()))
       updateNumericInput(session, inputId = "endYear", 
-                         value = max(allyrs))
+                         value = max(allyrs()))
     }
   })
     
@@ -499,13 +503,38 @@ server <- function(input, output, session) {
   
 
   # server: add devices to map ----------------------------------------------
+  
+  # update inputs for selecting year and device types to display
+  observe({
+    req(allyrs())
+    updateSelectInput(inputId = "selectYear", choices = unique(allyrs()))
+  })
+  observe({
+    req(devices())
+    choices <- sort(unique(devices()$Species))
+    updateSelectInput(inputId = "selectDevices", choices = choices, selected = choices)
+  })
+  
   observe({
     
-    req(input$renderPts)
     req(paths$zonesShapeFName)
     req(devices())
+    req(input$selectYear)
+    req(input$selectDevices)
     
-    devs_orig <- st_sf(st_as_sf(devices(), coords = c("Easting", "Northing")), crs = input$epsg)
+    # subset year and device
+    devs_orig <- subset(devices(), Year %in% input$selectYear & Species %in% input$selectDevices)
+    
+    # show first n devices
+    maxdevices <- 5000
+    if(nrow(devs_orig) > maxdevices){
+      showNotification(ui = list(strong("Displaying devices"), 
+                                 p(paste(nrow(devs_orig), " selected, displaying first ", maxdevices))), 
+                       id = "maxdevices", type = "default", duration = 7)
+      devs_orig <- devs_orig[seq_len(maxdevices),]
+    }
+    
+    devs_orig <- st_sf(st_as_sf(devs_orig, coords = c("Easting", "Northing")), crs = input$epsg)
     devs <- st_transform(devs_orig, crs = 4326)
     # set color palette
     pal.device <- colorFactor(palette = "Set2", domain = unique(devs$Species))
@@ -514,8 +543,8 @@ server <- function(input, output, session) {
       # leaflet() %>%
       # addLayersControl(overlayGroups = c("Devices"), options = layersControlOptions(collapsed = FALSE)) %>% 
       clearGroup("Devices") %>% 
-      addCircles(data = devs, group = "Devices",
-                 radius = 20, weight = 1, opacity = 1, fillOpacity = 1, color = ~pal.device(devs$Species)) %>%
+      addCircles(data = devs, group = "Devices", 
+                 weight = 1, opacity = 1, fillOpacity = 1, color = ~pal.device(devs$Species)) %>%
       addLegend(layerId = "Devices", pal = pal.device, values = unique(devs$Species), group = "Devices") 
 
   })
