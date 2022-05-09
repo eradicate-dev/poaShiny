@@ -587,7 +587,6 @@ server <- function(input, output, session) {
   
   
   output$deviceUI <- DT::renderDT(deviceUI())
-  output$table2 <- renderPrint(deviceUI())
   
   # server: render and update grid parameters -------------------------------
 
@@ -1120,14 +1119,6 @@ server <- function(input, output, session) {
   })
   
   output$inputTable <- renderText(inputTable())
-  
-  validTable <- reactive({
-    # return(valid())
-    return(input$a)
-  })
-  output$validTable <- renderPrint(validTable())
-  
-  
   
   printRes <- eventReactive(eventExpr = input$runLine, {
     eval(str2expression(input$consoleIn))
