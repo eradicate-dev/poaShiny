@@ -72,45 +72,77 @@ defaults <-
        summaryCIs = list(desc = "", label = "Summary table credible intervals", value = 0.95))
 
 
-
-# Define UI
-ui.troubleshooting <- tabPanel(title = "Troubleshooting",
-                                    splitLayout(
-                                      list(h4("Python & conda version info"),
-                                           verbatimTextOutput("pyinfo")),
-                                      list(h4("Run R commands"), 
-                                           fluidRow(column(textInput(inputId = "consoleIn", label = "consoleIn", value = "getwd()"), width = 6), 
-                                                    column(actionButton(inputId = "runLine", label = "runLine"), width = 6)),
-                                           verbatimTextOutput("consoleOut"),
-                                           h3("inputTable"),
-                                           htmlOutput("inputTable")
-                                      )
-                                    ))
-
 # UI: input ---------------------------------------------------------------
 
-ui.inputs <- list(
-  # Application title
-  titlePanel("Proof-of-absence calculator"),
-  # Sidebar with a slider input for number of bins 
-  
+## UI: troubleshooting ----
+ui.troubleshooting <- tabPanel(title = "Troubleshooting",
+                               splitLayout(
+                                 list(h4("Python & conda version info"),
+                                      verbatimTextOutput("pyinfo")),
+                                 list(h4("Run R commands"), 
+                                      fluidRow(column(textInput(inputId = "consoleIn", label = "consoleIn", value = "getwd()"), width = 6), 
+                                               column(actionButton(inputId = "runLine", label = "runLine"), width = 6)),
+                                      verbatimTextOutput("consoleOut"),
+                                      h3("inputTable"),
+                                      htmlOutput("inputTable")
+                                 )
+                               ))
+
+## UI: MWLR logo and title ----
+ui.logotitle <-
+  fluidRow(style = "height:75px",
+    column(width = 6, 
+           # Application title
+           titlePanel("Proof-of-absence calculator")),
+    column(width = 6, 
+           div(style="height:75px",
+             img(src="MW_LR_Landscape_lge_blk.png", align="right", hspace=20,vspace=10, style = "height:100%"),
+             img(src="ciss_logo.jpg", align="right", hspace=20,vspace=10, style = "height:100%"),
+             img(src="ari_logo.jpg", align="right", hspace=20,vspace=10, style = "height:100%")),
+             style = "padding-left:35px; padding-right:35px;"))
+
+## UI: about ----
+ui.about <-
+  list(br(), br(),
+       wellPanel(style = "padding:10px",
+         h4("About"),
+         h6(paste0("Version ", packageVersion("proofofabsenceMOH"), " (", packageDate("proofofabsenceMOH"), ")")),
+         h6("Developed by Manaaki Whenua - Landcare Research."),
+         h6("email: ", tags$a(href = "https://www.landcareresearch.co.nz/about-us/our-people/simon-howard", target="_blank", "Simon Howard"))
+       ))
+
+## UI: file uploads ----
+ui.file.uploads <- 
   wellPanel(
     selectInput(inputId = "namedExample", label = "Select example set", choices = c("None", "Kaitake possums", "Mahia possums", "CK stoats", "Nutria"), multiple = FALSE),
     conditionalPanel(condition = "input.namedExample == 'None'",{
       list(fileInput(inputId = "zonesShapeFName", label = "zonesShapeFName", multiple = TRUE),
+           splitLayout(radioButtons(inputId = "useMultiZone", label = "Use single or multiple zones?", 
+                                    choices = c("Single zone", "Multiple zones"), selected = "Multiple zones",
+                                    inline = TRUE),
+                       numericInput(inputId = "epsg", label = defaults$epsg$label, value = defaults$epsg$value)),
            fileInput(inputId = "surveyFName", label = "surveyFName", multiple = FALSE),
+           fileInput(inputId = "gridSurveyFname", label = "gridSurveyFname", multiple = TRUE),
            fileInput(inputId = "relativeRiskFName", label = "relativeRiskFName", multiple = FALSE),
-           fileInput(inputId = "gridSurveyFname", label = "gridSurveyFname", multiple = TRUE))
-    }),
-    radioButtons(inputId = "useMultiZone", label = "Use single or multiple zones?", 
-                 choices = c("Single zone", "Multiple zones"), selected = "Multiple zones"),
-    numericInput(inputId = "setMinRR", label = defaults$setMinRR$label, value = defaults$setMinRR$value, min = 0, max = 1000),
-    numericInput(inputId = "epsg", label = defaults$epsg$label, value = defaults$epsg$value)
-  ),
-  h4("Device parameters - double-click to adjust"),
-  DT::DTOutput(outputId = "deviceUI"),
-  DT::DTOutput(outputId = "gridUI")
-)
+           conditionalPanel(condition = "output.RRloaded", {
+             splitLayout(
+               numericInput(inputId = "setMinRR", label = defaults$setMinRR$label, 
+                            value = defaults$setMinRR$value, min = 0, max = 1000)
+             )
+           })
+      )
+    })  
+  )
+
+## UI: device and grid parameters ----
+ui.survparams <- 
+  list(
+    h4("Device parameters - double-click to adjust"),
+    tabsetPanel(tabPanel(title = "Points",
+                         DT::DTOutput(outputId = "deviceUI")),
+                tabPanel(title = "Grids",
+                         DT::DTOutput(outputId = "gridUI")))
+  )
 
 ## UI: priors ----
 ui.inputs.priors <- 
@@ -206,15 +238,21 @@ ui.output <-
   #   htmlOutput("inputTable"))
   # )
 
-
 # UI: layout page ---------------------------------------------------------
-ui <- fluidPage(
+ui <- fluidPage(title = "Proof-of-absence calculator",
+                ui.logotitle,
   tabsetPanel(
     tabPanel(title = "Run model", 
              # splitLayout(list(ui.inputs, ui.inputs.priors), ui.output)
-             fluidRow(column(4, list(ui.inputs, ui.inputs.priors, ui.set.intro, ui.inputs.yrs,
-                                     actionButton(inputId = "runpy", 
-                                                  label = "Calculate PoA")
+             fluidRow(column(4, 
+                             list(
+                               ui.file.uploads, 
+                               ui.survparams, 
+                               ui.inputs.priors, 
+                               ui.set.intro, 
+                               ui.inputs.yrs,
+                               actionButton(inputId = "runpy", 
+                                            label = "Calculate PoA")
              )), 
              column(8, list(ui.output)))
     ),  
@@ -258,6 +296,8 @@ server <- function(input, output, session) {
     virtualenv_dir = Sys.getenv('VIRTUALENV_NAME')
     python_path = Sys.getenv('PYTHON_PATH')
   
+    message("AAAA", virtualenv_exists(Sys.getenv('VIRTUALENV_NAME')))
+    
     # Create virtual env and install dependencies
     reticulate::virtualenv_create(envname = virtualenv_dir, python = python_path)
     reticulate::virtualenv_install(virtualenv_dir, packages = PYTHON_DEPENDENCIES)
@@ -760,6 +800,11 @@ server <- function(input, output, session) {
       paths$relativeRiskFName <- newpath
     }
   })
+  
+  # sets output.RRloaded to True when risk file loaded
+  # used to make panel conditional on uploads
+  output$RRloaded <- reactive({!is.null(input$relativeRiskFName)})
+  outputOptions(output, 'RRloaded', suspendWhenHidden=FALSE)
   
   # load relative risk map given in paths$relativeRiskFName
   observe({   
