@@ -171,9 +171,13 @@ ui.output <-
               #Map tab
               tabPanel(title="Maps", value="panel1",
                        leafletOutput("baseMap", height = 700),   
-                       selectInput(inputId = "selectYear", label = "selectYear", choices = NULL),
-                       selectInput(inputId = "selectDevices", label = "selectDevices", 
-                                   choices = NULL, selectize = TRUE, multiple = TRUE)
+                       fluidRow(
+                         column(width = 6,
+                                selectInput(inputId = "selectYear", label = "selectYear", choices = NULL)),
+                         column(width = 6,
+                                selectInput(inputId = "selectDevices", label = "selectDevices", 
+                                            choices = NULL, selectize = TRUE, multiple = TRUE))
+                       )
                        
               ),
               tabPanel(title="Probability of absence", value="panel2",
