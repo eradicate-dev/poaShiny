@@ -626,19 +626,6 @@ server <- function(input, output, session) {
       zonesShape(zonesShape.sf)
     }
     
-    # if(!is.null(zonesShape())) {
-    #   
-    #   detected_epsg <- st_crs(zonesShape())$epsg
-    #   
-    #   if(is.na(detected_epsg)){
-    #     showModal(modalDialog(title = "Invalid coordinate reference system in uploaded shape file", 
-    #                           p("Some common spatial libraries have been updated recently."),
-    #                           p("Try updating your GIS software, re-export the file, then reuploading the shape file.")))
-    #   } else {
-    #     updateNumericInput(session, inputId = "epsg", value = detected_epsg)  
-    #   }
-    # }
-    # set to use single zone if a single feature shape file loaded
     if(!is.null(zonesShape())) if(nrow(zonesShape()) == 1){
       updateRadioButtons(session = session, 
                          inputId = "useMultiZone", 
@@ -655,6 +642,7 @@ server <- function(input, output, session) {
   
 
   # server: update epsg input using uploaded shapefile ----------------------
+  detected_epsg <- reactiveVal()
   observe({
     req(zonesShape())
 
@@ -663,7 +651,7 @@ server <- function(input, output, session) {
     message("st_crs(zonesShape())$epsg result:\n", sf_epsg_string)
     
     if(!is.na(sf_epsg_string)){
-      detected_epsg <- sf_epsg_string
+      detected_epsg(sf_epsg_string)
     } else {
       # if sf::st_crs()$epsg doesn't work try to find in rgdal::make_EPSG()
       # lookup table
@@ -681,24 +669,32 @@ server <- function(input, output, session) {
       if(nrow(epsg_found) == 1){
         message("EPSG info from rgdal::make_EPSG() table:", 
                 paste("\n", epsg_found))
-        detected_epsg <- epsg_found$code
+        detected_epsg(epsg_found$code)
       } else {
-        detected_epsg <- NA
+        detected_epsg(NA)
       }
     }
+  })
+  
+  observe({
+    req(!is.null(detected_epsg()))
     
-    if(is.na(detected_epsg)){
+    if(is.na(detected_epsg())){
       showModal(modalDialog(title = "Invalid coordinate reference system in uploaded shape file", 
                             p("Some common spatial libraries have been updated recently."),
                             p("Try updating your GIS software, re-export the file, then reuploading the shape file.")))
+      # unset zonesShape and epsg input
+      zonesShape(NULL)
+      updateNumericInput(session, inputId = "epsg", value = NA)  
     } else {
-      updateNumericInput(session, inputId = "epsg", value = detected_epsg)  
+      updateNumericInput(session, inputId = "epsg", value = detected_epsg())  
     }
   })
   
   observe({
     
     req(input$epsg)
+    req(detected_epsg())
     
     # make reactive to selecting examples
     input$namedExample
