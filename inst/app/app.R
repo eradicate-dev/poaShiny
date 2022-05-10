@@ -955,7 +955,8 @@ server <- function(input, output, session) {
                                                  rawdata$RelRiskExtent, rawdata$zoneArray, rawdata$zoneCodes,
                                                  rawdata$match_geotrans, rawdata$wkt, outputDataPath,
                                                  rawdata$RR_zone, rawdata$Pu_zone, rawdata$Name_zone)
-
+    message("calcProofOfAbsence complete")
+    
     return(list(rawdata = rawdata,
                 result = result))
 
