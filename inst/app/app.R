@@ -286,7 +286,8 @@ server <- function(input, output, session) {
   # adapted from - 'https://github.com/ranikay/shiny-reticulate-app'
   
   # Define any Python packages needed for the app here:
-  PYTHON_DEPENDENCIES = c("numpy==1.21.6", "llvmlite==0.38.0", "numba==0.55.1")
+  # - note: numpy, pip, wheel and setuptools are updated on shinyapps.io startup
+  PYTHON_DEPENDENCIES = c("llvmlite", "numba")
   
   # check if on shiny server and install modules in 'PYTHON_DEPENDENCIES'
   if(Sys.info()[['user']] == 'shiny'){
