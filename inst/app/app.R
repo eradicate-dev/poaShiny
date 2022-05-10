@@ -41,9 +41,6 @@ library(proofofabsence)
 
 # devtools::install_github(repo = "eradicate-dev/poaShiny", ref = "master")
 
-# Define any Python packages needed for the app here:
-PYTHON_DEPENDENCIES = c("numpy==1.18.4", "llvmlite==0.31.0", "numba==0.47.0")
-
 # print loaded package versions
 loaded.paks <- as.character(.packages())
 loaded.paks.vers <- sapply(sapply(loaded.paks, utils::packageVersion, simplify = F), as.character)
@@ -256,6 +253,9 @@ server <- function(input, output, session) {
   
   # ------------------ App virtualenv setup (Do not edit) ------------------- #
   # adapted from - 'https://github.com/ranikay/shiny-reticulate-app'
+  
+  # Define any Python packages needed for the app here:
+  PYTHON_DEPENDENCIES = c("numpy==1.21.6", "llvmlite==0.38.0", "numba==0.55.1")
   
   # check if on shiny server and install modules in 'PYTHON_DEPENDENCIES'
   if(Sys.info()[['user']] == 'shiny'){
