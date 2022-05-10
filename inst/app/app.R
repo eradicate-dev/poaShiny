@@ -106,7 +106,7 @@ ui.about <-
   list(br(), br(),
        wellPanel(style = "padding:10px",
          h4("About"),
-         h6(paste0("Version ", packageVersion("proofofabsenceMOH"), " (", packageDate("proofofabsenceMOH"), ")")),
+         h6(paste0("Version ", packageVersion("proofofabsence"), " (", packageDate("proofofabsence"), ")")),
          h6("Developed by Manaaki Whenua - Landcare Research."),
          h6("email: ", tags$a(href = "https://www.landcareresearch.co.nz/about-us/our-people/simon-howard", target="_blank", "Simon Howard"))
        ))
