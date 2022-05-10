@@ -252,7 +252,8 @@ ui <- fluidPage(title = "Proof-of-absence calculator",
                                ui.set.intro, 
                                ui.inputs.yrs,
                                actionButton(inputId = "runpy", 
-                                            label = "Calculate PoA")
+                                            label = "Calculate PoA"),
+                               ui.about
              )), 
              column(8, list(ui.output)))
     ),  
