@@ -717,7 +717,8 @@ readGridSurveyData_reticulated <- function(self, gridSurveyFname = NULL, params 
       
       gridSurveyData <- np$zeros_like(data, dtype=npDType)
       gridSurveyData <- reticulate::py_to_r(gridSurveyData)
-      gridSurveyData[data != 0] <- code
+      .data <- reticulate::py_to_r(data)
+      gridSurveyData[.data != 0] <- reticulate::py_to_r(code)
       gridSurveyData <- np$array(gridSurveyData, dtype = npDType)
       
     } else {
