@@ -826,8 +826,12 @@ readGridSurveyData <- function(self, gridSurveyFname = NULL, params = poa$params
     # is this the first one?
     # create empty 2d array of the right type for storing the codes
     if("python.builtin.NoneType" %in% class(gridSurveyData)){
+      
       gridSurveyData <- np$zeros_like(data, dtype=npDType)
-      gridSurveyData <- np$where(np$not_equal(data, 0), code, gridSurveyData)
+      gridSurveyData <- reticulate::py_to_r(gridSurveyData)
+      gridSurveyData[data != 0] <- code
+      gridSurveyData <- np$array(gridSurveyData, dtype = npDType)
+      
     } else {
       
       # subsequent - bitwise or the code in
@@ -853,8 +857,8 @@ readGridSurveyData <- function(self, gridSurveyFname = NULL, params = poa$params
   
   # convert R vectors back to numpy arrays
   gridSurveyYears <- np$atleast_1d(np$array(gridSurveyYears, dtype=np$int32))
-  gridSurveyMeans <- np$atleast_1d(np$array(gridSurveyMeans, dtype=np$float32))
-  gridSurveySD <- np$atleast_1d(np$array(gridSurveySD, dtype=np$float32))
+  gridSurveyMeans <- np$atleast_1d(np$array(gridSurveyMeans, dtype=np$float64))
+  gridSurveySD <- np$atleast_1d(np$array(gridSurveySD, dtype=np$float64))
   gridSurveyCodes <- np$atleast_1d(np$array(gridSurveyCodes, dtype=np$float64))
   
   return(reticulate::tuple(gridSurveyYears, gridSurveyMeans, gridSurveySD, gridSurveyCodes,

@@ -714,8 +714,12 @@ readGridSurveyData_reticulated <- function(self, gridSurveyFname = NULL, params 
     # is this the first one?
     # create empty 2d array of the right type for storing the codes
     if("python.builtin.NoneType" %in% class(gridSurveyData)){
+      
       gridSurveyData <- np$zeros_like(data, dtype=npDType)
-      gridSurveyData <- np$where(np$not_equal(data, 0), code, gridSurveyData)
+      gridSurveyData <- reticulate::py_to_r(gridSurveyData)
+      gridSurveyData[data != 0] <- code
+      gridSurveyData <- np$array(gridSurveyData, dtype = npDType)
+      
     } else {
       
       # subsequent - bitwise or the code in
