@@ -439,10 +439,9 @@ server <- function(input, output, session) {
     # if(!is.null(input$gridSurveyFname) & input$namedExample == "None"){
     #   paths$gridSurveyFname <- normalizePath(input$gridSurveyFname$datapath)
     # }
-    input$gridSurveyFname
+    req(input$gridSurveyFname)
+    req(file.exists(input$gridSurveyFname$datapath))
     
-    if(!is.null(input$gridSurveyFname) && file.exists(input$gridSurveyFname$datapath)){
-      
       # get paths for multiple uploaded files
       gridpaths <- input$gridSurveyFname$datapath
       gridnames <- input$gridSurveyFname$name
@@ -458,16 +457,15 @@ server <- function(input, output, session) {
              " is missing. Make sure both grid information and grid raster files are uploaded.")
       }
       
-      # fileInput drops file names renbame files back to original
-      newpaths <- file.path(dirname(gridpaths), gridnames)
-      file.rename(gridpaths, newpaths)
+      # copy grid survey and raster file to temporary folder
+      copypaths <- file.path(tempdir(), "gridsurvey", gridnames)
+      dir.create(normalizePath(dirname(copypaths[1]), mustWork = FALSE), showWarnings = FALSE)
+      file.copy(from = gridpaths, to = copypaths, overwrite = TRUE)
       
       # update reactives with new grid survey path
-      newinfopath <- newpaths[basename(newpaths) == infoname]
+      newinfopath <- copypaths[basename(copypaths) == infoname]
       # update paths reactive object with path to renamed grid survey file
-      paths$gridSurveyFname <- normalizePath(newinfopath)
-      
-    }
+      paths$gridSurveyFname <- normalizePath(newinfopath, mustWork = TRUE)
     
     # update reactive gridinfo object
     if(!is.null(paths$gridSurveyFname)){
@@ -905,9 +903,12 @@ server <- function(input, output, session) {
     # write out modified (or not) grid parameters to temporary csv file
     #  - otherwise grid surveys from all years are pre-processed
     if(!is.null(set.grid.params())){
+      
+      # subset grid survey dataframe by years
       ind <- set.grid.params()$year %in% seq.int(input$startYear, input$endYear)
-      tmp.gridSurveyFname <- tempfile(fileext = ".csv")
-      write.csv(set.grid.params()[ind,], tmp.gridSurveyFname, row.names = FALSE, quote = FALSE)
+      # write file with dropped rows
+      write.csv(set.grid.params()[ind,], paths$gridSurveyFname, row.names = FALSE, quote = FALSE)
+      
     } else { 
       tmp.gridSurveyFname <- NULL 
     }
@@ -932,7 +933,7 @@ server <- function(input, output, session) {
                                 epsg = as.integer(input$epsg),
                                 surveyFName = tmp.surveyFName,
                                 params = myParams, 
-                                gridSurveyFname = tmp.gridSurveyFname)
+                                gridSurveyFname = paths$gridSurveyFname)
     message("RawData_R complete")
     
     # check if grid survey components are available as numpy.ndarray
