@@ -300,10 +300,10 @@ class RawData():
         """
         rawGridSurvey = np.genfromtxt(gridSurveyFname, delimiter=',', names=True,
                                       dtype=['S200', 'i4', 'f8', 'f8'])
-
+        rawGridSurvey = np.atleast_1d(rawGridSurvey)
         gridSurveyYears = rawGridSurvey['year']
 
-        nGrids = len(gridSurveyYears)
+        nGrids = np.alen(gridSurveyYears)
         #        print('gridyears', self.gridSurveyYears, 'type', type(self.gridSurveyYears),
         #            'is scalar', np.isscalar(self.gridSurveyYears), 'gridsize', nGrids)
 

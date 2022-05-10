@@ -633,10 +633,11 @@ readGridSurveyData_reticulated <- function(self, gridSurveyFname = NULL, params 
   
   rawGridSurvey = np$genfromtxt(gridSurveyFname, delimiter=",", names=TRUE,
                                 dtype=list('S200', 'i4', 'f8', 'f8'))
+  rawGridSurvey = np$atleast_1d(rawGridSurvey)
   
   gridSurveyYears = rawGridSurvey['year']
   
-  nGrids = bi$len(gridSurveyYears)
+  nGrids = np$alen(gridSurveyYears)
   #        print('gridyears', self.gridSurveyYears, 'type', type(self.gridSurveyYears),
   #            'is scalar', np.isscalar(self.gridSurveyYears), 'gridsize', nGrids)
   
