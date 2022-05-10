@@ -852,10 +852,10 @@ readGridSurveyData <- function(self, gridSurveyFname = NULL, params = poa$params
   }
   
   # convert R vectors back to numpy arrays
-  gridSurveyYears <- np$array(gridSurveyYears, dtype=np$int32)
-  gridSurveyMeans <- np$array(gridSurveyMeans, dtype=np$float32)
-  gridSurveySD <- np$array(gridSurveySD, dtype=np$float32)
-  gridSurveyCodes <- np$array(gridSurveyCodes, dtype=np$float64)
+  gridSurveyYears <- np$atleast_1d(np$array(gridSurveyYears, dtype=np$int32))
+  gridSurveyMeans <- np$atleast_1d(np$array(gridSurveyMeans, dtype=np$float32))
+  gridSurveySD <- np$atleast_1d(np$array(gridSurveySD, dtype=np$float32))
+  gridSurveyCodes <- np$atleast_1d(np$array(gridSurveyCodes, dtype=np$float64))
   
   return(reticulate::tuple(gridSurveyYears, gridSurveyMeans, gridSurveySD, gridSurveyCodes,
                            gridSurveyData))
