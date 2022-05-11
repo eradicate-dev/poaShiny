@@ -110,7 +110,7 @@ ui.logotitle <-
 
 ## UI: about ----
 ui.about <-
-  list(br(), br(),
+  list(br(),
        wellPanel(style = "padding:10px",
          h4("About"),
          h6(paste0("Version ", packageVersion("proofofabsence"), " (", packageDate("proofofabsence"), ")")),
@@ -154,17 +154,21 @@ ui.file.uploads <-
         conditionalPanel(condition = "output.RRloaded", {
           splitLayout(
             numericInput(inputId = "setMinRR", label = defaults$setMinRR$label, 
-                         value = defaults$setMinRR$value, min = 0, max = 1000)
+                         value = defaults$setMinRR$value, min = 0, max = 1000),
+            numericInput(inputId = "setRRTrapDistance", label = defaults$setRRTrapDistance$label, 
+                         value = defaults$setRRTrapDistance$value)
           )
         })
       )
     })  
   )
 
-## UI: device and grid parameters ----
+## UI: detection parameters ----
 ui.survparams <- 
-  list(
-    h4("Device parameters - double-click to adjust"),
+  wellPanel(
+    h4("Detection parameters"),
+    em("Double-click table cells to enter values"),
+    hr(),
     tabsetPanel(tabPanel(title = "Points",
                          DT::DTOutput(outputId = "deviceUI")),
                 tabPanel(title = "Grids",
@@ -173,120 +177,100 @@ ui.survparams <-
 
 ## UI: priors ----
 ui.inputs.priors <- 
-  list(
+  wellPanel(
     div(title = "Values must be between 0 and 1 and min < mode < max",
-        wellPanel(
-          h5("Set parameters for prior distribution"),
-          fluidRow(
-            column(numericInput(inputId = "prior_min", label = "Prior min", value = defaults$prior_min$value, min = 0, max = 1), width = 4),
-            column(numericInput(inputId = "prior_mode", label = "Prior mode", value = defaults$prior_mode$value, min = 0, max = 1), width = 4),
-            column(numericInput(inputId = "prior_max", label = "Prior max", value = defaults$prior_max$value, min = 0, max = 1), width = 4)
-          )
+        h4("Prior probability of eradication"),
+        hr(),
+        splitLayout(
+          numericInput(inputId = "prior_min", label = "Prior min", value = defaults$prior_min$value, min = 0, max = 1),
+          numericInput(inputId = "prior_mode", label = "Prior mode", value = defaults$prior_mode$value, min = 0, max = 1),
+          numericInput(inputId = "prior_max", label = "Prior max", value = defaults$prior_max$value, min = 0, max = 1)
         )
     )
   )
-  
+
 ## UI: introduction prob ----
 ui.set.intro <-
-  list(
+  wellPanel(
     div(title = "Values must be between 0 and 1 and min < mode < max",
-        wellPanel(
-          h5("Set parameters for distribution of re-introduction probability"),
-          fluidRow(
-            column(numericInput(inputId = "intro_min", label = "Minimum", value = 0.00001), width = 4),
-            column(numericInput(inputId = "intro_mode", label = "Mode", value = 0.00002), width = 4),
-            column(numericInput(inputId = "intro_max", label = "Maximum", value = 0.00003), width = 4)
-          )
+        h4("Re-introduction probability"),
+        hr(),
+        splitLayout(
+          numericInput(inputId = "intro_min", label = "Minimum", value = 0.00001),
+          numericInput(inputId = "intro_mode", label = "Mode", value = 0.00002),
+          numericInput(inputId = "intro_max", label = "Maximum", value = 0.00003)
         )
     )
   )
 
-ui.inputs.yrs <- 
-  fluidRow(column(numericInput(inputId = "startYear", label = "Start year", value = 1), width = 6),
-           column(numericInput(inputId = "endYear", label = "End year", value = 1), width = 6))
 
-# UI: advanced input ------------------------------------------------------
-ui.advinputs <- 
-  tabPanel(title = "Advanced inputs",
-           splitLayout(
-             list(
-               sliderInput("rasterOpacity", label = "Raster opacity", min = 0, max = 1, value = 0.7),
-               numericInput(inputId = "resolution", label = defaults$resolution$label, value = defaults$resolution$value),
-               numericInput(inputId = "setNumIterations", label = defaults$setNumIterations$label, value = defaults$setNumIterations$value),
-               numericInput(inputId = "setRRTrapDistance", label = defaults$setRRTrapDistance$label, value = defaults$setRRTrapDistance$value),
-               numericInput(inputId = "startPu", label = defaults$startPu$label, value = defaults$startPu$value),
-               numericInput(inputId = "PuIncreaseRate", label = defaults$PuIncreaseRate$label, value = defaults$PuIncreaseRate$value),
-               numericInput(inputId = "summaryCIs", label = defaults$summaryCIs$label, value = defaults$summaryCIs$value)
-             )))
-
+# UI: simulation parameters ----
+ui.simparams <- 
+  wellPanel(
+    h4("Simulation parameters"),
+    hr(),
+    splitLayout(numericInput(inputId = "startYear", label = "Start year", value = 1),
+                numericInput(inputId = "endYear", label = "End year", value = 1)),
+    numericInput(inputId = "setNumIterations", label = defaults$setNumIterations$label, value = defaults$setNumIterations$value, width = '50%'),
+    numericInput(inputId = "resolution", label = defaults$resolution$label, value = defaults$resolution$value, width = '50%'),
+    splitLayout(numericInput(inputId = "startPu", label = "Design prevalence (Pu)", value = defaults$startPu$value),
+    numericInput(inputId = "PuIncreaseRate", label = "Prevalence increase rate", value = defaults$PuIncreaseRate$value))
+  )
 
 # UI: output --------------------------------------------------------------
 
 ui.output <- 
   fluidRow(column(width=10,
-    tabsetPanel(id="maintabs", type="tabs",
-              #Map tab
-              tabPanel(title="Maps", value="panel1",
-                       leafletOutput("baseMap", height = 700),   
-                       fluidRow(
-                         column(width = 6,
-                                selectInput(inputId = "selectYear", label = "selectYear", choices = NULL)),
-                         column(width = 6,
-                                selectInput(inputId = "selectDevices", label = "selectDevices", 
-                                            choices = NULL, selectize = TRUE, multiple = TRUE))
-                       )
-                       
-              ),
-              tabPanel(title="Probability of absence", value="panel2",
-                       tableOutput("POAsummary")),
-              tabPanel(title="Plots", value="panel3",
-                       plotOutput("PoAtimeplot", width="70%"),
-                       plotOutput("PoAdensplot", width="70%"))
-              )))
-
-  #   fluidRow(column(width = 6, 
-  #   list(h3("Probability of absence")),
-  #   div(title = "Adjust credible from default (0.95) under the 'Advanced inputs' tab.", h4("Summary table")),
-  #   tableOutput("POAsummary"),
-  #   plotOutput("PoAtimeplot"),
-  #   plotOutput("PoAdensplot")),
-  #   # h3("validTable"),
-  #   # verbatimTextOutput("validTable"),
-  #   column(width = 6, list(h3("baseMap"),
-  #   leafletOutput("baseMap")),
-  #   # h3("result"),
-  #   # verbatimTextOutput("result"), 
-  #   # h3("runpypress"),
-  #   # verbatimTextOutput("runpypress"), 
-  #   h3("----------DEBUGGING-----------"),
-  #   checkboxInput(inputId = "renderPts", label = "render map points", value = TRUE),
-  #   checkboxInput(inputId = "renderRasts", label = "render map rasters", value = TRUE),
-  #   h3("inputTable"),
-  #   htmlOutput("inputTable"))
-  # )
+                  leafletOutput("baseMap", height = 600), 
+                  fluidRow(
+                    column(width = 6,
+                           selectInput(inputId = "selectYear", label = "Select year to display", 
+                                       choices = NULL)),
+                    column(width = 6,
+                           selectInput(inputId = "selectDevices", label = "Select surveillance types to display", 
+                                       choices = NULL, selectize = TRUE, multiple = TRUE))
+                  )
+                  
+  )# , plotOutput("PoAdensplot", width="70%"))
+  )
 
 # UI: layout page ---------------------------------------------------------
 ui <- fluidPage(title = "Proof-of-absence calculator",
                 ui.logotitle,
   tabsetPanel(
-    tabPanel(title = "Upload inputs", 
+    tabPanel(title = "Upload inputs",
+             br(),
              # splitLayout(list(ui.inputs, ui.inputs.priors), ui.output)
              fluidRow(column(4, 
                              list(
                                ui.file.uploads, 
-                               ui.survparams, 
-                               ui.inputs.priors, 
-                               ui.set.intro, 
-                               ui.inputs.yrs,
-                               actionButton(inputId = "runpy", 
-                                            label = "Calculate PoA"),
                                ui.about
              )), 
              column(8, list(ui.output)))
     ),  
-    tabPanel(title = "Set parameters"),
-    ui.advinputs,
-    ui.troubleshooting
+    tabPanel(title = "Set parameters",
+             br(),
+             fluidRow(column(width = 4, ui.survparams), 
+                      column(width = 4, 
+                             ui.inputs.priors,
+                             ui.set.intro), 
+             column(width = 4, ui.simparams))
+             ),
+    tabPanel(title = "Run model",
+             br(),
+             fluidRow(
+               column(width = 4, 
+                      br(),
+                      actionButton(inputId = "runpoa", label = "Calculate PoA",
+                                   width = '100%')),
+               column(width = 8,
+                      splitLayout(
+                        tableOutput("POAsummary"),
+                        numericInput(inputId = "summaryCIs", label = defaults$summaryCIs$label, value = defaults$summaryCIs$value)
+                      ),
+                      plotOutput("PoAtimeplot", width="70%"))
+               )
+    )#, ui.troubleshooting
   )
 )
 
@@ -305,8 +289,8 @@ options(shiny.reactlog = TRUE)   # press CTRL + F3 to view react log
 
 server <- function(input, output, session) {
   
-  runpypress <- reactive({input$runpy})
-  output$runpypress <- renderPrint(runpypress())
+  runpoapress <- reactive({input$runpoa})
+  output$runpoapress <- renderPrint(runpoapress())
 
 
   # server: manage python versions and modules ------------------------------
@@ -654,7 +638,10 @@ server <- function(input, output, session) {
   })
   
   
-  output$deviceUI <- DT::renderDT(deviceUI())
+  output$deviceUI <- DT::renderDT({
+    validate(need(set.animal.params(), label = "A point surveillance file"))
+    deviceUI()
+  })
   
   # server: render and update grid parameters -------------------------------
 
@@ -674,7 +661,10 @@ server <- function(input, output, session) {
     return(dtOut)
   })
   
-  output$gridUI <- DT::renderDT(gridUI())
+  output$gridUI <- DT::renderDT({
+    validate(need(set.grid.params(), label = "A grid surveillance file"))
+    gridUI()
+  })
   
   observe({
     if(!is.null(input$gridUI_cell_edit)){
@@ -953,9 +943,9 @@ server <- function(input, output, session) {
   
     
   # server: run py code -----------------------------------------------------
-  pyPOA <- eventReactive(input$runpy, {
+  pyPOA <- eventReactive(input$runpoa, {
     
-    message("runpy press detected")
+    message("runpoa press detected")
     
     # proofofabsence::poa_paks(modules = "minimal", delay_load = FALSE)
     
@@ -1190,7 +1180,7 @@ server <- function(input, output, session) {
     leafletProxy(session = session, mapId = "baseMap") %>%
       clearGroup(group = "SeU") %>%
       addRasterImage(x = meanSeu, layerId = "SeU", group = "SeU",
-                     opacity = input$rasterOpacity, colors = pal, 
+                     opacity = 0.7, colors = pal, 
                      project = FALSE) %>% 
       addLegend(pal = pal, values = c(0,1), labels = c(0,1), layerId = "SeU")
     
