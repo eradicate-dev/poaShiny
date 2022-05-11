@@ -695,18 +695,21 @@ server <- function(input, output, session) {
     }
   })
   
+  # update zonesShape when paths$zonesShapeFName set/changed
   zonesShape <- reactiveVal(NULL)
-  
   observe({
-    
-    path.ext <- paths$zonesShapeFName
     if(!is.null(paths$zonesShapeFName)){
       message(paste("loading .shp file:", paths$zonesShapeFName))
       zonesShape.sf <- st_sf(st_read(paths$zonesShapeFName))
       zonesShape(zonesShape.sf)
     }
+  })
+  
+  # update multizone options based on polygon in shp file
+  observe({ 
+    req(zonesShape())
     
-    if(!is.null(zonesShape())) if(nrow(zonesShape()) == 1){
+    if(nrow(zonesShape()) == 1){
       updateRadioButtons(session = session, 
                          inputId = "useMultiZone", 
                          selected = "Single zone", choices = "Single zone")
@@ -716,11 +719,17 @@ server <- function(input, output, session) {
                          selected = "Multiple zones", 
                          choices = c("Single zone", "Multiple zones"))
     }
-    
-    
   })
   
-
+  # manual EPSG code override
+  observe({
+    req(input$epsg)
+    req(is.na(detected_epsg()))
+    zonesShape.sf <- st_sf(st_read(paths$zonesShapeFName, crs = NA), crs = input$epsg)
+    zonesShape(zonesShape.sf)
+  })
+  
+  
   # server: update epsg input using uploaded shapefile ----------------------
   detected_epsg <- reactiveVal()
   observe({
