@@ -40,6 +40,7 @@ library(DT)
 
 library(proofofabsence)
 
+# install proofofabsence package from source before deploying to shinyapps.io
 # devtools::install_github(repo = "eradicate-dev/poaShiny", ref = "master")
 
 # print loaded package versions
