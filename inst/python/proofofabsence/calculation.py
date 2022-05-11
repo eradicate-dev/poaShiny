@@ -37,24 +37,24 @@ from proofofabsence import params
 
 # find libpython and extract the locking functions
 # so we can lock access to some arrays from threads
-LOCK_INIT = ctypes.pythonapi.PyThread_allocate_lock
-LOCK_INIT.argtypes = None
-LOCK_INIT.restype = ctypes.c_void_p
+# LOCK_INIT = ctypes.pythonapi.PyThread_allocate_lock
+# LOCK_INIT.argtypes = None
+# LOCK_INIT.restype = ctypes.c_void_p
 
-LOCK_DESTROY = ctypes.pythonapi.PyThread_free_lock
-LOCK_DESTROY.argtypes = [ctypes.c_void_p]
-LOCK_DESTROY.restype = ctypes.c_int
+# LOCK_DESTROY = ctypes.pythonapi.PyThread_free_lock
+# LOCK_DESTROY.argtypes = [ctypes.c_void_p]
+# LOCK_DESTROY.restype = ctypes.c_int
 
-LOCK_LOCK = ctypes.pythonapi.PyThread_acquire_lock
-LOCK_LOCK.argtypes = [ctypes.c_void_p, ctypes.c_int]
-LOCK_LOCK.restype = ctypes.c_int
+# LOCK_LOCK = ctypes.pythonapi.PyThread_acquire_lock
+# LOCK_LOCK.argtypes = [ctypes.c_void_p, ctypes.c_int]
+# LOCK_LOCK.restype = ctypes.c_int
 
-LOCK_UNLOCK = ctypes.pythonapi.PyThread_release_lock
-LOCK_UNLOCK.argtypes = [ctypes.c_void_p]
-LOCK_UNLOCK.restype = None
+# LOCK_UNLOCK = ctypes.pythonapi.PyThread_release_lock
+# LOCK_UNLOCK.argtypes = [ctypes.c_void_p]
+# LOCK_UNLOCK.restype = None
 
 # global locking for tricky sections
-THREAD_LOCK = None
+# THREAD_LOCK = None
 
 class POAException(Exception):
     "Base class for POA exceptions"
@@ -193,8 +193,8 @@ def calcProofOfAbsence(poaparams, trapArray, RRArray, zoneArray, zoneCodes, matc
             nIterList.append((start, end))
 
     # create the locks, we do this even if nthreads=1 to make it easier
-    global THREAD_LOCK 
-    THREAD_LOCK = LOCK_INIT()
+    # global THREAD_LOCK 
+    # THREAD_LOCK = LOCK_INIT()
 
     Pz = poaparams.Pz       ## ZONE DESIGN PREVALENCE
 
@@ -301,7 +301,7 @@ def calcProofOfAbsence(poaparams, trapArray, RRArray, zoneArray, zoneCodes, matc
         yearCount += 1
 
     # free the lock
-    LOCK_DESTROY(THREAD_LOCK)
+    # LOCK_DESTROY(THREAD_LOCK)
 
     # write the big rasters to directory as *.tif
     # (1) multilayered tif of annual mean SeU
@@ -448,7 +448,7 @@ def doIterations(startItr, endItr, sensitivityRaster, zoneSeResults,
 
 
         # following lines need lock since the updated arrays are shared between all threads
-        LOCK_LOCK(THREAD_LOCK, 1)
+        # LOCK_LOCK(THREAD_LOCK, 1)
         # keep a total of the searchedCells for now - will divide later
         
         # ProportionSearchedZone is 2D. We are setting all zones
@@ -460,7 +460,7 @@ def doIterations(startItr, endItr, sensitivityRaster, zoneSeResults,
         # One is produced for each year.
         sensitivityRaster += thisSensitivity
 
-        LOCK_UNLOCK(THREAD_LOCK)
+        # LOCK_UNLOCK(THREAD_LOCK)
         # Condition on presence or absence of surveillance in year
         # Sum() across all zones of number of searched cells.
         zoneSensitivity = np.zeros(zoneCodes.shape)
