@@ -925,6 +925,8 @@ server <- function(input, output, session) {
     
     # proofofabsence::poa_paks(modules = "minimal", delay_load = FALSE)
     
+    showNotification("Processing data ...", id = "processing", duration = NULL)
+    
     myParams <- proofofabsence::makeParams(setMultipleZones = input$useMultiZone %in% "Multiple zones",
                                            setNumIterations = input$setNumIterations,
                                            setRRTrapDistance = input$setRRTrapDistance,
@@ -1000,11 +1002,19 @@ server <- function(input, output, session) {
     # use temporary output data path
     outputDataPath <- tempdir(check = TRUE)
     
+    removeNotification(id = "processing")
+    showNotification("Processing data complete", duration = 2)
+    showNotification("Calculating proof of absence ...", id = "poa", duration = NULL)
+    
     # calculate PoA using poa.calculation.calcProofOfAbsence
     result <- poa$calculation$calcProofOfAbsence(myParams, rawdata$survey,
                                                  rawdata$RelRiskExtent, rawdata$zoneArray, rawdata$zoneCodes,
                                                  rawdata$match_geotrans, rawdata$wkt, outputDataPath,
                                                  rawdata$RR_zone, rawdata$Pu_zone, rawdata$Name_zone)
+    
+    removeNotification(id = "poa")
+    showNotification("Calculating proof of absence complete", duration = 2)
+    
     message("calcProofOfAbsence complete")
     
     return(list(rawdata = rawdata,
