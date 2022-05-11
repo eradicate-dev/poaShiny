@@ -138,7 +138,9 @@ makeParams <- function(
     #---------------------------------------------------------------------------#
 
     # number of cpu's from SLURM
-    ncpus = np$int(os$getenv('SLURM_CPUS_PER_TASK', '1'))
+    ncpus <- Sys.getenv('SLURM_CPUS_PER_TASK')
+    if(ncpus == ""){ncpus <- '1'}
+    ncpus <- np$int(ncpus)
     myParams$setNumThreads(ncpus)
 
     # print('ncpus', ncpus)
