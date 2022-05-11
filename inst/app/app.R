@@ -280,7 +280,8 @@ server <- function(input, output, session) {
   runpypress <- reactive({input$runpy})
   output$runpypress <- renderPrint(runpypress())
 
-  # manage python versions and modules --------------------------------------
+
+  # server: manage python versions and modules ------------------------------
   
   # ------------------ App virtualenv setup (Do not edit) ------------------- #
   # adapted from - 'https://github.com/ranikay/shiny-reticulate-app'
@@ -323,6 +324,19 @@ server <- function(input, output, session) {
     if(Sys.getenv("PYTHON_PATH") != "") use_python(Sys.getenv("PYTHON_PATH"))
   }
   # ------------------ App server logic (Edit anything below) --------------- #
+  
+  # python modules
+  poa <<-
+    reticulate::import_from_path(
+      path = system.file("python", package = "proofofabsence"),
+      module = "proofofabsence_min",
+      convert = FALSE, delay_load = FALSE)
+
+  cachedir <- system.file("python/proofofabsence_min/__pycache__", package = "proofofabsence")
+  if(dir.exists(cachedir)) message("cached proofofabsence module functions found:\n", cachedir)
+
+  np <<- reticulate::import(module = "numpy", convert = FALSE, delay_load = FALSE)
+  bi <<- reticulate::import_builtins(convert = FALSE)
   
   # server: valid() ---------------------------------------------------------
   
@@ -907,7 +921,7 @@ server <- function(input, output, session) {
     
     message("runpy press detected")
     
-    proofofabsence::poa_paks(modules = "minimal", delay_load = FALSE)
+    # proofofabsence::poa_paks(modules = "minimal", delay_load = FALSE)
     
     myParams <- proofofabsence::makeParams(setMultipleZones = input$useMultiZone %in% "Multiple zones",
                                            setNumIterations = input$setNumIterations,
