@@ -64,7 +64,7 @@ defaults <-
        prior_min = list(desc = "", label = "Prior min", value = 0.2),
        prior_mode = list(desc = "", label = "Prior mode", value = 0.4),
        prior_max = list(desc = "", label = "Prior max", value = 0.6),
-       setNumIterations = list(desc = "", label = "Number of iterations", value = 100),
+       setNumIterations = list(desc = "", label = "Number of iterations", value = 2),
        setRRTrapDistance = list(desc = "", label = "Relative risk buffer", value = 100),
        setMinRR = list(desc = "", label = "Minimum relative risk value", value = 1),
        startPu = list(desc = "", label = "startPu", value = 1.00),
