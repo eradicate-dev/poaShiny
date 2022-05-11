@@ -41,23 +41,14 @@ poa_paks <- function(modules = "minimal", delay_load = TRUE){
   if(modules == "full"){
     os <<- reticulate::import(module = "os", convert = FALSE, delay_load = delay_load)
     np <<- reticulate::import(module = "numpy", convert = FALSE, delay_load = delay_load)
-    pickle <<- reticulate::import(module = "pickle", convert = FALSE, delay_load = delay_load)
-    pytempfile <<- reticulate::import(module = "tempfile", convert = FALSE, delay_load = delay_load)
     gdal <<- reticulate::import(module = "osgeo.gdal", convert = FALSE, delay_load = delay_load)
     ogr <<- reticulate::import(module = "osgeo.ogr", convert = FALSE, delay_load = delay_load)
     osr <<- reticulate::import(module = "osgeo.osr", convert = FALSE, delay_load = delay_load)
     gdalconst <<- reticulate::import(module = "osgeo.gdalconst", convert = FALSE, delay_load = delay_load)
-    njit <<- reticulate::import(module = "numba", convert = FALSE, delay_load = delay_load)$njit
-    jit <<- reticulate::import(module = "numba", convert = FALSE, delay_load = delay_load)$jit
   }
   
   if(modules == "minimal"){
-    os <<- reticulate::import(module = "os", convert = FALSE, delay_load = delay_load) 
     np <<- reticulate::import(module = "numpy", convert = FALSE, delay_load = delay_load)
-    pickle <<- reticulate::import(module = "pickle", convert = FALSE, delay_load = delay_load)
-    pytempfile <<- reticulate::import(module = "tempfile", convert = FALSE, delay_load = delay_load)
-    njit <<- reticulate::import(module = "numba", convert = FALSE, delay_load = delay_load)$njit
-    jit <<- reticulate::import(module = "numba", convert = FALSE, delay_load = delay_load)$jit
   }
   
   # always load builtin modules
