@@ -18,7 +18,8 @@
 # Simon Howard; howards@landcareresearch.co.nz | si.w.howard@gmail.com
 #-------------------------------------------------------------------------#
 
-# packages ----------------------------------------------------------------
+
+# R packages --------------------------------------------------------------
 
 # devtools::install_github("rstudio/reticulate")
 library(reticulate)
