@@ -55,26 +55,28 @@ options(shiny.maxRequestSize=100*1024^2)
 
 # UI: input defaults ------------------------------------------------------
 defaults <- 
-  list(zonesShapeFName = 
-         list(desc = "Upload a shapefile by clicking the 'Browse' button and selecting the shapefile's .shp, .shx, .prj and .dbf files.", 
-              label = "Upload shapefiles", 
-              placeholder = "Select .shp, .shx, .prj and .dbf files"),
+  list(zonesShapeFName = list(desc = paste0("Upload a shapefile by clicking the 'Browse' button and ",
+                                            "selecting the shapefile's .shp, .shx, .prj and .dbf files. ",
+                                            "To select multiple files hold down the Shift or Ctrl keys ",
+                                            "while clicking the files"),
+                              label = "Upload shapefiles", 
+                              placeholder = "Select .shp, .shx, .prj and .dbf files"),
        relativeRiskFName = list(desc = "", label = "", value = "app\\www\\poa\\Kaitake\\Data\\relRiskRaster.tif"),
        zonesOutFName = list(desc = "", label = "", value = "app\\www\\poa\\Kaitake\\Results\\Model_0\\zones.tif"),
        relRiskRasterOutFName = list(desc = "", label = "", value = "app\\www\\poa\\Kaitake\\Results\\Model_0\\relRiskRaster.tif"),
-       resolution = list(desc = "", label = "Raster resolution", value = as.double(50)),
-       epsg = list(desc = "", label = "epsg", value = NULL),
-       surveyFName = list(desc = "", label = "surveyFName", value = "app\\www\\poa\\Kaitake\\Data\\devices.csv"),
-       gridSurveyFname = list(desc = "", label = "gridSurveyFname", value = NULL),
-       prior_min = list(desc = "", label = "Prior min", value = 0.2),
-       prior_mode = list(desc = "", label = "Prior mode", value = 0.4),
-       prior_max = list(desc = "", label = "Prior max", value = 0.6),
-       setNumIterations = list(desc = "", label = "Number of iterations", value = 2),
-       setRRTrapDistance = list(desc = "", label = "Relative risk buffer", value = 100),
-       setMinRR = list(desc = "", label = "Minimum relative risk value", value = 1),
-       startPu = list(desc = "", label = "startPu", value = 1.00),
-       PuIncreaseRate = list(desc = "", label = "PuIncreaseRate", value = 0.00),
-       summaryCIs = list(desc = "", label = "Summary table credible intervals", value = 0.95))
+         resolution = list(desc = "", label = "Raster resolution", value = as.double(50)),
+         epsg = list(desc = "", label = "EPSG code", value = NULL),
+         surveyFName = list(desc = "", label = "surveyFName", value = "app\\www\\poa\\Kaitake\\Data\\devices.csv"),
+         gridSurveyFname = list(desc = "", label = "gridSurveyFname", value = NULL),
+         prior_min = list(desc = "", label = "Prior min", value = 0.2),
+         prior_mode = list(desc = "", label = "Prior mode", value = 0.4),
+         prior_max = list(desc = "", label = "Prior max", value = 0.6),
+         setNumIterations = list(desc = "", label = "Number of iterations", value = 2),
+         setRRTrapDistance = list(desc = "", label = "Relative risk buffer", value = 100),
+         setMinRR = list(desc = "", label = "Minimum relative risk value", value = 1),
+         startPu = list(desc = "", label = "startPu", value = 1.00),
+         PuIncreaseRate = list(desc = "", label = "PuIncreaseRate", value = 0.00),
+         summaryCIs = list(desc = "", label = "Summary table credible intervals", value = 0.95))
 
 
 # UI: input ---------------------------------------------------------------
@@ -126,13 +128,29 @@ ui.file.uploads <-
             fileInput(inputId = "zonesShapeFName", label = defaults$zonesShapeFName$label, 
                       multiple = TRUE, placeholder = defaults$zonesShapeFName$placeholder,
                       accept = ".SHP,.SHX,.DBF,.PRJ")),
-        splitLayout(radioButtons(inputId = "useMultiZone", label = "Use single or multiple zones?", 
-                                 choices = c("Single zone", "Multiple zones"), selected = "Multiple zones",
-                                 inline = TRUE),
-                    numericInput(inputId = "epsg", label = defaults$epsg$label, value = defaults$epsg$value)),
-        fileInput(inputId = "surveyFName", label = "surveyFName", multiple = FALSE),
-        fileInput(inputId = "gridSurveyFname", label = "gridSurveyFname", multiple = TRUE),
-        fileInput(inputId = "relativeRiskFName", label = defaults$relativeRiskFName$label, multiple = FALSE),
+        splitLayout(
+          div(title = paste0("If the uploaded shape file contains multiple polygons, ",
+                             "or zones, then they can be treated separately, with differing risk ",
+                             "and design prevalence values. Select 'Multiple zones' ",
+                             "to treat zones separately, or 'Single zone' to apply the ",
+                             "same risk and prevalence to all zones."), 
+              radioButtons(inputId = "useMultiZone", label = "Use single or multiple zones?", 
+                           choices = c("Single zone", "Multiple zones"), selected = "Multiple zones",
+                           inline = TRUE)),
+          div(title = paste0("The EPSG code is detected automatically from information stored ",
+                             "in the uploaded shapefile. The coordinate reference system associated ",
+                             "with the  shape file is used for all other uploaded data. If incorrect, ",
+                             "or not automatically detected, the code can be manually set here."),
+          numericInput(inputId = "epsg", label = "EPSG code", value = defaults$epsg$value))),
+        div(title = paste0(""),
+            fileInput(inputId = "surveyFName", label = "Point surveillance file", 
+                      accept = ".csv", placeholder = "Select .csv file", multiple = FALSE)),
+        fileInput(inputId = "gridSurveyFname", label = "Grid surveillance files", 
+                  accept = ".img,.tif,.tiff,.csv", placeholder = "Select .csv and associated .tif or .img raster files",
+                  multiple = TRUE),
+        fileInput(inputId = "relativeRiskFName", label = "Relative risk raster", 
+                  accept = ".img,.tif,.tiff", placeholder = "Select relative risk .tif or .img raster file",
+                  multiple = FALSE),
         conditionalPanel(condition = "output.RRloaded", {
           splitLayout(
             numericInput(inputId = "setMinRR", label = defaults$setMinRR$label, 
@@ -251,7 +269,7 @@ ui.output <-
 ui <- fluidPage(title = "Proof-of-absence calculator",
                 ui.logotitle,
   tabsetPanel(
-    tabPanel(title = "Run model", 
+    tabPanel(title = "Upload inputs", 
              # splitLayout(list(ui.inputs, ui.inputs.priors), ui.output)
              fluidRow(column(4, 
                              list(
@@ -266,6 +284,7 @@ ui <- fluidPage(title = "Proof-of-absence calculator",
              )), 
              column(8, list(ui.output)))
     ),  
+    tabPanel(title = "Set parameters"),
     ui.advinputs,
     ui.troubleshooting
   )
@@ -784,7 +803,6 @@ server <- function(input, output, session) {
   observe({
     
     req(input$epsg)
-    req(detected_epsg())
     
     # make reactive to selecting examples
     input$namedExample
