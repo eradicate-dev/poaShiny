@@ -55,7 +55,10 @@ options(shiny.maxRequestSize=100*1024^2)
 
 # UI: input defaults ------------------------------------------------------
 defaults <- 
-  list(zonesShapeFName = list(desc = "", label = "", value = "app\\www\\poa\\Kaitake\\Data\\extent.shp"),
+  list(zonesShapeFName = 
+         list(desc = "Upload a shapefile by clicking the 'Browse' button and selecting the shapefile's .shp, .shx, .prj and .dbf files.", 
+              label = "Upload shapefiles", 
+              placeholder = "Select .shp, .shx, .prj and .dbf files"),
        relativeRiskFName = list(desc = "", label = "", value = "app\\www\\poa\\Kaitake\\Data\\relRiskRaster.tif"),
        zonesOutFName = list(desc = "", label = "", value = "app\\www\\poa\\Kaitake\\Results\\Model_0\\zones.tif"),
        relRiskRasterOutFName = list(desc = "", label = "", value = "app\\www\\poa\\Kaitake\\Results\\Model_0\\relRiskRaster.tif"),
@@ -118,20 +121,24 @@ ui.file.uploads <-
   wellPanel(
     selectInput(inputId = "namedExample", label = "Select example set", choices = c("None", "Kaitake possums", "Mahia possums", "CK stoats", "Nutria"), multiple = FALSE),
     conditionalPanel(condition = "input.namedExample == 'None'",{
-      list(fileInput(inputId = "zonesShapeFName", label = "zonesShapeFName", multiple = TRUE),
-           splitLayout(radioButtons(inputId = "useMultiZone", label = "Use single or multiple zones?", 
-                                    choices = c("Single zone", "Multiple zones"), selected = "Multiple zones",
-                                    inline = TRUE),
-                       numericInput(inputId = "epsg", label = defaults$epsg$label, value = defaults$epsg$value)),
-           fileInput(inputId = "surveyFName", label = "surveyFName", multiple = FALSE),
-           fileInput(inputId = "gridSurveyFname", label = "gridSurveyFname", multiple = TRUE),
-           fileInput(inputId = "relativeRiskFName", label = "relativeRiskFName", multiple = FALSE),
-           conditionalPanel(condition = "output.RRloaded", {
-             splitLayout(
-               numericInput(inputId = "setMinRR", label = defaults$setMinRR$label, 
-                            value = defaults$setMinRR$value, min = 0, max = 1000)
-             )
-           })
+      list(
+        div(title = defaults$zonesShapeFName$desc, 
+            fileInput(inputId = "zonesShapeFName", label = defaults$zonesShapeFName$label, 
+                      multiple = TRUE, placeholder = defaults$zonesShapeFName$placeholder,
+                      accept = ".SHP,.SHX,.DBF,.PRJ")),
+        splitLayout(radioButtons(inputId = "useMultiZone", label = "Use single or multiple zones?", 
+                                 choices = c("Single zone", "Multiple zones"), selected = "Multiple zones",
+                                 inline = TRUE),
+                    numericInput(inputId = "epsg", label = defaults$epsg$label, value = defaults$epsg$value)),
+        fileInput(inputId = "surveyFName", label = "surveyFName", multiple = FALSE),
+        fileInput(inputId = "gridSurveyFname", label = "gridSurveyFname", multiple = TRUE),
+        fileInput(inputId = "relativeRiskFName", label = defaults$relativeRiskFName$label, multiple = FALSE),
+        conditionalPanel(condition = "output.RRloaded", {
+          splitLayout(
+            numericInput(inputId = "setMinRR", label = defaults$setMinRR$label, 
+                         value = defaults$setMinRR$value, min = 0, max = 1000)
+          )
+        })
       )
     })  
   )
