@@ -121,8 +121,8 @@ ui.about <-
 ## UI: file uploads ----
 ui.file.uploads <- 
   wellPanel(
-    selectInput(inputId = "namedExample", label = "Select example set", choices = c("None", "Kaitake possums", "Mahia possums", "CK stoats", "Nutria"), multiple = FALSE),
-    conditionalPanel(condition = "input.namedExample == 'None'",{
+    # selectInput(inputId = "namedExample", label = "Select example set", choices = c("None", "Kaitake possums", "Mahia possums", "CK stoats", "Nutria"), multiple = FALSE),
+    # conditionalPanel(condition = "input.namedExample == 'None'",{
       list(
         div(title = defaults$zonesShapeFName$desc, 
             fileInput(inputId = "zonesShapeFName", label = defaults$zonesShapeFName$label, 
@@ -160,7 +160,7 @@ ui.file.uploads <-
           )
         })
       )
-    })  
+    # })  
   )
 
 ## UI: detection parameters ----
@@ -418,37 +418,37 @@ server <- function(input, output, session) {
   # server: copy example files to temp folder ---------------------------------
   
   # - copy device folders
-  observe({
-    if(input$namedExample == "Kaitake possums"){
-      paths$zonesShapeFName <- system.file("example_data/Kaitake_possums/extent.shp", package = "proofofabsence")
-      paths$relativeRiskFName <- system.file("example_data/Kaitake_possums/relRiskRaster.tif", package = "proofofabsence")
-      paths$surveyFName <- system.file("example_data/Kaitake_possums/devices.csv", package = "proofofabsence")
-    } else if(input$namedExample == "Mahia possums"){
-      paths$zonesShapeFName <- system.file("example_data/Mahia_Audrey/extent_block1ABCD.shp", package = "proofofabsence")
-      paths$relativeRiskFName <- system.file("example_data/Mahia_Audrey/habDistRR_block1ABCD.tif", package = "proofofabsence")
-      paths$surveyFName <- system.file("example_data/Mahia_Audrey/Surveillance_location.csv", package = "proofofabsence")
-    } else if(input$namedExample == "CK stoats"){
-      paths$zonesShapeFName <- system.file("example_data/CK_stoats/extent.shp", package = "proofofabsence")
-      paths$relativeRiskFName <- system.file("example_data/CK_stoats/relRisk.tif", package = "proofofabsence")
-      paths$surveyFName <- system.file("example_data/CK_stoats/devices.csv", package = "proofofabsence")
-    } else if(input$namedExample == "Nutria"){
-      paths$zonesShapeFName <- system.file("example_data/Nutria/mngtZone_LowPu.shp", package = "proofofabsence")
-      paths$surveyFName <- system.file("example_data/Nutria/AllNutriaSurvey_2024.csv", package = "proofofabsence", mustWork = TRUE)
-      updateNumericInput(inputId = "epsg", value = 26918)
-      
-      # copy grid surveillance files to temporary folder
-      #  - csv gets rewritten when selecting start and end years
-      #  - unless the csv is copied the R system csvs are overwritten and the
-      #    changes becomes permanent
-      publicNutria <- system.file("example_data/Nutria/publicNutria.img", package = "proofofabsence")
-      tmp.publicNutria <- file.path(tempdir(), basename(publicNutria))
-      gridSurveyFname <- system.file("example_data/Nutria/gridPublicSur7.csv", package = "proofofabsence")
-      tmp.gridSurveyFname <- file.path(tempdir(), basename(gridSurveyFname))
-      file.copy(publicNutria, tmp.publicNutria)
-      file.copy(gridSurveyFname, tmp.gridSurveyFname)
-      paths$gridSurveyFname <- normalizePath(tmp.gridSurveyFname)
-    }
-  })
+  # observe({
+  #   if(input$namedExample == "Kaitake possums"){
+  #     paths$zonesShapeFName <- system.file("example_data/Kaitake_possums/extent.shp", package = "proofofabsence")
+  #     paths$relativeRiskFName <- system.file("example_data/Kaitake_possums/relRiskRaster.tif", package = "proofofabsence")
+  #     paths$surveyFName <- system.file("example_data/Kaitake_possums/devices.csv", package = "proofofabsence")
+  #   } else if(input$namedExample == "Mahia possums"){
+  #     paths$zonesShapeFName <- system.file("example_data/Mahia_Audrey/extent_block1ABCD.shp", package = "proofofabsence")
+  #     paths$relativeRiskFName <- system.file("example_data/Mahia_Audrey/habDistRR_block1ABCD.tif", package = "proofofabsence")
+  #     paths$surveyFName <- system.file("example_data/Mahia_Audrey/Surveillance_location.csv", package = "proofofabsence")
+  #   } else if(input$namedExample == "CK stoats"){
+  #     paths$zonesShapeFName <- system.file("example_data/CK_stoats/extent.shp", package = "proofofabsence")
+  #     paths$relativeRiskFName <- system.file("example_data/CK_stoats/relRisk.tif", package = "proofofabsence")
+  #     paths$surveyFName <- system.file("example_data/CK_stoats/devices.csv", package = "proofofabsence")
+  #   } else if(input$namedExample == "Nutria"){
+  #     paths$zonesShapeFName <- system.file("example_data/Nutria/mngtZone_LowPu.shp", package = "proofofabsence")
+  #     paths$surveyFName <- system.file("example_data/Nutria/AllNutriaSurvey_2024.csv", package = "proofofabsence", mustWork = TRUE)
+  #     updateNumericInput(inputId = "epsg", value = 26918)
+  #     
+  #     # copy grid surveillance files to temporary folder
+  #     #  - csv gets rewritten when selecting start and end years
+  #     #  - unless the csv is copied the R system csvs are overwritten and the
+  #     #    changes becomes permanent
+  #     publicNutria <- system.file("example_data/Nutria/publicNutria.img", package = "proofofabsence")
+  #     tmp.publicNutria <- file.path(tempdir(), basename(publicNutria))
+  #     gridSurveyFname <- system.file("example_data/Nutria/gridPublicSur7.csv", package = "proofofabsence")
+  #     tmp.gridSurveyFname <- file.path(tempdir(), basename(gridSurveyFname))
+  #     file.copy(publicNutria, tmp.publicNutria)
+  #     file.copy(gridSurveyFname, tmp.gridSurveyFname)
+  #     paths$gridSurveyFname <- normalizePath(tmp.gridSurveyFname)
+  #   }
+  # })
   
   
 
@@ -795,7 +795,7 @@ server <- function(input, output, session) {
     req(input$epsg)
     
     # make reactive to selecting examples
-    input$namedExample
+    # input$namedExample
     
     if("sf" %in% class(zonesShape())){
       
