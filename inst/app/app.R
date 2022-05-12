@@ -490,9 +490,6 @@ server <- function(input, output, session) {
       # set devices reactive object
       devices(devs)
       
-      # update start and finish years
-      updateNumericInput(session, inputId = "yrStart", value = min(devs$Year))
-      updateNumericInput(session, inputId = "yrEnd", value = max(devs$Year))
     }
   })
 
