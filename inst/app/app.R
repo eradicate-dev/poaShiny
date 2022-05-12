@@ -542,8 +542,8 @@ server <- function(input, output, session) {
   observe({
     
     # get years from devices & grids
-    deviceyrs <- devices()$Year
-    gridyrs <- gridinfo()$year
+    deviceyrs <- unique(devices()$Year)
+    gridyrs <- unique(gridinfo()$year)
     # combine years and update inputs
     allyrs(c(deviceyrs, gridyrs))
     if(!is.null(allyrs()) && is.numeric(allyrs())){
