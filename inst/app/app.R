@@ -26,6 +26,8 @@ library(reticulate)
 
 library(raster)
 
+library(terra)
+
 library(kableExtra)
 
 library(leaflet)
@@ -237,7 +239,7 @@ ui.output <-
 # UI: layout page ---------------------------------------------------------
 ui <- fluidPage(title = "Proof-of-absence calculator",
                 ui.logotitle,
-  tabsetPanel(
+  tabsetPanel(id = "tabs",
     tabPanel(title = "Upload inputs",
              br(),
              # splitLayout(list(ui.inputs, ui.inputs.priors), ui.output)
@@ -268,7 +270,8 @@ ui <- fluidPage(title = "Proof-of-absence calculator",
                         tableOutput("POAsummary"),
                         numericInput(inputId = "summaryCIs", label = defaults$summaryCIs$label, value = defaults$summaryCIs$value)
                       ),
-                      plotOutput("PoAtimeplot", width="70%"))
+                      plotOutput("PoAtimeplot", width="70%"),
+                      actionButton(inputId = "renderSeU", label = "renderSeU"))
                )
     )#, ui.troubleshooting
   )
@@ -1139,35 +1142,41 @@ server <- function(input, output, session) {
 
     
   # server: add meanSeU raster ----------------------------------------------
-  observe({
+  observeEvent(input$renderSeU, {
     
     req(pyPOA())
     
-    # get sensitivityList from calcProofOfAbsence result
-    sensitivityList <- py_to_r(pyPOA()$result$sensitivityList)
-    # get zone tif file path
-    extZoneTifName <- pyPOA()$result$extZoneTifName
+    # jump to 'Upload inputs' tab
+    updateTabsetPanel(inputId = "tabs", session = session, 
+                      selected = "Upload inputs")  
+    showNotification(session = session, id = "SeUrender", 
+                     ui = list(strong("Rendering cell surveillance sensitivities"),
+                               p("Will jump to inputs tab when complete")), duration = NULL)
+    
+    # get result objects
+    rawdata <- pyPOA()$rawdata
+    result <- pyPOA()$result
+    
+    # find selected year and number of list element
+    years <- as.vector(result$params$years)
+    ind <- which(years %in% input$selectYear)
+    
+    # get sensitivity values from calcProofOfAbsence sensitivityList
+    sensitivityMatrix <- result$sensitivityList[[ind-1]]
+    sensitivityMatrix <- as.matrix(sensitivityMatrix)
+    # sensitivityMatrix[sensitivityMatrix == 0L] <- NA
     
     # read zone raster as template
-    rtemp <- terra::rast(pyPOA()$rawdata$zonesOutFName)
-    
-    # replace template values with cell mean SeU and replace zeroes with NA
-    rlist <- lapply(sensitivityList, function(vals){
-      r <- rtemp
-      vals[vals == 0L] <- NA
-      values(r) <- vals
-      r
-    })
-    
-    # stack rasters into layers
-    meanSeu <- do.call("c", rlist)
-    
-    # terra::writeRaster(x = meanSeu, filename = "meanSeu_usingGDAL.tif")
-    
+    rtemp <- terra::rast(rawdata$zonesOutFName)
+    meanSeu_terra <- rtemp
+    terra::values(meanSeu_terra) <- sensitivityMatrix
+     
     # project to pseudo-WGS84 using terra package
-    meanSeu_project <- terra::project(meanSeu, "epsg:3857")
+    meanSeu_project <- terra::project(x = meanSeu_terra, y = "epsg:3857", 
+                                      method = "bilinear", gdal = FALSE)
+    terra::values(meanSeu_project)[terra::values(meanSeu_project) == 0] <- NA
     # convert back to raster for use in leaflet
-    meanSeu <- raster::raster(meanSeu_project)
+    meanSeu <- raster(meanSeu_project)
     
     # set palette
     pal <- colorNumeric(palette = "viridis", domain = c(0,1.1),  # add 0.1 to upper limit
@@ -1180,6 +1189,8 @@ server <- function(input, output, session) {
                      opacity = 0.7, colors = pal, 
                      project = FALSE) %>% 
       addLegend(pal = pal, values = c(0,1), labels = c(0,1), layerId = "SeU")
+    
+    removeNotification(session = session, id = "SeUrender")
     
   })
   
