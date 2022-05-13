@@ -41,8 +41,9 @@ conda_env_build_full <- function(envname = "proofofabsence", force.overwrite = T
   }
 
   # required python packages and versions
-  paks <- c("python==3.*","numba","numpy","rios==1.4.*","gdal",
-            "r==3.*")
+  # - versions for gdal, proj and geos match versions on shinyapps.io
+  paks <- c("python==3.*","numba","numpy","rios==1.4.*","gdal==3.0.4",
+            "proj=3.6.1", "geos=3.8.0", "r==3.*")
 
   message(sprintf("Creating '%s' conda environment - this takes a while ....", envname))
   # create the 'envname' conda environment
