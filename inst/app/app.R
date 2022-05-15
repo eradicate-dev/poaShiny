@@ -77,8 +77,7 @@ defaults <-
          setRRTrapDistance = list(desc = "", label = "Relative risk buffer", value = 100),
          setMinRR = list(desc = "", label = "Minimum relative risk value", value = 1),
          startPu = list(desc = "", label = "startPu", value = 1.00),
-         PuIncreaseRate = list(desc = "", label = "PuIncreaseRate", value = 0.00),
-         summaryCIs = list(desc = "", label = "Summary table credible intervals", value = 0.95))
+         PuIncreaseRate = list(desc = "", label = "PuIncreaseRate", value = 0.00))
 
 
 # UI: input ---------------------------------------------------------------
@@ -267,11 +266,12 @@ ui <- fluidPage(title = "Proof-of-absence calculator",
                                    width = '100%')),
                column(width = 8,
                       splitLayout(
-                        tableOutput("POAsummary"),
-                        numericInput(inputId = "summaryCIs", label = defaults$summaryCIs$label, value = defaults$summaryCIs$value)
+                        tableOutput("SSePoFResultTable"),
+                        tableOutput("zoneSeResultTable")
                       ),
                       plotOutput("PoAtimeplot", width="70%"),
-                      actionButton(inputId = "renderSeU", label = "renderSeU"))
+                      actionButton(inputId = "renderSeU", label = "renderSeU"),
+                      downloadButton("downloadData", "Download"))
                )
     )#, ui.troubleshooting
   )
@@ -971,7 +971,7 @@ server <- function(input, output, session) {
                                                 sigsd = set.animal.params()$`Stdev sigma`)
     message("addAnimalParams complete")
     
-    # create rawdata using preProcessing.RawData() ----------------------------
+    # create rawdata using preProcessing.RawData()
     
     # set temp files for zonesOutFName and relRiskRasterOutFName
     tmp.zonesOutFName <- tempfile(fileext = ".tif")
@@ -1057,10 +1057,10 @@ server <- function(input, output, session) {
 
 
   # server: summary table ---------------------------------------------------
-  output$POAsummary <- renderTable({
+  output$SSePoFResultTable <- renderTable({
     
-    # get credible interval from advanced input
-    credint <- input$summaryCIs
+    # credible intervals
+    credint <- 0.95
     lowint <- (1-credint)/2
     uppint <- 1 - lowint
     
@@ -1093,12 +1093,60 @@ server <- function(input, output, session) {
     
     formatted_df <- 
       rbind(data.frame(Output = "Prior", Session = NA, 
-                       Value = prior_string),
+                       "Mean (upp, low 95% credible int.)" = prior_string, check.names = FALSE),
             data.frame(Output = c("SSe", rep("", length(SSe_string) - 1)), 
-                       Session = sprintf("%d", years), Value = SSe_string),
+                       Session = sprintf("%d", years), 
+                       "Mean (upp, low 95% credible int.)" = SSe_string, check.names = FALSE),
             data.frame(Output = c("PoF", rep("", length(poa_string) - 1)), 
-                       Session = sprintf("%d", years), Value = poa_string)) }, na = "")
+                       Session = sprintf("%d", years), 
+                       "Mean (upp, low 95% credible int.)" = poa_string, check.names = FALSE)) 
+    }, na = "")
   
+  # server: zoneSeResultTable -----------------------------------------------
+  
+  zoneSeResultTable <- reactive({
+
+    req(pyPOA())
+
+    rawdata <- pyPOA()$rawdata
+    result <- pyPOA()$result
+    
+    zoneSe3D <- as.array(result$zoneSeMatrix)
+    zoneYears <- as.matrix(result$params$years)
+    yrNames <- as.character(zoneYears)
+    Name_zone <- as.matrix(result$Name_zone)
+    
+    proportionSearchedZone <- as.array(result$proportionSearchedZone)
+    dimnames(proportionSearchedZone) <- list(zoneYears, Name_zone)
+    zoneSeMatrix <- as.array(result$zoneSeMatrix)
+    dimnames(zoneSeMatrix) <- list(zoneYears, NULL, Name_zone)
+    
+    meanSeZ <- apply(zoneSeMatrix, c(1,3), mean)
+    LoCI_SeZ <- apply(zoneSeMatrix, c(1,3), quantile, prob = 0.025)
+    HiCI_SeZ <- apply(zoneSeMatrix, c(1,3), quantile, prob = 0.975)
+    
+    d <- expand.grid(Zones = as.character(Name_zone),
+                     "Year/session" = yrNames, 
+                     stringsAsFactors = FALSE)[c(2,1)]
+    d$Mean_SeZ <- as.vector(t(meanSeZ))
+    d$Lo_CI_SeZ <- as.vector(t(LoCI_SeZ))
+    d$HI_CI_SeZ <- as.vector(t(HiCI_SeZ))
+    d$Prop_Searched <- as.vector(proportionSearchedZone)
+    
+    return(d)
+    
+  })
+  
+  output$zoneSeResultTable <- renderTable({
+    zoneSeResultTable()
+    
+    d <- zoneSeResultTable()
+    d$`Mean SeZ (upp, low 95% credible int.)` <- sprintf("%0.4f (%0.4f, %0.4f)", d$Mean_SeZ, d$Lo_CI_SeZ, d$HI_CI_SeZ)
+    d$`Year/session` <- ifelse(duplicated(d$`Year/session`), "", d$`Year/session`)
+    
+    d[c("Year/session", "Zones", "Mean SeZ (upp, low 95% credible int.)")]
+    
+  })
   
   # server: PoF plot --------------------------------------------------------
   # observe({try(print(py_to_r(pyPOA()$poFMatrix)))})
@@ -1140,6 +1188,97 @@ server <- function(input, output, session) {
                 xlab = "Probability of absence", ylab = "density")
   })
 
+  # server: zip results download --------------------------------------------
+  
+  # Downloadable csv of selected dataset ----
+  output$downloadData <- downloadHandler(
+    filename = function() {
+      paste0("poaresults_", format(Sys.time(), "%Y%m%d_%H%M"), ".zip", sep = "")
+    },
+    content = function(file) {
+      
+      showNotification(id = "zipid", ui = "Creating results zip file ...", 
+                       duration = NULL, session = session)
+      
+      rawdata <- pyPOA()$rawdata
+      result <- pyPOA()$result
+      
+      # R version of proofofabsence.postProcessing.makeTableFX()
+      SSe2D <- as.matrix(result$sensitivityMatrix)
+      years <- as.matrix(result$params$years)
+      nyears <- length(years)
+      yrNames <- as.character(years)
+      PoF2D <- as.matrix(result$poFMatrix)
+      prpSearched <- as.matrix(result$proportionSearchedExtent)
+      meanPoFAllYr <- rowMeans(PoF2D)
+      PoFQuantiles <- apply(PoF2D, 1, quantile, c(0.025, 0.975))
+      meanSSeAllYr <- rowMeans(SSe2D)
+      SSeQuantiles <- apply(SSe2D, 1, quantile, c(0.025, 0.975))
+      resultTable <- 
+        data.frame("Year/session" = yrNames, 
+                   'Mean PoF' = sprintf("%0.3f", meanPoFAllYr), 
+                   'Lo CI PoF' = sprintf("%0.3f", PoFQuantiles[1,]), 
+                   'Hi CI PoF' = sprintf("%0.3f", PoFQuantiles[2,]),
+                   'Mean SSe' = sprintf("%0.3f", meanSSeAllYr), 
+                   'Lo CI SSe' = sprintf("%0.3f", SSeQuantiles[1,]), 
+                   'Hi CI SSe' = sprintf("%0.3f", SSeQuantiles[2,]), 
+                   'Prop. Searched' = sprintf("%0.3f", prpSearched), 
+                   check.names = FALSE)
+      
+      # PofSseResultTable.txt
+      PofSseResultTable.txt <- file.path(tempdir(), "PofSseResultTable.txt")
+      write.csv(resultTable, PofSseResultTable.txt, row.names = FALSE, quote = FALSE)
+      
+      # zoneSeResultTable.txt
+      d <- zoneSeResultTable()
+      d$Mean_SeZ <- sprintf("%0.3f", d$Mean_SeZ)
+      d$Lo_CI_SeZ <- sprintf("%0.3f", d$Lo_CI_SeZ)
+      d$HI_CI_SeZ <- sprintf("%0.3f", d$HI_CI_SeZ)
+      d$Prop_Searched <- sprintf("%0.3f", d$Prop_Searched)
+      zoneSeResultTable.txt <- file.path(tempdir(), "zoneSeResultTable.txt")
+      write.csv(d, zoneSeResultTable.txt, row.names = FALSE, quote = FALSE)
+      
+      # meanSeuAllYears.tif
+      sensitivityList <- py_to_r(result$sensitivityList)
+      # use zones.tif as template
+      rtemp <- terra::rast(rawdata$zonesOutFName)
+      # replace values in zones.tif with meanSeU values
+      meanSeuAllYears <- 
+        do.call("c", lapply(sensitivityList, FUN = function(x){
+          r <- rtemp
+          values(r) <- x
+          return(r)}))
+      
+      meanSeuAllYears.tif <- file.path(tempdir(), "meanSeuAllYears.tif")
+      terra::writeRaster(x = meanSeuAllYears, filename = meanSeuAllYears.tif, 
+                         datatype =  "FLT8S", overwrite = TRUE)
+      rm(meanSeuAllYears, rtemp, sensitivityList)
+      gc()
+      message("meanSeuAllYears.tif created")
+      
+      # relRiskRaster.tif
+      relRiskRaster.tif_tmp <- as.character(rawdata$relRiskRasterOutFName)
+      relRiskRaster.tif <- file.path(dirname(relRiskRaster.tif_tmp), "relRiskRaster.tif")
+      file.copy(relRiskRaster.tif_tmp, relRiskRaster.tif, overwrite = TRUE)
+      message("relRiskRaster.tif copied")
+      
+      # zones.tif
+      zones.tif_tmp <- as.character(rawdata$zonesOutFName)
+      zones.tif <- file.path(dirname(zones.tif_tmp), "zones.tif")
+      file.copy(zones.tif_tmp, zones.tif, overwrite = TRUE)
+      message("zones.tif copied")
+
+      removeNotification(id = "zipid")
+      showNotification(ui = "Results zip file complete")
+      
+      # create zip
+      utils::zip(zipfile = file, flags = "-rX9j",
+                 files = c(PofSseResultTable.txt, zoneSeResultTable.txt, relRiskRaster.tif, zones.tif, 
+                           meanSeuAllYears.tif))
+      
+    }
+  )
+  
 
     
   # server: add meanSeU raster ----------------------------------------------
