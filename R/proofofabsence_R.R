@@ -677,7 +677,7 @@ makeMaskAndZones <- function(self, multipleZones, params){
               zoneCodes = zoneCodes,
               Pu_zone = Pu_zone,
               RR_zone = RR_zone,
-              Name_zone = RR_zone))
+              Name_zone = Name_zone))
 }
 
 #' readGridSurveyData
