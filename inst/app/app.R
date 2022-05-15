@@ -576,6 +576,7 @@ server <- function(input, output, session) {
     req(devices())
     req(input$selectYear)
     req(input$selectDevices)
+    req(input$epsg)
     
     # subset year and device
     devs_orig <- subset(devices(), Year %in% input$selectYear & Species %in% input$selectDevices)
