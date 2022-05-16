@@ -66,7 +66,7 @@ defaults <-
        relativeRiskFName = list(desc = "", label = "", value = "app\\www\\poa\\Kaitake\\Data\\relRiskRaster.tif"),
        zonesOutFName = list(desc = "", label = "", value = "app\\www\\poa\\Kaitake\\Results\\Model_0\\zones.tif"),
        relRiskRasterOutFName = list(desc = "", label = "", value = "app\\www\\poa\\Kaitake\\Results\\Model_0\\relRiskRaster.tif"),
-         resolution = list(desc = "", label = "Raster resolution", value = as.double(50)),
+         resolution = list(desc = "", label = "Spatial unit resolution (m)", value = as.double(50)),
          epsg = list(desc = "", label = "EPSG code", value = NULL),
          surveyFName = list(desc = "", label = "surveyFName", value = "app\\www\\poa\\Kaitake\\Data\\devices.csv"),
          gridSurveyFname = list(desc = "", label = "gridSurveyFname", value = NULL),
@@ -126,7 +126,8 @@ ui.file.uploads <-
     # conditionalPanel(condition = "input.namedExample == 'None'",{
       list(
         div(title = defaults$zonesShapeFName$desc, 
-            fileInput(inputId = "zonesShapeFName", label = defaults$zonesShapeFName$label, 
+            fileInput(inputId = "zonesShapeFName", 
+                      label = "Area of interest shapefiles", 
                       multiple = TRUE, placeholder = defaults$zonesShapeFName$placeholder,
                       accept = ".SHP,.SHX,.DBF,.PRJ")),
         splitLayout(
@@ -149,7 +150,7 @@ ui.file.uploads <-
         fileInput(inputId = "gridSurveyFname", label = "Grid surveillance files", 
                   accept = ".img,.tif,.tiff,.csv", placeholder = "Select .csv and associated .tif or .img raster files",
                   multiple = TRUE),
-        fileInput(inputId = "relativeRiskFName", label = "Relative risk raster", 
+        fileInput(inputId = "relativeRiskFName", label = "Spatial relative risk raster", 
                   accept = ".img,.tif,.tiff", placeholder = "Select relative risk .tif or .img raster file",
                   multiple = FALSE),
         conditionalPanel(condition = "output.RRloaded", {
@@ -262,17 +263,34 @@ ui <- fluidPage(title = "Proof-of-absence calculator",
              fluidRow(
                column(width = 4, 
                       br(),
-                      actionButton(inputId = "runpoa", label = "Calculate PoA",
-                                   width = '100%')),
-               column(width = 8,
-                      splitLayout(
-                        tableOutput("SSePoFResultTable"),
-                        tableOutput("zoneSeResultTable")
+                      wellPanel(
+                        actionButton(inputId = "runpoa", 
+                                     label = strong("Calculate proof of absence"),
+                                     width = '100%')
                       ),
-                      plotOutput("PoAtimeplot", width="70%"),
-                      actionButton(inputId = "renderSeU", label = "renderSeU"),
-                      downloadButton("downloadData", "Download"))
+                      br(),
+                      wellPanel(
+                        h4("Additional outputs"),
+                        br(),
+                        h5("Download results zip file"),
+                        downloadButton("downloadData", "Download .zip file"),
+                        hr(),
+                        h5("Show raster cell sensitivities on map"),
+                        actionButton(inputId = "renderSeU", 
+                                     label = "Show on map")
+                      )),
+               column(width = 8,
+                      h4("Proof of absence & sensitivity estimates"),
+                      tabsetPanel(
+                        tabPanel(title = "Results",
+                                 tableOutput("SSePoFResultTable")),
+                        tabPanel(title = "Zone results",
+                                 tableOutput("zoneSeResultTable"))),
+                      h4("Proof of absence over time/session"),
+                      em("Points are means and error bands are 95% credible intervals"),
+                      plotOutput("PoAtimeplot", width="70%")
                )
+             )
     )#, ui.troubleshooting
   )
 )
@@ -1099,8 +1117,8 @@ server <- function(input, output, session) {
                        "Mean (upp, low 95% credible int.)" = SSe_string, check.names = FALSE),
             data.frame(Output = c("PoF", rep("", length(poa_string) - 1)), 
                        Session = sprintf("%d", years), 
-                       "Mean (upp, low 95% credible int.)" = poa_string, check.names = FALSE)) 
-    }, na = "")
+                       "Mean (upp, low 95% credible int.)" = poa_string, check.names = FALSE))
+    }, na = "", width = "500px", align = "llr", rownames = FALSE)
   
   # server: zoneSeResultTable -----------------------------------------------
   
@@ -1146,7 +1164,7 @@ server <- function(input, output, session) {
     
     d[c("Year/session", "Zones", "Mean SeZ (upp, low 95% credible int.)")]
     
-  })
+  }, width = "500px", align = "llr", rownames = FALSE)
   
   # server: PoF plot --------------------------------------------------------
   # observe({try(print(py_to_r(pyPOA()$poFMatrix)))})
@@ -1155,13 +1173,13 @@ server <- function(input, output, session) {
     result <- pyPOA()$result
     PoFmat <- py_to_r(result$poFMatrix)
     poa_mean <- rowMeans(PoFmat)
-    poa_low <- apply(PoFmat, 1, quantile, 0.05)
-    poa_upp <- apply(PoFmat, 1, quantile, 0.95)
+    poa_low <- apply(PoFmat, 1, quantile, 0.025)
+    poa_upp <- apply(PoFmat, 1, quantile, 0.975)
     years <- py_to_r(result$params$years)
     prior <- py_to_r(result$priorStore)
     prior_mean <- mean(prior)
-    prior_low <- quantile(prior, 0.05)
-    prior_upp <- quantile(prior, 0.95)
+    prior_low <- quantile(prior, 0.025)
+    prior_upp <- quantile(prior, 0.975)
     ploty <- c(prior_mean, poa_mean)
     plotx <- c(min(years)-1, years)
     plot(y = ploty, x = plotx, ylim = c(0, 1), type = "b", 
@@ -1291,7 +1309,7 @@ server <- function(input, output, session) {
                       selected = "Upload inputs")  
     showNotification(session = session, id = "SeUrender", 
                      ui = list(strong("Rendering cell surveillance sensitivities"),
-                               p("Will jump to inputs tab when complete")), duration = NULL)
+                               p("Will jump to map in 'Upload inputs' tab when complete")), duration = NULL)
     
     # get result objects
     rawdata <- pyPOA()$rawdata
