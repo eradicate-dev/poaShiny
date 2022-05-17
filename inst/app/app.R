@@ -284,14 +284,18 @@ ui <- fluidPage(title = "Proof-of-absence calculator",
                       tabsetPanel(
                         tabPanel(title = "Results",
                                  tableOutput("SSePoFResultTable")),
+                        tabPanel(title = "Plot", 
+                                 h4("Probability of absence over time/session"),
+                                 em("Points are means and error bands are 95% credible intervals"),
+                                 plotOutput("PoAtimeplot", width="70%")),
                         tabPanel(title = "Zone results",
-                                 tableOutput("zoneSeResultTable"))),
-                      h4("Proof of absence over time/session"),
-                      em("Points are means and error bands are 95% credible intervals"),
-                      plotOutput("PoAtimeplot", width="70%")
+                                 tableOutput("zoneSeResultTable"))
+                      )
                )
              )
-    )#, ui.troubleshooting
+    ),
+    tabPanel(title = "Help",
+             includeMarkdown("proofofabsence_help.md"))#, ui.troubleshooting
   )
 )
 
@@ -1115,7 +1119,7 @@ server <- function(input, output, session) {
             data.frame(Output = c("SSe", rep("", length(SSe_string) - 1)), 
                        Session = sprintf("%d", years), 
                        "Mean (upp, low 95% credible int.)" = SSe_string, check.names = FALSE),
-            data.frame(Output = c("PoF", rep("", length(poa_string) - 1)), 
+            data.frame(Output = c("PoA", rep("", length(poa_string) - 1)), 
                        Session = sprintf("%d", years), 
                        "Mean (upp, low 95% credible int.)" = poa_string, check.names = FALSE))
     }, na = "", width = "500px", align = "llr", rownames = FALSE)
