@@ -18,4 +18,5 @@ tests
 # files
 inst/device_pars.csv
 inst/app/.Rprofile
+inst/app/www/google-analytics.html
 TODO.txt
