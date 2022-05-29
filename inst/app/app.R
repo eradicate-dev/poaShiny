@@ -416,7 +416,9 @@ server <- function(input, output, session) {
   
   
   observe({
-    input$GO
+    input$runpoa
+    
+    req(input$prior_min, input$prior_mode, input$prior_max)
     
     if(isolate(input$prior_min) >= isolate(input$prior_mode)){
     showNotification(ui = h5("Prior min > Prior mode"))
