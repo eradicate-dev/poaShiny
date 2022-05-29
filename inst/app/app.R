@@ -172,9 +172,11 @@ ui.survparams <-
     em("Double-click table cells to enter values"),
     hr(),
     tabsetPanel(tabPanel(title = "Points",
-                         DT::DTOutput(outputId = "deviceUI")),
+                         DT::DTOutput(outputId = "deviceUI"),
+                         p(em("Enter the 1st row of sigma values and click the button below to fill down rows")),
+                         actionButton(inputId = "filldownsigma", label = "Fill down sigma values")),
                 tabPanel(title = "Grids",
-                         DT::DTOutput(outputId = "gridUI")))
+                         DT::DTOutput(outputId = "gridUI"))),
   )
 
 ## UI: priors ----
@@ -660,6 +662,14 @@ server <- function(input, output, session) {
     }
   })
   
+  # fill down sigma values
+  observeEvent(input$filldownsigma, {
+    req(set.animal.params())
+    d <- set.animal.params()
+    d$`Mean sigma` <- d$`Mean sigma`[1]
+    d$`Stdev sigma` <- d$`Stdev sigma`[1]
+    set.animal.params(d)
+  })
   
   output$deviceUI <- DT::renderDT({
     validate(need(set.animal.params(), label = "A point surveillance file"))
