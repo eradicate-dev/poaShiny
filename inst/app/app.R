@@ -238,8 +238,13 @@ ui.output <-
   )# , plotOutput("PoAdensplot", width="70%"))
   )
 
+
+# UI: analytics script ----------------------------------------------------
+ui.analytics <- tags$head(includeHTML("www/google-analytics.html"))
+
 # UI: layout page ---------------------------------------------------------
 ui <- fluidPage(title = "Proof-of-absence calculator",
+                ui.analytics,
                 ui.logotitle,
   tabsetPanel(id = "tabs",
     tabPanel(title = "Upload inputs",
