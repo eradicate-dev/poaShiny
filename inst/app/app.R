@@ -225,7 +225,7 @@ ui.simparams <-
 
 ui.output <- 
   fluidRow(column(width=10,
-                  leafletOutput("baseMap", height = 600), 
+                  leafletOutput("baseMap", height = '550px'), 
                   fluidRow(
                     column(width = 6,
                            selectInput(inputId = "selectYear", label = "Select year to display", 
