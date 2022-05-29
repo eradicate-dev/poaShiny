@@ -638,10 +638,10 @@ server <- function(input, output, session) {
       inputId.spp <- paste0("inputId.", spp)
       n <- length(spp)
       df <- data.frame(row.names = spp)
-      df$`Mean g0` <- as.numeric(0.1)
-      df$`Stdev g0` <- as.numeric(0.01)
-      df$`Mean sigma` <- as.numeric(90)
-      df$`Stdev sigma` <- as.numeric(10)
+      df$`Mean g0` <- as.numeric(NA) # as.numeric(0.1)
+      df$`Stdev g0` <- as.numeric(NA) # as.numeric(0.01)
+      df$`Mean sigma` <- as.numeric(NA) # as.numeric(90)
+      df$`Stdev sigma` <- as.numeric(NA) # as.numeric(10)
       
       set.animal.params(df)
     }
