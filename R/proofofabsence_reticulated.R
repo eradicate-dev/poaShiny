@@ -41,7 +41,7 @@ addAnimalParams <- function(POAParameters = makeParams(),
 
   # add animals
   for(i in seq_along(deviceName)){
-    TYPE_INT <- np$int(i + dictlen - 1)    # set type integer
+    TYPE_INT <- bi$int(i + dictlen - 1)    # set type integer
     .animals$addAnimal(TYPE_INT, deviceName[i], poa$params$DETECT_ANIMAL)
   }
 
@@ -50,7 +50,7 @@ addAnimalParams <- function(POAParameters = makeParams(),
 
   # add animal parameters to temporary object
   for(i in seq_along(deviceName)){
-    TYPE_INT <- np$int(i + dictlen - 1)    # set type integer
+    TYPE_INT <- bi$int(i + dictlen - 1)    # set type integer
     .POAParameters$setCapture(TYPE_INT, np$double(g0[i]), np$double(g0sd[i]))   # note the 12 indicates LEGHOLD
     .POAParameters$setSigma(TYPE_INT, np$double(sig[i]), np$double(sigsd[i]))   #
     .POAParameters$addRRBufferAnimal(TYPE_INT)
@@ -119,7 +119,7 @@ makeParams <- function(
 
     #---------------------------------------------------------------------------#
     #---# ADD SURVEILLANCE TYPES                                                #
-    # TYPE_LEGHOLD = np$int(12) # index number for leghold traps                  #
+    # TYPE_LEGHOLD = bi$int(12) # index number for leghold traps                  #
     animals = poa$params$AnimalTypes()                                              #
     # animals$addAnimal(TYPE_LEGHOLD, "Leghold", poa$params$DETECT_ANIMAL)            #
     #---------------------------------------------------------------------------#
@@ -132,26 +132,26 @@ makeParams <- function(
 
     #---------------------------------------------------------------------------#
     # ADD LEGHOLD TRAP PARAMETERS                                               #
-    # myParams$setCapture(np$int(12), np$double(0.06), np$double(0.03))           # note the 12 indicates LEGHOLD
-    # myParams$setSigma(np$int(12), np$double(150.0), np$double(20.0))            #
+    # myParams$setCapture(bi$int(12), np$double(0.06), np$double(0.03))           # note the 12 indicates LEGHOLD
+    # myParams$setSigma(bi$int(12), np$double(150.0), np$double(20.0))            #
     # myParams$addRRBufferAnimal(TYPE_LEGHOLD)                                    #
     #---------------------------------------------------------------------------#
 
     # number of cpu's from SLURM
     ncpus <- Sys.getenv('SLURM_CPUS_PER_TASK')
     if(ncpus == ""){ncpus <- '1'}
-    ncpus <- np$int(ncpus)
+    ncpus <- bi$int(ncpus)
     myParams$setNumThreads(ncpus)
 
     # print('ncpus', ncpus)
 
     # number of iterations
-    myParams$setNumIterations(np$int(setNumIterations))
+    myParams$setNumIterations(bi$int(setNumIterations))
     #    myParams$setNumChewcardTraps(3)
     myParams$setRRTrapDistance(np$double(setRRTrapDistance))
 
     ##   <<< COMPULSORY - PERHAPS CHANGE TO SESSIONS NOT YEARS >>>
-    myParams$setYears(np$int(startYear), np$int(endYear))
+    myParams$setYears(bi$int(startYear), bi$int(endYear))
 
     ## THE startPu WILL NOT BE USED IF USE zoneData FILE - TURN OFF
     # starting Pu (GRID CELL PREVALENCE) and period rate of Pu increase
@@ -329,7 +329,7 @@ preProcessing_reticulated <- function(
   # resolution for analysis
   Resolution = np$double(np$double(Resolution))
   # EPSG - PROJECTION SYSTEM
-  epsg = np$int(epsg)    # NZ transverse mercator
+  epsg = bi$int(epsg)    # NZ transverse mercator
 
   myParams <- addAnimalParams(POAParameters = myParams,
                               deviceName = c("Leghold", "Sentinel", "PossMaster", "Camera", "CHEWDETECT", "AT220"),
@@ -511,11 +511,11 @@ makeMaskAndZones_reticulated <- function(self, multipleZones, params){
   }
 
   zones_ds = gdal$GetDriverByName('GTiff')$Create(self$zonesOutFName, self$cols,
-                                                  self$rows, np$int(1), gdal$GDT_Byte)
+                                                  self$rows, bi$int(1), gdal$GDT_Byte)
   zones_ds$SetGeoTransform(self$match_geotrans)
   zones_ds$SetProjection(self$wkt)
-  band = zones_ds$GetRasterBand(np$int(1))
-  NoData_value = np$int(0)    #-9999
+  band = zones_ds$GetRasterBand(bi$int(1))
+  NoData_value = bi$int(0)    #-9999
   band$SetNoDataValue(NoData_value)
   # Rasterize Extent and write to directory
 
@@ -525,7 +525,7 @@ makeMaskAndZones_reticulated <- function(self, multipleZones, params){
 
     # gdal.RasterizeLayer(zones_ds, [1], zones_layer,
     #         options=['ATTRIBUTE=%s' % ZONE_CODE_ATTRIBUTE])
-    gdal$RasterizeLayer(zones_ds, bi$list(list(np$int(1))), zones_layer,
+    gdal$RasterizeLayer(zones_ds, bi$list(list(bi$int(1))), zones_layer,
                         options=bi$list(list(sprintf('ATTRIBUTE=%s', ZONE_CODE_ATTRIBUTE))))
     # get the unique zones
     # and create a mapping between the zone and RR_zone, Pu_zone
@@ -591,13 +591,13 @@ makeMaskAndZones_reticulated <- function(self, multipleZones, params){
   } else {
     # just burn 1 inside the polygon(s)
     # gdal.RasterizeLayer(zones_ds, [1], zones_layer, burn_values=[1])
-    gdal$RasterizeLayer(zones_ds, bi$list(list(np$int(1))), zones_layer, burn_values=bi$list(list(np$int(1))))
+    gdal$RasterizeLayer(zones_ds, bi$list(list(bi$int(1))), zones_layer, burn_values=bi$list(list(bi$int(1))))
     # zoneCodes = np.array([1])
-    zoneCodes = np$array(bi$list(list(np$int(1))))
+    zoneCodes = np$array(bi$list(list(bi$int(1))))
     # Pu_zone = np.array([params.pu])
     Pu_zone = np$array(bi$list(list(params$pu)))
     # RR_zone = np.array([1])
-    RR_zone = np$array(bi$list(list(np$int(1))))
+    RR_zone = np$array(bi$list(list(bi$int(1))))
     # Name_zone = np.array(['oneZone'])
     Name_zone = np$array(bi$list(list(np$str('oneZone'))))
   }
@@ -606,7 +606,7 @@ makeMaskAndZones_reticulated <- function(self, multipleZones, params){
 
   # read in the data so we can return it
   # zoneArray = zones_ds$GetRasterBand(1).ReadAsArray()
-  zoneArray = zones_ds$GetRasterBand(np$int(1))$ReadAsArray()
+  zoneArray = zones_ds$GetRasterBand(bi$int(1))$ReadAsArray()
 
   # del dataset
   rm(dataset)
@@ -699,7 +699,7 @@ readGridSurveyData_reticulated <- function(self, gridSurveyFname = NULL, params 
     reprojFName = bi$str(tempfile(fileext = ".tif"))
     
     reproj_ds <- gdal$GetDriverByName('GTiff')$Create(reprojFName, self$cols,
-                                                      self$rows, np$int(1), gdal$GDT_Byte)
+                                                      self$rows, bi$int(1), gdal$GDT_Byte)
     
     reproj_ds$SetGeoTransform(self$match_geotrans)
     # spatial reference from making extent mask
@@ -709,7 +709,7 @@ readGridSurveyData_reticulated <- function(self, gridSurveyFname = NULL, params 
     
     reproj_ds$FlushCache()
     
-    data <- reproj_ds$GetRasterBand(np$int(1))$ReadAsArray()
+    data <- reproj_ds$GetRasterBand(bi$int(1))$ReadAsArray()
     # remove non-risk cells
     data <- np$where(np$equal(tmpExtMask, 0), 0, data)
     
@@ -781,7 +781,7 @@ makeRelativeRiskTif_reticulated <- function(self, relativeRiskFName, relRiskRast
   # dst = gdal.GetDriverByName('GTiff').Create(relRiskRasterOutFName, self$cols, self$rows,
   #                         1, gdalconst.GDT_Float32)
   dst = gdal$GetDriverByName('GTiff')$Create(relRiskRasterOutFName, self$cols, self$rows,
-                                             np$int(1), gdalconst$GDT_Float32)
+                                             bi$int(1), gdalconst$GDT_Float32)
   # dst.SetGeoTransform(self$match_geotrans)
   dst$SetGeoTransform(self$match_geotrans)
   # spatial reference from making extent mask
@@ -807,11 +807,11 @@ makeRelativeRiskTif_reticulated <- function(self, relativeRiskFName, relRiskRast
       # gdal.ReprojectImage(RR_src, dst, self$wkt, self$wkt, gdalconst.GRA_Bilinear)
       gdal$ReprojectImage(RR_src, dst, self$wkt, self$wkt, gdalconst$GRA_Bilinear)
       # RelRiskExtent = dst.GetRasterBand(1).ReadAsArray()
-      RelRiskExtent = dst$GetRasterBand(np$int(1))$ReadAsArray()
+      RelRiskExtent = dst$GetRasterBand(bi$int(1))$ReadAsArray()
       # else:
     } else {
       # inband = RR_src.GetRasterBand(1)
-      inband = RR_src$GetRasterBand(np$int(1))
+      inband = RR_src$GetRasterBand(bi$int(1))
       # inband.SetNoDataValue(0)
       inband$SetNoDataValue(bi$int(0))
       # in_im = inband.ReadAsArray()
@@ -865,7 +865,7 @@ makeRelativeRiskTif_reticulated <- function(self, relativeRiskFName, relRiskRast
       # bilinear(in_im, RelRiskExtent, nodata)
       poa$preProcessing$bilinear(in_im, RelRiskExtent, nodata)
       # outband = dst.GetRasterBand(1)
-      outband = dst$GetRasterBand(np$int(1))
+      outband = dst$GetRasterBand(bi$int(1))
       # outband.WriteArray(RelRiskExtent)
       outband$WriteArray(RelRiskExtent)
     }
@@ -936,9 +936,9 @@ getGeoTrans_reticulated <- function(self){
   
   #### get dimensions that incorporate both extent shape and farm boundaries
   # cols = int((self.xmax - self.xmin) / self.resol)
-  cols = np$int(np$divide(np$subtract(self$xmax, self$xmin), self$resol))
+  cols = bi$int(np$divide(np$subtract(self$xmax, self$xmin), self$resol))
   # rows = int((self.ymax - self.ymin) / self.resol)
-  rows = np$int(np$divide(np$subtract(self$ymax, self$ymin), self$resol))
+  rows = bi$int(np$divide(np$subtract(self$ymax, self$ymin), self$resol))
   # match_geotrans = [self.xmin, self.resol, 0, self.ymax, 0,
   #                        -self.resol]
   match_geotrans = list(self$xmin, self$resol, 0, self$ymax, 0,

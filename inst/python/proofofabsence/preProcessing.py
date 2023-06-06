@@ -545,7 +545,7 @@ class RawData():
 
         # keep a track of all the animals that have been translated
         # from string to constants
-        translatedAnimals = np.zeros(rawSurvey.shape, dtype=np.bool)
+        translatedAnimals = np.zeros(rawSurvey.shape, dtype=bool)
 
         for code in animalTypes.functionDict.keys():
             animal = animalTypes.functionDict[code]

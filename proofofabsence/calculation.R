@@ -207,7 +207,7 @@ def calcProofOfAbsence(poaparams, trapArray, RRArray, zoneArray, zoneCodes, matc
 
     for yearCount in range(nTotalYears):
         # probability of not detecting = 1
-        sensitivityRaster = np.zeros_like(zoneArray, dtype=np.float)
+        sensitivityRaster = np.zeros_like(zoneArray, dtype=float)
         currentYear = yearSeq[yearCount]
         # calc PStar for year
         PStar = Pu_zone + (float(yearCount) * poaparams.puRate) ## EITHER SCALAR OR ARRAY

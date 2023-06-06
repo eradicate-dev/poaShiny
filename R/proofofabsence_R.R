@@ -302,11 +302,11 @@ preProcessing_reticulated <- function(
   # resolution for analysis
   Resolution = np$double(np$double(Resolution))
   # EPSG - PROJECTION SYSTEM
-  epsg = np$int(epsg)    # NZ transverse mercator
+  epsg = bi$int(epsg)    # NZ transverse mercator
 
   #---------------------------------------------------------------------------#
   #---# ADD SURVEILLANCE TYPES                                                #
-  TYPE_LEGHOLD = np$int(12) # index number for leghold traps                  #
+  TYPE_LEGHOLD = bi$int(12) # index number for leghold traps                  #
   animals = poa$params$AnimalTypes()                                              #
   animals$addAnimal(TYPE_LEGHOLD, "Leghold", poa$params$DETECT_ANIMAL)            #
   #---------------------------------------------------------------------------#
@@ -319,26 +319,26 @@ preProcessing_reticulated <- function(
 
   #---------------------------------------------------------------------------#
   # ADD LEGHOLD TRAP PARAMETERS                                               #
-  myParams$setCapture(np$int(12), np$double(0.06), np$double(0.03))           # note the 12 indicates LEGHOLD
-  myParams$setSigma(np$int(12), np$double(150.0), np$double(20.0))            #
+  myParams$setCapture(bi$int(12), np$double(0.06), np$double(0.03))           # note the 12 indicates LEGHOLD
+  myParams$setSigma(bi$int(12), np$double(150.0), np$double(20.0))            #
   myParams$addRRBufferAnimal(TYPE_LEGHOLD)                                    #
   #---------------------------------------------------------------------------#
 
   # number of cpu's from SLURM
-  ncpus = np$int(os$getenv('SLURM_CPUS_PER_TASK', '1'))
+  ncpus = bi$int(os$getenv('SLURM_CPUS_PER_TASK', '1'))
   myParams$setNumThreads(ncpus)
 
   # print('ncpus', ncpus)
 
   # number of iterations
-  myParams$setNumIterations(np$int(setNumIterations))
+  myParams$setNumIterations(bi$int(setNumIterations))
   #    myParams$setNumChewcardTraps(3)
   myParams$setRRTrapDistance(np$double(setRRTrapDistance))
 
   ##   <<< COMPULSORY - PERHAPS CHANGE TO SESSIONS NOT YEARS >>>
-  # startYear = np$int(1)
-  # endYear = np$int(1)
-  myParams$setYears(np$int(startYear), np$int(endYear))
+  # startYear = bi$int(1)
+  # endYear = bi$int(1)
+  myParams$setYears(bi$int(startYear), bi$int(endYear))
 
   ## THE startPu WILL NOT BE USED IF USE zoneData FILE - TURN OFF
   # starting Pu (GRID CELL PREVALENCE) and period rate of Pu increase
@@ -780,7 +780,7 @@ readGridSurveyData <- function(self, gridSurveyFname = NULL, params = poa$params
 
     #-------------------------------------------------------------------------#
     # quick check
-    # a <- as.matrix(src_ds_orig$GetRasterBand(np$int(1))$ReadAsArray())
+    # a <- as.matrix(src_ds_orig$GetRasterBand(bi$int(1))$ReadAsArray())
     # b <- terra::as.array(src_ds)[,,1]
     # all(a == b)
     #-------------------------------------------------------------------------#
@@ -953,9 +953,9 @@ getShapefileDimensions_R <- function(zonesShapeFName){
 getGeoTrans_R <- function(self){
   #### get dimensions that incorporate both extent shape and farm boundaries
   # cols = int((self.xmax - self.xmin) / self.resol)
-  cols = np$int(np$divide(np$subtract(self$xmax, self$xmin), self$resol))
+  cols = bi$int(np$divide(np$subtract(self$xmax, self$xmin), self$resol))
   # rows = int((self.ymax - self.ymin) / self.resol)
-  rows = np$int(np$divide(np$subtract(self$ymax, self$ymin), self$resol))
+  rows = bi$int(np$divide(np$subtract(self$ymax, self$ymin), self$resol))
   # match_geotrans = [self.xmin, self.resol, 0, self.ymax, 0,
   #                        -self.resol]
   match_geotrans = list(self$xmin, self$resol, 0, self$ymax, 0,
