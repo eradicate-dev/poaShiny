@@ -68,11 +68,11 @@ conda_env_build_min <- function(envname = "proofofabsence", force.overwrite = TR
   #-------------------------------------------------------------------------#
   
   # required python packages and versions
-  paks <- c("python==3.*","numba","numpy","r==3.*")
+  paks <- c("python==3.11","numba","numpy","r==4.1.*")
 
   message(sprintf("Creating '%s' conda environment - this takes a while ....", envname))
   # create the 'envname' conda environment
-  reticulate::conda_create(envname = envname, packages = paks, forge = TRUE, channel = "conda-forge")
+  reticulate::conda_create(envname = envname, packages = paks, forge = FALSE)
 
   if(conda_env_check()) message(sprintf("'%s' conda environment built", envname))
 
