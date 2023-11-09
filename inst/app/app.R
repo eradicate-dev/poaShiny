@@ -742,6 +742,37 @@ server <- function(input, output, session) {
     }
   })
   
+  # check field names of uploaded shapefile
+  observe({
+    
+    req(paths$zonesShapeFName)
+    
+    # regex strings to identify zone shapefile fields
+    # - matches logic in makeMaskAndZones()
+    shp_fields <- c(zoneID = "zone.?ID", Pu_zone = "Pu.?zone",
+                    RR_zone = "RR.?zone", zoneName = "zone.?Name")
+    field_missing <- logical(length = length(shp_fields))
+    # get shape file field names
+    field_names <- names(sf::st_read(paths$zonesShapeFName))
+    
+    # check for a match to required fields
+    for(i in seq_along(shp_fields)){
+      field_missing[i] <- all(!grepl(shp_fields[i], field_names))
+    }
+    
+    # if missing fields show an informative modal dialog
+    if(any(field_missing)){
+      showModal(
+        modalDialog(title = "Shapefile missing required fields",
+                    div(paste0("Required fields ",
+                               paste(names(shp_fields)[field_missing], collapse = ", "),
+                               " are missing from uploaded shapefile.")),
+                    br(),
+                    div("See the 'data requirements guide' linked to in the 'Getting started' section of the help tab for guidance on required fields and their values.")
+        ))
+    }
+  })
+    
   # update zonesShape when paths$zonesShapeFName set/changed
   zonesShape <- reactiveVal(NULL)
   observe({
