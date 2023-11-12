@@ -332,64 +332,64 @@ server <- function(input, output, session) {
     #   reactiveEvent()
     
     req(input$runpoa == 1L)   # only run on first button press
-
-  # ------------------ App virtualenv setup (Do not edit) ------------------- #
-  # adapted from - 'https://github.com/ranikay/shiny-reticulate-app'
-  
-  # Define any Python packages needed for the app here:
-  # - note: numpy, pip, wheel and setuptools are updated on shinyapps.io startup
-  PYTHON_DEPENDENCIES = c("llvmlite", "numba")
-  
-  # check if on shiny server and install modules in 'PYTHON_DEPENDENCIES'
-  if(Sys.info()[['user']] == 'shiny'){
     
-    showNotification(id = "venvload", duration = NULL,
-                     ui = strong("Loading python & installing dependencies ..."))
+    # ------------------ App virtualenv setup (Do not edit) ------------------- #
+    # adapted from - 'https://github.com/ranikay/shiny-reticulate-app'
     
-    virtualenv_dir = Sys.getenv('VIRTUALENV_NAME')
-    python_path = Sys.getenv('PYTHON_PATH')
+    # Define any Python packages needed for the app here:
+    # - note: numpy, pip, wheel and setuptools are updated on shinyapps.io startup
+    PYTHON_DEPENDENCIES = c("llvmlite", "numba")
     
-    # print python related messages to shinyapps.io logs
-    message("PYTHON_PATH: \n", python_path)
+    # check if on shiny server and install modules in 'PYTHON_DEPENDENCIES'
+    if(Sys.info()[['user']] == 'shiny'){
+      
+      showNotification(id = "venvload", duration = NULL,
+                       ui = strong("Loading python & installing dependencies ..."))
+      
+      virtualenv_dir = Sys.getenv('VIRTUALENV_NAME')
+      python_path = Sys.getenv('PYTHON_PATH')
+      
+      # print python related messages to shinyapps.io logs
+      message("PYTHON_PATH: \n", python_path)
+      
+      # Create virtual env and install dependencies
+      venv_path <- reticulate::virtualenv_create(envname = virtualenv_dir)
+      message("reticulate::virtualenv_create() COMPLETE - environment created in ", venv_path)
+      reticulate::virtualenv_install(virtualenv_dir, packages = PYTHON_DEPENDENCIES)
+      reticulate::use_virtualenv(virtualenv_dir, required = T)
+      
+      removeNotification(id = "venvload")
+      
+    } else if(!is.null(reticulate::conda_binary())){ 
+      
+      showNotification(id = "condaload",  duration = NULL,
+                       ui = strong("Loading python ..."))
+      
+      # check if conda available and use 'proofofabsence' environment
+      reticulate::use_condaenv(condaenv = "proofofabsence", required = TRUE)
+      print(reticulate::py_config())
+      
+      removeNotification(id = "condaload")
+      
+    } else {
+      # use python on system path
+      if(Sys.getenv("PYTHON_PATH") != "") use_python(Sys.getenv("PYTHON_PATH"))
+    }
+    # ------------------ App server logic (Edit anything below) --------------- #
     
-    # Create virtual env and install dependencies
-    venv_path <- reticulate::virtualenv_create(envname = virtualenv_dir)
-    message("reticulate::virtualenv_create() COMPLETE - environment created in ", venv_path)
-    reticulate::virtualenv_install(virtualenv_dir, packages = PYTHON_DEPENDENCIES)
-    reticulate::use_virtualenv(virtualenv_dir, required = T)
+    # python modules
+    poa <<-
+      reticulate::import_from_path(
+        path = system.file("python", package = "proofofabsence"),
+        module = "proofofabsence_min",
+        convert = FALSE, delay_load = FALSE)
     
-    removeNotification(id = "venvload")
+    cachedir <- system.file("python/proofofabsence_min/__pycache__", package = "proofofabsence")
+    if(dir.exists(cachedir)) message("cached proofofabsence module functions found:\n", cachedir)
     
-  } else if(!is.null(reticulate::conda_binary())){ 
+    np <<- reticulate::import(module = "numpy", convert = FALSE, delay_load = FALSE)
+    bi <<- reticulate::import_builtins(convert = FALSE)
     
-    showNotification(id = "condaload",  duration = NULL,
-                     ui = strong("Loading python ..."))
-    
-    # check if conda available and use 'proofofabsence' environment
-    reticulate::use_condaenv(condaenv = "proofofabsence", required = TRUE)
-    print(reticulate::py_config())
-    
-    removeNotification(id = "condaload")
-    
-  } else {
-    # use python on system path
-    if(Sys.getenv("PYTHON_PATH") != "") use_python(Sys.getenv("PYTHON_PATH"))
-  }
-  # ------------------ App server logic (Edit anything below) --------------- #
-  
-  # python modules
-  poa <<-
-    reticulate::import_from_path(
-      path = system.file("python", package = "proofofabsence"),
-      module = "proofofabsence_min",
-      convert = FALSE, delay_load = FALSE)
-
-  cachedir <- system.file("python/proofofabsence_min/__pycache__", package = "proofofabsence")
-  if(dir.exists(cachedir)) message("cached proofofabsence module functions found:\n", cachedir)
-
-  np <<- reticulate::import(module = "numpy", convert = FALSE, delay_load = FALSE)
-  bi <<- reticulate::import_builtins(convert = FALSE)
-  
   }, ignoreInit = TRUE, priority = 2)
   
   # server: valid() ---------------------------------------------------------
