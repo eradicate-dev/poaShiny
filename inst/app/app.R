@@ -323,6 +323,16 @@ server <- function(input, output, session) {
 
   # server: manage python versions and modules ------------------------------
   
+  observeEvent({input$runpoa == 1L}, {
+    
+    # - Pre-processing steps don't require the python-dependent libraries
+    # - Set up python environment after calculate button is pressed
+    # - The order this observer and the event that does the calculations is
+    #   controlled by setting the priority arguments in observeEvent() and
+    #   reactiveEvent()
+    
+    req(input$runpoa == 1L)   # only run on first button press
+
   # ------------------ App virtualenv setup (Do not edit) ------------------- #
   # adapted from - 'https://github.com/ranikay/shiny-reticulate-app'
   
@@ -379,6 +389,8 @@ server <- function(input, output, session) {
 
   np <<- reticulate::import(module = "numpy", convert = FALSE, delay_load = FALSE)
   bi <<- reticulate::import_builtins(convert = FALSE)
+  
+  }, ignoreInit = TRUE, priority = 2)
   
   # server: valid() ---------------------------------------------------------
   
