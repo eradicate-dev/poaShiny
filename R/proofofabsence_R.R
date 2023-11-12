@@ -743,7 +743,7 @@ readGridSurveyData <- function(self, gridSurveyFname = NULL, params = poa$params
     }
   }
   
-  if (npDType == bi$None) {  # if have more than 61 grids, it will be error
+  if (reticulate::py_to_r(npDType == bi$None)) {  # if have more than 61 grids, it will be error
     stop('Too many grid survey years to store in an integer')
   }
   
