@@ -599,25 +599,23 @@ makeMaskAndZones <- function(self, multipleZones, params){
   zones_layer = sf::st_read(self$zonesShapeFName, crs = self$epsg,
                             int64_as_string = TRUE, stringsAsFactors = FALSE, quiet = TRUE)
 
-  # check each shape file field
-  for(i in seq_along(shp_fields)){
-    # find matching shape file field 
-    selectCol <- grepl(pattern = shp_fields[i], 
-                       x = names(zones_layer), ignore.case = TRUE)
-    if(!any(selectCol)){
-      # warn if none found
-      stop("Shapefile field matching ", names(shp_fields)[i], " not found.")
-    } else {
-      # replace with strict value if matching pattern in shp_fields
-      # (i.e. ZoneID replaced with zoneID)
-      names(zones_layer)[selectCol] <- names(shp_fields)[i]
-    }
-  }
-  
-  # OK now check all the expected attributes are in the shape file
-  # if we are doing the multiple zones thing
+  # fuzzy check of each shape file field name
+  # - replace with strict name if found
   if(multipleZones){
-
+    for(i in seq_along(shp_fields)){
+      # find matching shape file field 
+      selectCol <- grepl(pattern = shp_fields[i], 
+                         x = names(zones_layer), ignore.case = TRUE)
+      if(!any(selectCol)){
+        # warn if none found
+        stop("Shapefile field matching ", names(shp_fields)[i], " not found.")
+      } else {
+        # replace with strict value if matching pattern in shp_fields
+        # (i.e. ZoneID replaced with zoneID)
+        names(zones_layer)[selectCol] <- names(shp_fields)[i]
+      }
+    }
+    
     #- py --------------------------------------------------------------------#
     #     # OK now check all the expected attributes are in the shape file
     #     # if we are doing the multiple zones thing
@@ -655,17 +653,17 @@ makeMaskAndZones <- function(self, multipleZones, params){
 
       }
     }
-  }
-
-  # int64 values get imported as floating point using st_read
-  # - st_read() has option to import these as strings
-  # - following checks for numeric strings and converts to integer of fails w/error
-  for(j in c(ZONE_CODE_ATTRIBUTE, PU_CODE_ATTRIBUTE,RRZONE_CODE_ATTRIBUTE)){
-    fieldvals <- zones_layer[[j]]
-    if(is.character(fieldvals) & all(grepl("^\\d*$", fieldvals))){
-      zones_layer[[j]] <- as.integer(zones_layer[[j]])
-    } else {
-      sprintf('zoneID is a non-integer. Expected: integer')
+    
+    # int64 values get imported as floating point using st_read
+    # - st_read() has option to import these as strings
+    # - following checks for numeric strings and converts to integer of fails w/error
+    for(j in c(ZONE_CODE_ATTRIBUTE, PU_CODE_ATTRIBUTE,RRZONE_CODE_ATTRIBUTE)){
+      fieldvals <- zones_layer[[j]]
+      if(is.character(fieldvals) & all(grepl("^\\d*$", fieldvals))){
+        zones_layer[[j]] <- as.integer(zones_layer[[j]])
+      } else {
+        sprintf('zoneID is a non-integer. Expected: integer')
+      }
     }
   }
 
@@ -690,16 +688,6 @@ makeMaskAndZones <- function(self, multipleZones, params){
   # crop the extent by row and column numbers
   zones_ds <- raster::crop(zones_ds, raster::extent(zones_ds, 1, self$rows, 1, self$cols))
 
-  # rasterise zone shapefile to target raster
-  zones_ds <- fasterize::fasterize(sf = zones_layer, raster = zones_ds, field = ZONE_CODE_ATTRIBUTE, background = 0)
-
-  # create zone arrays
-  zoneCodes <- reticulate::np_array(zones_layer$zoneID, dtype = "int")
-  Pu_zone <- reticulate::np_array(zones_layer$Pu_zone, dtype = "float")
-  RR_zone <- reticulate::np_array(zones_layer$RR_zone, dtype = "float")
-  Name_zone <- reticulate::np_array(zones_layer$zoneName, dtype = "str")
-
-  if(!multipleZones){
   #- py --------------------------------------------------------------------#
   #     if multipleZones:
   #         # burn the value of the ZONE_CODE_ATTRIBUTE
@@ -742,6 +730,19 @@ makeMaskAndZones <- function(self, multipleZones, params){
   #         RR_zone = np.array(rrlist)
   #         Name_zone = np.array(namelist)
   #- py --------------------------------------------------------------------#
+  if(multipleZones){
+    
+    # rasterise zone shapefile to target raster
+    zones_ds <- fasterize::fasterize(sf = zones_layer, raster = zones_ds, field = ZONE_CODE_ATTRIBUTE, background = 0)
+    
+    # create zone arrays
+    zoneCodes <- reticulate::np_array(zones_layer$zoneID, dtype = "int")
+    Pu_zone <- reticulate::np_array(zones_layer$Pu_zone, dtype = "float")
+    RR_zone <- reticulate::np_array(zones_layer$RR_zone, dtype = "float")
+    Name_zone <- reticulate::np_array(zones_layer$zoneName, dtype = "str")
+    
+  } else {
+    
     #- py --------------------------------------------------------------------#
     #     else:
     #         # just burn 1 inside the polygon(s)
@@ -753,11 +754,12 @@ makeMaskAndZones <- function(self, multipleZones, params){
     #- py --------------------------------------------------------------------#
     
     # just burn 1 inside the polygon(s)
-    zones_ds <- raster::clamp(zones_ds, upper = 1)
+    raster::values(zones_ds) <- 1L
     zoneCodes = np$array(bi$list(list(bi$int(1))))
     Pu_zone = np$array(bi$list(list(params$pu)))
     RR_zone = np$array(bi$list(list(bi$int(1))))
     Name_zone = np$array(bi$list(list('oneZone')))
+  
   }
   
   #- py --------------------------------------------------------------------#
