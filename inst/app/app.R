@@ -133,7 +133,7 @@ ui.file.uploads <-
                              "to treat zones separately, or 'Single zone' to apply the ",
                              "same risk and prevalence to all zones."), 
               radioButtons(inputId = "useMultiZone", label = "Use single or multiple zones?", 
-                           choices = c("Single zone", "Multiple zones"), selected = "Multiple zones",
+                           choices = c("Single zone", "Multiple zones"), selected = "Single zone",
                            inline = TRUE)),
           div(title = paste0("The EPSG code is detected automatically from information stored ",
                              "in the uploaded shapefile. The coordinate reference system associated ",
