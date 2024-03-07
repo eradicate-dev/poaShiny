@@ -544,6 +544,16 @@ calcProofOfAbsence_reticulated <- function(myParams, rawdata, outputDataPath){
 #' @export
 makeMaskAndZones <- function(self, multipleZones, params){
 
+  #- py --------------------------------------------------------------------#
+  # def makeMaskAndZones(self, multipleZones, params):
+  #     """
+  #     Use zone shapefile to make zone raster
+  #     """
+  #     # create extent raster tiff
+  # 
+  #     print("## multiple zones =", multipleZones)
+  #- py --------------------------------------------------------------------#
+  
   #-------------------------------------------------------------------------#
   # Original attributes list
   #
@@ -580,6 +590,11 @@ makeMaskAndZones <- function(self, multipleZones, params){
   
   # Use zone shapefile to make zone raster
 
+  #- py --------------------------------------------------------------------#
+  #     dataset = ogr.Open(self.zonesShapeFName)
+  #     zones_layer = dataset.GetLayer()
+  #- py --------------------------------------------------------------------#
+  
   # create extent raster tiff
   zones_layer = sf::st_read(self$zonesShapeFName, crs = self$epsg,
                             int64_as_string = TRUE, stringsAsFactors = FALSE, quiet = TRUE)
@@ -603,6 +618,26 @@ makeMaskAndZones <- function(self, multipleZones, params){
   # if we are doing the multiple zones thing
   if(multipleZones){
 
+    #- py --------------------------------------------------------------------#
+    #     # OK now check all the expected attributes are in the shape file
+    #     # if we are doing the multiple zones thing
+    #     if multipleZones:
+    #         featDefn = zones_layer.GetLayerDefn()
+    #         for name, types in EXPECTED_SHP_ATTRIBUTES:
+    #             idx = featDefn.GetFieldIndex(name)
+    #             if idx == -1:
+    #                 msg = 'Required Field %s not found in shape file' % name
+    #                 raise ValueError(msg)
+    # 
+    #             fieldDefn = featDefn.GetFieldDefn(idx)
+    #             ogrType = fieldDefn.GetType()
+    #             if ogrType not in types:
+    #                 foundName = fieldDefn.GetTypeName()
+    #                 expectedNames = [ogr.GetFieldTypeName(x) for x in types]
+    #                 msg = '%s is of type %s. Expected: %s' % (name, foundName,
+    #                                                           ','.join(expectedNames))
+    #                 raise ValueError(msg)
+    #- py --------------------------------------------------------------------#
     # check required fields present
     reqFields <- names(EXPECTED_SHP_ATTRIBUTES)
     missingShpFields <- setdiff(reqFields,  names(zones_layer))
@@ -635,6 +670,16 @@ makeMaskAndZones <- function(self, multipleZones, params){
   }
 
 
+  #- py --------------------------------------------------------------------#
+  #     zones_ds = gdal.GetDriverByName('GTiff').Create(self.zonesOutFName, self.cols,
+  #                                                     self.rows, 1, gdal.GDT_Byte)
+  #     zones_ds.SetGeoTransform(self.match_geotrans)
+  #     zones_ds.SetProjection(self.wkt)
+  #     band = zones_ds.GetRasterBand(1)
+  #     NoData_value = 0  # -9999
+  #     band.SetNoDataValue(NoData_value)
+  #- py --------------------------------------------------------------------#
+  
   # Rasterize Extent and write to directory
 
   # make destination raster using stored xy min-max and rows and columns
@@ -655,6 +700,58 @@ makeMaskAndZones <- function(self, multipleZones, params){
   Name_zone <- reticulate::np_array(zones_layer$zoneName, dtype = "str")
 
   if(!multipleZones){
+  #- py --------------------------------------------------------------------#
+  #     if multipleZones:
+  #         # burn the value of the ZONE_CODE_ATTRIBUTE
+  #         gdal.RasterizeLayer(zones_ds, [1], zones_layer,
+  #                             options=['ATTRIBUTE=%s' % ZONE_CODE_ATTRIBUTE])
+  # 
+  #         # get the unique zones
+  #         # and create a mapping between the zone and RR_zone, Pu_zone
+  #         zones = set()
+  #         zoneToRRDict = {}
+  #         zoneToPuDict = {}
+  #         ## GET NAME OF ZONE - FOR USE IN RESULTS TABLE
+  #         zoneToNameDict = {}
+  #         zones_layer.ResetReading()
+  #         for feature in zones_layer:
+  #             zone = feature.GetFieldAsInteger(ZONE_CODE_ATTRIBUTE)
+  #             if zone == 0:
+  #                 raise ValueError("Can't use zero as a zone code")
+  #             zones.add(zone)
+  #             pu = feature.GetFieldAsDouble(PU_CODE_ATTRIBUTE)
+  #             zoneToPuDict[zone] = pu
+  #             rr = feature.GetFieldAsDouble(RRZONE_CODE_ATTRIBUTE)
+  #             zoneToRRDict[zone] = rr
+  #             ## GET NAMES OF ZONES FOR RESULTS TABLE:
+  #             nn = feature.GetFieldAsString(NAMEZONE_CODE_ATTRIBUTE)
+  #             zoneToNameDict[zone] = nn
+  # 
+  #         # ok turn zones into an array of unique values
+  #         zoneCodes = np.array(list(zones))
+  #         zoneCodes.sort()
+  #         rrlist = []
+  #         pulist = []
+  #         namelist = []
+  #         # now ensure RR and Pu are in the same order as zoneCodes
+  #         for zone in zoneCodes:
+  #             rrlist.append(zoneToRRDict[zone])
+  #             pulist.append(zoneToPuDict[zone])
+  #             namelist.append(zoneToNameDict[zone])
+  #         Pu_zone = np.array(pulist)
+  #         RR_zone = np.array(rrlist)
+  #         Name_zone = np.array(namelist)
+  #- py --------------------------------------------------------------------#
+    #- py --------------------------------------------------------------------#
+    #     else:
+    #         # just burn 1 inside the polygon(s)
+    #         gdal.RasterizeLayer(zones_ds, [1], zones_layer, burn_values=[1])
+    #         zoneCodes = np.array([1])
+    #         Pu_zone = np.array([params.pu])
+    #         RR_zone = np.array([1])
+    #         Name_zone = np.array(['oneZone'])
+    #- py --------------------------------------------------------------------#
+    
     # just burn 1 inside the polygon(s)
     zones_ds <- raster::clamp(zones_ds, upper = 1)
     zoneCodes = np$array(bi$list(list(bi$int(1))))
@@ -662,6 +759,17 @@ makeMaskAndZones <- function(self, multipleZones, params){
     RR_zone = np$array(bi$list(list(bi$int(1))))
     Name_zone = np$array(bi$list(list('oneZone')))
   }
+  
+  #- py --------------------------------------------------------------------#
+  #     zones_ds.FlushCache()
+  # 
+  #     # read in the data so we can return it
+  #     zoneArray = zones_ds.GetRasterBand(1).ReadAsArray()
+  # 
+  #     del dataset
+  #     del zones_ds
+  #     return zoneArray, zoneCodes, Pu_zone, RR_zone, Name_zone
+  #- py --------------------------------------------------------------------#
 
   # read in the data so we can return it
   zoneArray <- reticulate::np_array(raster::as.matrix(zones_ds))
