@@ -67,6 +67,7 @@ numpy dtype for structured array that contains the parameters each grid
 survey.
 """
 
+
 class Animal(object):
     """
     Class that described an animal/trap and how to process it
@@ -75,9 +76,11 @@ class Animal(object):
     later
     'detect' is one of the DETECT_* constants above
     """
+
     def __init__(self, name, detect):
         self.name = name
         self.detect = detect
+
 
 class AnimalTypes(object):
     """
@@ -88,16 +91,17 @@ class AnimalTypes(object):
     are known about (see TYPE_* constants above).
     """
     functionDict = None
+
     def __init__(self):
         """
         add the standard animal codes with their functions
         """
         self.functionDict = {TYPE_POSSUM: Animal("possum", DETECT_DISEASE_TRAP),
-            TYPE_POSSTRAP: Animal("posstrap", DETECT_DISEASE_TRAP),
-            TYPE_CHEWCARD: Animal("chewcard", DETECT_DISEASE_CHEWCARD),
-            TYPE_FERRET: Animal("ferret", DETECT_DISEASE_SENTINEL),
-            TYPE_PIG: Animal("pig", DETECT_DISEASE_SENTINEL),
-            TYPE_REDDEER: Animal("reddeer", DETECT_DISEASE_SENTINEL)}
+                             TYPE_POSSTRAP: Animal("posstrap", DETECT_DISEASE_TRAP),
+                             TYPE_CHEWCARD: Animal("chewcard", DETECT_DISEASE_CHEWCARD),
+                             TYPE_FERRET: Animal("ferret", DETECT_DISEASE_SENTINEL),
+                             TYPE_PIG: Animal("pig", DETECT_DISEASE_SENTINEL),
+                             TYPE_REDDEER: Animal("reddeer", DETECT_DISEASE_SENTINEL)}
 
     def addAnimal(self, animal, name, detect):
         """
@@ -135,10 +139,10 @@ class POAParameters(object):
     parameterArray = None
     animals = None
     multipleZones = False
-    Pz = 1.0        # zone design prevalence - should always be set to 1
+    Pz = 1.0  # zone design prevalence - should always be set to 1
     # kBufferAnimals are the types we buffer with higher RR values
     # if they are in areas of < minRR
-#    RRBufferAnimals = {TYPE_POSSUM, TYPE_POSSTRAP, TYPE_CHEWCARD}
+    #    RRBufferAnimals = {TYPE_POSSUM, TYPE_POSSTRAP, TYPE_CHEWCARD}
     gridSurveyData = None
     gridSurveyParams = None
     # set to greater than one for multi threading
@@ -186,13 +190,11 @@ class POAParameters(object):
         """
         self.RRTrapDistance = RRDistance
 
-
     def setYears(self, startYear, endYear):
         """
         Sets a sequence of years that the model is to be run over
         """
         self.years = np.arange(startYear, (endYear + 1), dtype=int)
-
 
     def addRRBufferAnimal(self, animalCode):
         """
@@ -213,7 +215,7 @@ class POAParameters(object):
         """
         self.nChewcardTraps = nChewcardTraps
 
-    def setPu(self, startpu, puRateIncrease = 0.0):
+    def setPu(self, startpu, puRateIncrease=0.0):
         """
         Set the Pu - cell level design prevalence
         """
@@ -287,14 +289,14 @@ class POAParameters(object):
         self.parameterArray[animal]['a_infect'] = a
         self.parameterArray[animal]['b_infect'] = b
 
-    def setGridSurvey(self, gridSurveyYears, gridSurveyData, 
-                gridSurveyMeans, gridSurveySD, gridSurveyCodes):
+    def setGridSurvey(self, gridSurveyYears, gridSurveyData,
+                      gridSurveyMeans, gridSurveySD, gridSurveyCodes):
         """
         Sets the data and parameters for grid survey
         """
         nGrids = len(gridSurveyYears)
-        self.gridSurveyParams = np.empty((nGrids,), 
-                dtype=GRID_SURVEY_PARAM_DTYPE)
+        self.gridSurveyParams = np.empty((nGrids,),
+                                         dtype=GRID_SURVEY_PARAM_DTYPE)
 
         for i in range(nGrids):
             self.gridSurveyParams[i]['year'] = gridSurveyYears[i]
@@ -304,7 +306,7 @@ class POAParameters(object):
             self.gridSurveyParams[i]['code'] = gridSurveyCodes[i]
 
         self.gridSurveyData = gridSurveyData
-        
+
     def setMultipleZones(self, multipleZones):
         """
         Sets whether we expect multiple zones in the shape
@@ -312,15 +314,17 @@ class POAParameters(object):
         """
         self.multipleZones = multipleZones
 
+
 def findBeta(mu, sdev):
     """
     Find a and b of a Beta distribution given mean and standard deviation
     """
     sdevsq = sdev * sdev;
-    a = mu * ( ( mu * (1.0 - mu) ) / sdevsq - 1.0)
-    b = ( 1.0 - mu ) * ( ( mu * ( 1.0 - mu ) ) / sdevsq - 1.0)
+    a = mu * ((mu * (1.0 - mu)) / sdevsq - 1.0)
+    b = (1.0 - mu) * ((mu * (1.0 - mu)) / sdevsq - 1.0)
 
     return a, b
+
 
 def findBetaPert(min, mode, max, shape=PERT_SHAPE):
     """
@@ -328,11 +332,11 @@ def findBetaPert(min, mode, max, shape=PERT_SHAPE):
     (min, mode, max)
     see http://rgm2.lab.nig.ac.jp/RGM2/func.php?rd_id=mc2d:pert 
     """
-    mu = (min + max + shape * mode)/(shape + 2.0);
-    if np.round(mu,8) == mode:
-        shape1 = int(1) + shape / int(2)
+    mu = (min + max + shape * mode) / (shape + 2.0);
+    if mu == mode:
+        shape1 = 1.0 + shape / 2.0
     else:
-        shape1 = (mu - min) * (int(2) * mode - min - max)/((mode-mu)*(max - min))
-    shape2 = shape1 * (max - mu)/(mu - min)
+        shape1 = (mu - min) * (2.0 * mode - min - max) / ((mode - mu) * (max - min))
+    shape2 = shape1 * (max - mu) / (mu - min)
     return shape1, shape2
 

@@ -34,6 +34,16 @@ from numba import njit
 import warnings
 
 from proofofabsence import params
+## [2023-09-25] Suppress a deprecation warning
+##
+## """
+## ../python3.11/site-packages/osgeo/osr.py:385:
+## FutureWarning: Neither osr.UseExceptions() nor
+## osr.DontUseExceptions() has been explicitly called. In GDAL 4.0,
+## exceptions will be enabled by default.
+## """
+osr.UseExceptions()
+
 
 TRAP_PARAM_DTYPE = [('year', 'u4'), ('animal', 'u4'), ('detect', 'u4'),
                     ('easting', 'f8'), ('northing', 'f8'), ('age', 'f8'), ('sex', 'u1'),
@@ -170,6 +180,7 @@ class RawData():
         if surveyFName is not None:
             print('params.animals', params.animals)
             self.survey = self.readSurveyData(surveyFName, params.animals)
+            
         else:
             # not present, but need an empty array for processing
             self.survey = np.empty((0,), dtype=TRAP_PARAM_DTYPE)
@@ -204,6 +215,9 @@ class RawData():
         Use zone shapefile to make zone raster
         """
         # create extent raster tiff
+
+        print("## multiple zones =", multipleZones)
+
         dataset = ogr.Open(self.zonesShapeFName)
         zones_layer = dataset.GetLayer()
 
@@ -300,10 +314,11 @@ class RawData():
         """
         rawGridSurvey = np.genfromtxt(gridSurveyFname, delimiter=',', names=True,
                                       dtype=['S200', 'i4', 'f8', 'f8'])
-        rawGridSurvey = np.atleast_1d(rawGridSurvey)
+
         gridSurveyYears = rawGridSurvey['year']
 
-        nGrids = np.alen(gridSurveyYears)
+#        nGrids = np.alen(gridSurveyYears)
+        nGrids = len(gridSurveyYears)
         #        print('gridyears', self.gridSurveyYears, 'type', type(self.gridSurveyYears),
         #            'is scalar', np.isscalar(self.gridSurveyYears), 'gridsize', nGrids)
 
@@ -386,7 +401,7 @@ class RawData():
         ## CHECK IF AT LEAST 5% OF POINT DATA OR GRID DATA ARE IN EXTENT OF INTEREST
         """
         ## IF HAVE POINT DATA
-        warningMessage = None
+        warningMessage = "No Warnings in data check"
         if surveyFName is not None:
             ndat = np.shape(self.survey)[0]
             percentIn = checkPointData_In_Extent(self.survey,
@@ -545,7 +560,7 @@ class RawData():
 
         # keep a track of all the animals that have been translated
         # from string to constants
-        translatedAnimals = np.zeros(rawSurvey.shape, dtype=bool)
+        translatedAnimals = np.zeros(rawSurvey.shape, dtype=np.bool_)
 
         for code in animalTypes.functionDict.keys():
             animal = animalTypes.functionDict[code]

@@ -34,6 +34,15 @@ from numba import njit
 import warnings
 
 from proofofabsence_min import params
+## [2023-09-25] Suppress a deprecation warning
+##
+## """
+## ../python3.11/site-packages/osgeo/osr.py:385:
+## FutureWarning: Neither osr.UseExceptions() nor
+## osr.DontUseExceptions() has been explicitly called. In GDAL 4.0,
+## exceptions will be enabled by default.
+## """
+osr.UseExceptions()
 
 TRAP_PARAM_DTYPE = [('year', 'u4'), ('animal', 'u4'), ('detect', 'u4'),
                     ('easting', 'f8'), ('northing', 'f8'), ('age', 'f8'), ('sex', 'u1'),
@@ -552,7 +561,7 @@ class RawData():
 
         # keep a track of all the animals that have been translated
         # from string to constants
-        translatedAnimals = np.zeros(rawSurvey.shape, dtype=bool)
+        translatedAnimals = np.zeros(rawSurvey.shape, dtype=np.bool_)
 
         for code in animalTypes.functionDict.keys():
             animal = animalTypes.functionDict[code]
@@ -586,6 +595,7 @@ class PickleDat(object):
     are needed for running the model. This object is
     designed to be pickled.
     """
+
     def __init__(self, rawdata):
         # assemble objects to pickle
         self.wkt = rawdata.wkt
@@ -606,17 +616,18 @@ class PickleDat(object):
         self.gridSurveySD = rawdata.gridSurveySD
         self.gridSurveyCodes = rawdata.gridSurveyCodes
 
+
 # Workaround for errors in bilinear interpolation in GDAL 2.x.
 # matches behaviour in GDAL 1.x which appears to give the correct answers.
 @njit
 def bilinear(in_im, out_im, nodata):
-
     xratio = in_im.shape[1] / out_im.shape[1]
     yratio = in_im.shape[0] / out_im.shape[0]
 
     for y in range(out_im.shape[0]):
         for x in range(out_im.shape[1]):
             out_im[y, x] = bilinear_interpolate(in_im, x * xratio, y * yratio, nodata)
+
 
 @njit
 def bilinear_interpolate(im, x, y, nodata):
