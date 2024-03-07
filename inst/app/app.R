@@ -34,8 +34,6 @@ library(leaflet)
 
 library(sf)
 
-library(rgdal)
-
 library(shiny)
 
 library(DT)
@@ -791,26 +789,9 @@ server <- function(input, output, session) {
     if(!is.na(sf_epsg_string)){
       detected_epsg(sf_epsg_string)
     } else {
-      # if sf::st_crs()$epsg doesn't work try to find in rgdal::make_EPSG()
-      # lookup table
-      
-      # make lookup table for epsg codes
-      epsg_lookup <- rgdal::make_EPSG()
-      # get proj4 string from sf class zones shape
-      shp_proj4 <- st_crs(zonesShape())$proj4string
-      message("proj4 string from sf class zones shape: ", shp_proj4)
-      # escape '+' and ' ' strings 
-      shp_proj4_pattern <- gsub("\\+", "\\\\\\+", shp_proj4)
-      shp_proj4_pattern <- gsub("\\s", "\\\\\\s", shp_proj4_pattern)
-      epsg_found <- epsg_lookup[grepl(shp_proj4_pattern, epsg_lookup$prj4),]
-      
-      if(nrow(epsg_found) == 1){
-        message("EPSG info from rgdal::make_EPSG() table:", 
-                paste("\n", epsg_found))
-        detected_epsg(epsg_found$code)
-      } else {
-        detected_epsg(NA)
-      }
+      # if no EPSG strings detected when loading shapefile then set to NA
+      # - NA triggers check below and alerts user
+      detected_epsg(NA)
     }
   })
   
