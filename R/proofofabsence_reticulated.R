@@ -599,7 +599,7 @@ makeMaskAndZones_reticulated <- function(self, multipleZones, params){
     # RR_zone = np.array([1])
     RR_zone = np$array(bi$list(list(bi$int(1))))
     # Name_zone = np.array(['oneZone'])
-    Name_zone = np$array(bi$list(list(np$str('oneZone'))))
+    Name_zone = np$array(bi$list(list(bi$str('oneZone'))))
   }
 
   zones_ds$FlushCache()
@@ -639,7 +639,7 @@ readGridSurveyData_reticulated <- function(self, gridSurveyFname = NULL, params 
   
   gridSurveyYears = rawGridSurvey['year']
   
-  nGrids = np$alen(gridSurveyYears)
+  nGrids = bi$len(gridSurveyYears)
   #        print('gridyears', self.gridSurveyYears, 'type', type(self.gridSurveyYears),
   #            'is scalar', np.isscalar(self.gridSurveyYears), 'gridsize', nGrids)
   
@@ -656,13 +656,13 @@ readGridSurveyData_reticulated <- function(self, gridSurveyFname = NULL, params 
   npDType = bi$None
   for(dt in c(np$uint8, np$uint16, np$uint32, np$uint64)) {  # loop potential data types
     info = np$iinfo(dt)  # get min and max of datetype
-    if (maxCode <= info$max){  # if the required integer < max of data type, keep
+    if (reticulate::py_to_r(maxCode <= info$max)){  # if the required integer < max of data type, keep
       npDType = dt
       break
     }
   }
   
-  if (npDType == bi$None) {  # if have more than 61 grids, it will be error
+  if (reticulate::py_to_r(npDType == bi$None)) {  # if have more than 61 grids, it will be error
     stop('Too many grid survey years to store in an integer')
   }
   
@@ -859,7 +859,7 @@ makeRelativeRiskTif_reticulated <- function(self, relativeRiskFName, relRiskRast
       nodata = inband$GetNoDataValue()
       # if nodata is None:
       # raise ValueError("No Data value must be set on RR raster")
-      if(nodata == bi$None) stop("No Data value must be set on RR raster")
+      if(reticulate::py_to_r(nodata == bi$None)) stop("No Data value must be set on RR raster")
       # RelRiskExtent = np.empty((self$rows, self$cols), dtype=np.float32)
       RelRiskExtent = np$empty(tuple(self$rows, self$cols), dtype=np$float32)
       # bilinear(in_im, RelRiskExtent, nodata)
@@ -913,7 +913,7 @@ getShapefileDimensions_reticulated <- function(self, definition=np$False_){
   # print out definitions optional
   # if definition:
   #   getShapeLayerDefinition(layer)
-  if(definition == np$True_) getShapeLayerDefinition(layer)
+  if(reticulate::py_to_r(definition == np$True_)) getShapeLayerDefinition(layer)
   # get dimensions
   # (xmin, xmax, ymin, ymax) = layer.GetExtent()
   xyminmax = layer$GetExtent()
