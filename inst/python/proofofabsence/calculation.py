@@ -308,7 +308,7 @@ def calcProofOfAbsence(poaparams, trapArray, RRArray, zoneArray, zoneCodes, matc
 #    print('sensitivityList size', sensitivityList.nbytes / (1024 * 1024 * 1024))
     meanSeuTifPathName = os.path.join(outputDataPath, 'meanSeuAllYears.tif')
     gdt_type = gdalconst.GDT_Float32
-    writeTif(sensitivityList, meanSeuTifPathName, gdt_type, wkt, match_geotrans)
+    # writeTif(sensitivityList, meanSeuTifPathName, gdt_type, wkt, match_geotrans)
 
 
 #    del sensitivityList
@@ -316,14 +316,14 @@ def calcProofOfAbsence(poaparams, trapArray, RRArray, zoneArray, zoneCodes, matc
     print('RRArray size', RRArray.nbytes / (1024 * 1024 * 1024))
     relRiskTifName = os.path.join(outputDataPath, 'updatedRelRisk.tif')
     gdt_type = gdalconst.GDT_Float32
-    writeTif(RRArray, relRiskTifName, gdt_type, wkt, match_geotrans)
+    # writeTif(RRArray, relRiskTifName, gdt_type, wkt, match_geotrans)
 #    del modifiedK
 
     # (3) updated Zone mask
     print('zoneArray size', zoneArray.nbytes / (1024 * 1024 * 1024))
     extZoneTifName = os.path.join(outputDataPath, 'updatedExtentZone.tif')
     gdt_type = gdal.GDT_Byte
-    writeTif(zoneArray, extZoneTifName, gdt_type, wkt, match_geotrans)
+    # writeTif(zoneArray, extZoneTifName, gdt_type, wkt, match_geotrans)
 
     # create object with result information
     result = Results()
