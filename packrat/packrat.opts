@@ -16,4 +16,4 @@ snapshot.fields:
     Imports
     Depends
     LinkingTo
-symlink.system.packages: TRUE
+symlink.system.packages: FALSE

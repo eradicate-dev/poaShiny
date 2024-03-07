@@ -19,3 +19,4 @@ tests
 inst/device_pars.csv
 inst/app/www/google-analytics.html
 TODO.txt
+packrat/lib*/
