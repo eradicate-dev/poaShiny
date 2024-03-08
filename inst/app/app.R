@@ -1411,9 +1411,9 @@ server <- function(input, output, session) {
     print("getwd()")
     print(getwd())
     print("py_config()")
-    print(reticulate::py_discover_config())
-    print("conda_list()")
-    # print(reticulate::conda_list())
+    print(try(reticulate::py_discover_config()))
+    # print("conda_list()")
+    # print(try(reticulate::conda_list()))
   })
 
 }
