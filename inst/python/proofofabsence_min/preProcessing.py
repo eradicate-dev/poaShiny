@@ -34,15 +34,6 @@ from numba import njit
 import warnings
 
 from proofofabsence_min import params
-## [2023-09-25] Suppress a deprecation warning
-##
-## """
-## ../python3.11/site-packages/osgeo/osr.py:385:
-## FutureWarning: Neither osr.UseExceptions() nor
-## osr.DontUseExceptions() has been explicitly called. In GDAL 4.0,
-## exceptions will be enabled by default.
-## """
-osr.UseExceptions()
 
 TRAP_PARAM_DTYPE = [('year', 'u4'), ('animal', 'u4'), ('detect', 'u4'),
                     ('easting', 'f8'), ('northing', 'f8'), ('age', 'f8'), ('sex', 'u1'),
