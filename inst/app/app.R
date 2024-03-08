@@ -22,8 +22,6 @@
 # R packages --------------------------------------------------------------
 
 # devtools::install_github("rstudio/reticulate")
-library(reticulate)
-
 library(raster)
 
 library(terra)
@@ -1089,28 +1087,28 @@ server <- function(input, output, session) {
     result <- pyPOA()$result
     
     # Prior
-    prior <- py_to_r(result$priorStore)
+    prior <- reticulate::py_to_r(result$priorStore)
     prior_mean <- mean(prior)
     prior_low <- quantile(prior, probs = lowint)
     prior_upp <- quantile(prior, probs = uppint)
     prior_string <- sprintf("%0.3f (%0.3f, %0.3f)", prior_mean, prior_low, prior_upp)
     
     # SSe
-    SSe_mat <- py_to_r(result$sensitivityMatrix)
+    SSe_mat <- reticulate::py_to_r(result$sensitivityMatrix)
     SSe_mean <- rowMeans(SSe_mat)
     SSe_low <- apply(SSe_mat, 1, quantile, probs = lowint)
     SSe_upp <- apply(SSe_mat, 1, quantile, probs = uppint)
     SSe_string <- sprintf("%0.3f (%0.3f, %0.3f)", SSe_mean, SSe_low, SSe_upp)
     
     # PoF
-    PoFmat <- py_to_r(result$poFMatrix)
+    PoFmat <- reticulate::py_to_r(result$poFMatrix)
     poa_mean <- rowMeans(PoFmat)
     poa_low <- apply(PoFmat, 1, quantile, lowint)
     poa_upp <- apply(PoFmat, 1, quantile, uppint)
     poa_string <- sprintf("%0.3f (%0.3f, %0.3f)", poa_mean, poa_low, poa_upp)
     
-    years <- py_to_r(result$params$years)
-    # py_to_r(result$sensitivityList)
+    years <- reticulate::py_to_r(result$params$years)
+    # reticulate::py_to_r(result$sensitivityList)
     
     formatted_df <- 
       rbind(data.frame(Output = "Prior", Session = NA, 
@@ -1170,16 +1168,16 @@ server <- function(input, output, session) {
   }, width = "500px", align = "llr", rownames = FALSE)
   
   # server: PoF plot --------------------------------------------------------
-  # observe({try(print(py_to_r(pyPOA()$poFMatrix)))})
+  # observe({try(print(reticulate::py_to_r(pyPOA()$poFMatrix)))})
   
   output$PoAtimeplot <- renderPlot({
     result <- pyPOA()$result
-    PoFmat <- py_to_r(result$poFMatrix)
+    PoFmat <- reticulate::py_to_r(result$poFMatrix)
     poa_mean <- rowMeans(PoFmat)
     poa_low <- apply(PoFmat, 1, quantile, 0.025)
     poa_upp <- apply(PoFmat, 1, quantile, 0.975)
-    years <- py_to_r(result$params$years)
-    prior <- py_to_r(result$priorStore)
+    years <- reticulate::py_to_r(result$params$years)
+    prior <- reticulate::py_to_r(result$priorStore)
     prior_mean <- mean(prior)
     prior_low <- quantile(prior, 0.025)
     prior_upp <- quantile(prior, 0.975)
@@ -1200,9 +1198,9 @@ server <- function(input, output, session) {
     
     res <- pyPOA()$result
     # browser()
-    PoFmat <- py_to_r(res$poFMatrix)
+    PoFmat <- reticulate::py_to_r(res$poFMatrix)
     row.names(PoFmat) <- paste("Session", 1:nrow(PoFmat))
-    prior <- py_to_r(res$priorStore)
+    prior <- reticulate::py_to_r(res$priorStore)
     PoFmat <- rbind(prior, PoFmat)
     
     lattice::densityplot(~val, group = d1, arr2df(PoFmat), auto.key = T, 
@@ -1260,7 +1258,7 @@ server <- function(input, output, session) {
       write.csv(d, zoneSeResultTable.txt, row.names = FALSE, quote = FALSE)
       
       # meanSeuAllYears.tif
-      sensitivityList <- py_to_r(result$sensitivityList)
+      sensitivityList <- reticulate::py_to_r(result$sensitivityList)
       # use zones.tif as template
       rtemp <- terra::rast(rawdata$zonesOutFName)
       # replace values in zones.tif with meanSeU values
