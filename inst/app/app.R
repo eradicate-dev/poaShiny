@@ -340,11 +340,12 @@ server <- function(input, output, session) {
     
     virtualenv_dir = Sys.getenv('VIRTUALENV_NAME')
     python_path = Sys.getenv('PYTHON_PATH')
-  
-    message("AAAA", virtualenv_exists(Sys.getenv('VIRTUALENV_NAME')))
+    
+    message("PYTHON_PATH: \n", python_path)
     
     # Create virtual env and install dependencies
     reticulate::virtualenv_create(envname = virtualenv_dir, python = python_path)
+    message("reticulate::virtualenv_create() COMPLETE")
     reticulate::virtualenv_install(virtualenv_dir, packages = PYTHON_DEPENDENCIES)
     reticulate::use_virtualenv(virtualenv_dir, required = T)
     
