@@ -339,11 +339,12 @@ server <- function(input, output, session) {
     virtualenv_dir = Sys.getenv('VIRTUALENV_NAME')
     python_path = Sys.getenv('PYTHON_PATH')
     
+    # print python related messages to shinyapps.io logs
     message("PYTHON_PATH: \n", python_path)
     
     # Create virtual env and install dependencies
-    reticulate::virtualenv_create(envname = virtualenv_dir, python = python_path)
-    message("reticulate::virtualenv_create() COMPLETE")
+    venv_path <- reticulate::virtualenv_create(envname = virtualenv_dir)
+    message("reticulate::virtualenv_create() COMPLETE - environment created in ", venv_path)
     reticulate::virtualenv_install(virtualenv_dir, packages = PYTHON_DEPENDENCIES)
     reticulate::use_virtualenv(virtualenv_dir, required = T)
     
