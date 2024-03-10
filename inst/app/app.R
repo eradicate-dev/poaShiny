@@ -752,37 +752,6 @@ server <- function(input, output, session) {
     }
   })
   
-  # check field names of uploaded shapefile
-  observe({
-    
-    req(paths$zonesShapeFName)
-    
-    # regex strings to identify zone shapefile fields
-    # - matches logic in makeMaskAndZones()
-    shp_fields <- c(zoneID = "zone.?ID", Pu_zone = "Pu.?zone",
-                    RR_zone = "RR.?zone", zoneName = "zone.?Name")
-    field_missing <- logical(length = length(shp_fields))
-    # get shape file field names
-    field_names <- names(sf::st_read(paths$zonesShapeFName))
-    
-    # check for a match to required fields
-    for(i in seq_along(shp_fields)){
-      field_missing[i] <- all(!grepl(shp_fields[i], field_names))
-    }
-    
-    # if missing fields show an informative modal dialog
-    if(any(field_missing)){
-      showModal(
-        modalDialog(title = "Shapefile missing required fields",
-                    div(paste0("Required fields ",
-                               paste(names(shp_fields)[field_missing], collapse = ", "),
-                               " are missing from uploaded shapefile.")),
-                    br(),
-                    div("See the 'data requirements guide' linked to in the 'Getting started' section of the help tab for guidance on required fields and their values.")
-        ))
-    }
-  })
-    
   # update zonesShape when paths$zonesShapeFName set/changed
   zonesShape <- reactiveVal(NULL)
   observe({
@@ -793,21 +762,61 @@ server <- function(input, output, session) {
     }
   })
   
-  # update multizone options based on polygon in shp file
-  observe({ 
-    req(zonesShape())
+  # check uploaded shapefile
+  # 
+  # set useMultiZone to FALSE (i.e. set useMultiZone to 'Single Zone'):
+  #   if single polygon
+  #   if multiple polygons but fields for multizone are missing
+    observe({
     
-    if(nrow(zonesShape()) == 1){
-      updateRadioButtons(session = session, 
-                         inputId = "useMultiZone", 
-                         selected = "Single zone", choices = "Single zone")
-    } else {
-      updateRadioButtons(session = session, 
-                         inputId = "useMultiZone", 
-                         selected = "Multiple zones", 
-                         choices = c("Single zone", "Multiple zones"))
-    }
+      req(zonesShape())
+      
+      if(nrow(zonesShape()) == 1){
+        updateRadioButtons(session = session, 
+                           inputId = "useMultiZone", 
+                           selected = "Single zone", choices = "Single zone")
+        
+      } else {
+        
+        # regex strings to identify zone shapefile fields
+        # - matches logic in makeMaskAndZones()
+        shp_fields <- c(zoneID = "zone.?ID", Pu_zone = "Pu.?zone",
+                        RR_zone = "RR.?zone", zoneName = "zone.?Name")
+        field_missing <- logical(length = length(shp_fields))
+        # get shape file field names
+        field_names <- names(zonesShape())
+        
+        # check for a match to required fields
+        for(i in seq_along(shp_fields)){
+          field_missing[i] <- all(!grepl(shp_fields[i], field_names))
+        }
+        
+        # if missing fields show an informative modal dialog
+        if(any(field_missing)){
+          # prompt user
+          showModal(
+            modalDialog(title = "Shapefile missing required fields",
+                        div(paste0("Required fields ",
+                                   paste(names(shp_fields)[field_missing], collapse = ", "),
+                                   " are missing from uploaded shapefile. Use single or multiple zones option set to 'Single zone'.")),
+                        br(),
+                        div("See the 'data requirements guide' linked to in the 'Getting started' section of the help tab for guidance on required fields and their values.")
+            ))
+          # set to 'Single zone'
+          updateRadioButtons(session = session, 
+                             inputId = "useMultiZone", 
+                             selected = "Single zone", choices = "Single zone")
+          
+        } else {
+          updateRadioButtons(session = session, 
+                             inputId = "useMultiZone", 
+                             selected = "Multiple zones", 
+                             choices = c("Single zone", "Multiple zones"))
+        }
+      }
   })
+    
+  
   
   # manual EPSG code override
   observe({
