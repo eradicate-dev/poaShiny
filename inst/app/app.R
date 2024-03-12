@@ -163,10 +163,11 @@ ui.file.uploads <-
 ui.survparams <- 
   wellPanel(
     h4("Detection parameters"),
-    em("Double-click table cells to enter values"),
+    em("Double-click table cells to enter values. Use tab to move to next cell and Ctrl + Enter to confirm entries."),
     hr(),
     tabsetPanel(tabPanel(title = "Points",
                          DT::DTOutput(outputId = "deviceUI"),
+                         hr(),
                          p(em("Enter the 1st row of sigma values and click the button below to fill down rows")),
                          actionButton(inputId = "filldownsigma", label = "Fill down sigma values")),
                 tabPanel(title = "Grids",
@@ -646,35 +647,38 @@ server <- function(input, output, session) {
   
   # server: render and update device parameters -----------------------------
   set.animal.params <- reactiveVal(NULL)
-  observe({
-    if(!is.null(devices())){
-      
-      spp <- sort(unique(devices()$Species))
-      inputId.spp <- paste0("inputId.", spp)
-      n <- length(spp)
-      df <- data.frame(row.names = spp)
-      df$`Mean g0` <- as.numeric(NA) # as.numeric(0.1)
-      df$`Stdev g0` <- as.numeric(NA) # as.numeric(0.01)
-      df$`Mean sigma` <- as.numeric(NA) # as.numeric(90)
-      df$`Stdev sigma` <- as.numeric(NA) # as.numeric(10)
-      
-      set.animal.params(df)
-    }
+  
+  observeEvent(devices(), {
+    
+    req(devices())
+    
+    spp <- sort(unique(devices()$Species))
+    df <- data.frame(row.names = spp)
+    df$`Mean g0` <- as.numeric(NA) # as.numeric(0.1)
+    df$`Stdev g0` <- as.numeric(NA) # as.numeric(0.01)
+    df$`Mean sigma` <- as.numeric(NA) # as.numeric(90)
+    df$`Stdev sigma` <- as.numeric(NA) # as.numeric(10)
+    
+    set.animal.params(df)
+    
   })
   
   
   deviceUI <- reactive({
-    dtOut <- DT::datatable(set.animal.params(), editable = TRUE, options = list(ordering=F, searching = F, paging = F))
+    dtOut <- 
+      DT::datatable(set.animal.params(), editable = list(target = "all", disable = list(columns = 0)),
+                    options = list(ordering=F, searching = F, paging = F), 
+                    selection = "none")
     return(dtOut)
   })
   
-  observe({
-    if(!is.null(input$deviceUI_cell_edit)){
-      print(set.animal.params())
-      print(input$deviceUI_cell_edit)
-      set.animal.params(DT::editData(data = set.animal.params(), 
-                       info = input$deviceUI_cell_edit))
-    }
+  # update set.animal.params reactiveValue when deviceUI table edited
+  observeEvent(input$deviceUI_cell_edit, {
+    
+    print(input$deviceUI_cell_edit)
+    set.animal.params(DT::editData(data = set.animal.params(), 
+                                   info = input$deviceUI_cell_edit))
+      
   })
   
   # fill down sigma values
@@ -693,35 +697,35 @@ server <- function(input, output, session) {
   
   # server: render and update grid parameters -------------------------------
 
+  # update reactive value set.grid.params() on gridinfo() update
   set.grid.params <- reactiveVal(NULL)
-  observe({
-    if(!is.null(gridinfo())){
-      gridinfo()
-      set.grid.params(gridinfo())
-    }
+  observeEvent(gridinfo(), {
+    req(gridinfo())  
+    set.grid.params(gridinfo())
   })
     
+  # datatable object with grid detection parameters
   gridUI <- reactive({
-    # browser()
-    dtOut <- DT::datatable(set.grid.params(), 
-                           editable = TRUE, 
-                           options = list(ordering=F, searching = F, paging = F))
+    dtOut <- 
+      DT::datatable(set.grid.params(), editable = list(target = "all", disable = list(columns = 0)),
+                    options = list(ordering=F, searching = F, paging = F), 
+                    selection = "none")
     return(dtOut)
   })
   
+  # render datatable in UI
   output$gridUI <- DT::renderDT({
     validate(need(set.grid.params(), label = "A grid surveillance file"))
     gridUI()
   })
   
-  observe({
-    if(!is.null(input$gridUI_cell_edit)){
-      # browser()
-      print(set.grid.params())
-      print(input$gridUI_cell_edit)
-      set.grid.params(DT::editData(data = set.grid.params(), 
-                                   info = input$gridUI_cell_edit))
-    }
+  # update set.grid.params reactiveValue when gridUI table edited
+  observeEvent(input$gridUI_cell_edit, {
+    
+    print(input$gridUI_cell_edit)
+    set.grid.params(DT::editData(data = set.grid.params(), 
+                                 info = input$gridUI_cell_edit))
+    
   })
   
   # 
