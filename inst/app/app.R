@@ -681,6 +681,34 @@ server <- function(input, output, session) {
       
   })
   
+  # check values in set.animal.params
+  observeEvent(set.animal.params(), {
+    
+    # copy parameter table
+    d <- set.animal.params()
+    
+    # check g0 between zero and 1
+    chk_g0 <- d$`Mean g0` > 1 | d$`Mean g0` < 0
+    if(any(chk_g0, na.rm = TRUE)){
+      showModal(ui = modalDialog(title = "Mean g0 must be between 0-1",
+                                 div("Re-enter a valid value in the Detection parameters table")))
+      d$`Mean g0`[chk_g0] <- NA
+    }
+    # check sigma > 0
+    chk_sig <- d$`Mean sigma` < 0
+    if(any(chk_sig, na.rm = TRUE)){
+      showModal(ui = modalDialog(title = "Mean sigma must be > 0",
+                                 div("Re-enter a valid value in the Detection parameters table")))
+      d$`Mean sigma`[chk_sig] <- NA
+    }
+    
+    # update set.animal.params with corrections from error checking above
+    set.animal.params(d)
+    
+    
+  })
+  
+  
   # fill down sigma values
   observeEvent(input$filldownsigma, {
     req(set.animal.params())
