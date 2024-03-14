@@ -1115,7 +1115,7 @@ server <- function(input, output, session) {
                                 relativeRiskFName = paths$relativeRiskFName,
                                 zonesOutFName = tmp.zonesOutFName,
                                 relRiskRasterOutFName = tmp.relRiskRasterOutFName,
-                                resolution = as.double(valid()$resolution),
+                                resolution = as.double(input$resolution),
                                 epsg = as.integer(input$epsg),
                                 surveyFName = tmp.surveyFName,
                                 params = myParams, 
