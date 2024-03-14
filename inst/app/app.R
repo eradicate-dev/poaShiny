@@ -40,6 +40,7 @@ library(proofofabsence)
 
 # install proofofabsence package from source before deploying to shinyapps.io
 # devtools::install_github(repo = "eradicate-dev/poaShiny", ref = "master")
+# devtools::install_github(repo = "eradicate-dev/poaShiny", ref = "app_improvements")
 
 # print loaded package versions
 loaded.paks <- as.character(.packages())
