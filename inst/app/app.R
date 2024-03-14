@@ -1044,15 +1044,14 @@ server <- function(input, output, session) {
     }
   })
   
+  
+  myParams <- reactive({
     
-  # server: run py code -----------------------------------------------------
-  pyPOA <- eventReactive(input$runpoa, {
     
     message("runpoa press detected")
     
     # proofofabsence::poa_paks(modules = "minimal", delay_load = FALSE)
     
-    showNotification("Processing data ...", id = "processing", duration = NULL)
     
     myParams <- proofofabsence::makeParams(setMultipleZones = input$useMultiZone %in% "Multiple zones",
                                            setNumIterations = input$setNumIterations,
@@ -1072,6 +1071,14 @@ server <- function(input, output, session) {
                                                 sig = set.animal.params()$`Mean sigma`, 
                                                 sigsd = set.animal.params()$`Stdev sigma`)
     message("addAnimalParams complete")
+    
+    return(myParams)
+    
+  })
+  
+  rawdata <- reactive({
+    
+    showNotification("Processing data ...", id = "processing", duration = NULL)
     
     # create rawdata using preProcessing.RawData()
     
@@ -1126,6 +1133,16 @@ server <- function(input, output, session) {
                              rawdata$gridSurveyMeans, rawdata$gridSurveySD, rawdata$gridSurveyCodes)
     }
     
+    return(rawdata)
+    
+  })
+  
+    
+  # server: run py code -----------------------------------------------------
+  pyPOA <- eventReactive(input$runpoa, {
+    
+    message("runpoa press detected")
+    
     # use temporary output data path
     outputDataPath <- tempdir(check = TRUE)
     
@@ -1134,17 +1151,17 @@ server <- function(input, output, session) {
     showNotification("Calculating proof of absence ...", id = "poa", duration = NULL)
     
     # calculate PoA using poa.calculation.calcProofOfAbsence
-    result <- poa$calculation$calcProofOfAbsence(myParams, rawdata$survey,
-                                                 rawdata$RelRiskExtent, rawdata$zoneArray, rawdata$zoneCodes,
-                                                 rawdata$match_geotrans, rawdata$wkt, outputDataPath,
-                                                 rawdata$RR_zone, rawdata$Pu_zone, rawdata$Name_zone)
+    result <- poa$calculation$calcProofOfAbsence(myParams(), rawdata()$survey,
+                                                 rawdata()$RelRiskExtent, rawdata()$zoneArray, rawdata()$zoneCodes,
+                                                 rawdata()$match_geotrans, rawdata()$wkt, outputDataPath,
+                                                 rawdata()$RR_zone, rawdata()$Pu_zone, rawdata()$Name_zone)
     
     removeNotification(id = "poa")
     showNotification("Calculating proof of absence complete", duration = 2)
     
     message("calcProofOfAbsence complete")
     
-    return(list(rawdata = rawdata,
+    return(list(rawdata = rawdata(),
                 result = result))
 
   })
