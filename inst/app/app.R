@@ -1115,7 +1115,7 @@ server <- function(input, output, session) {
                                 resolution = as.double(input$resolution),
                                 epsg = as.integer(input$epsg),
                                 surveyFName = tmp.surveyFName,
-                                params = myParams, 
+                                params = myParams(), 
                                 gridSurveyFname = paths$gridSurveyFname)
     message("RawData_R complete")
     
