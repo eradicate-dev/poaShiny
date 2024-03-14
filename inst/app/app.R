@@ -675,10 +675,20 @@ server <- function(input, output, session) {
   # update set.animal.params reactiveValue when deviceUI table edited
   observeEvent(input$deviceUI_cell_edit, {
     
-    print(input$deviceUI_cell_edit)
-    set.animal.params(DT::editData(data = set.animal.params(), 
-                                   info = input$deviceUI_cell_edit))
-      
+    # for testing/demonstration purposes fill table with placeholders when 9999 entered in first cell
+    if(input$deviceUI_cell_edit$value[2] == 9999){
+      .tmp <- set.animal.params()
+      .tmp[,1] <- 0.1
+      .tmp[,2] <- 0.02
+      .tmp[,3] <- 100
+      .tmp[,4] <- 10
+      set.animal.params(.tmp)
+    } else {
+      print(input$deviceUI_cell_edit)
+      set.animal.params(DT::editData(data = set.animal.params(), 
+                                     info = input$deviceUI_cell_edit))
+    }
+    
   })
   
   # check values in set.animal.params
