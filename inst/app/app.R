@@ -1044,9 +1044,36 @@ server <- function(input, output, session) {
     }
   })
   
-  
-  myParams <- reactive({
+  # split params objects into those needed to run raw data or calculation
+  #  - for example we shouldn't need to re-run pre-processing steps if we up the number of iterations
+  myParams.rawdata <- reactive({
     
+    validate(need(!is.null(set.animal.params()), "Enter detection parameters"))
+    
+    
+    
+    myParams <- proofofabsence::makeParams(setMultipleZones = input$useMultiZone %in% "Multiple zones",
+                                           setRRTrapDistance = input$setRRTrapDistance,
+                                           startPu = input$startPu, 
+                                           PuIncreaseRate = input$PuIncreaseRate,
+                                           setMinRR = input$setMinRR)
+    message("makeParams complete")
+    
+    myParams <- proofofabsence::addAnimalParams(myParams,
+                                                deviceName = row.names(set.animal.params()),
+                                                g0 = set.animal.params()$`Mean g0`,
+                                                g0sd = set.animal.params()$`Stdev g0`,
+                                                sig = set.animal.params()$`Mean sigma`, 
+                                                sigsd = set.animal.params()$`Stdev sigma`)
+    message("addAnimalParams complete")
+    
+    return(myParams)
+    
+  })
+  
+  myParams.calc <- reactive({
+    
+    validate(need(!is.null(set.animal.params()), "Enter detection parameters"))
     
     
     
@@ -1115,7 +1142,7 @@ server <- function(input, output, session) {
                                 resolution = as.double(input$resolution),
                                 epsg = as.integer(input$epsg),
                                 surveyFName = tmp.surveyFName,
-                                params = myParams(), 
+                                params = myParams.rawdata(), 
                                 gridSurveyFname = paths$gridSurveyFname)
     message("RawData_R complete")
     
@@ -1130,6 +1157,9 @@ server <- function(input, output, session) {
                              rawdata$gridSurveyMeans, rawdata$gridSurveySD, rawdata$gridSurveyCodes)
     }
     
+    removeNotification(id = "processing")
+    showNotification("Processing data complete", duration = 2)
+    
     return(rawdata)
     
   })
@@ -1138,17 +1168,19 @@ server <- function(input, output, session) {
   # server: run py code -----------------------------------------------------
   pyPOA <- eventReactive(input$runpoa, {
     
+    myParams <- myParams.calc()
+    
     message("runpoa press detected")
     
     # use temporary output data path
     outputDataPath <- tempdir(check = TRUE)
     
-    removeNotification(id = "processing")
-    showNotification("Processing data complete", duration = 2)
     showNotification("Calculating proof of absence ...", id = "poa", duration = NULL)
     
+    message("Running ", myParams$nIter, " iterations")
+    
     # calculate PoA using poa.calculation.calcProofOfAbsence
-    result <- poa$calculation$calcProofOfAbsence(myParams(), rawdata()$survey,
+    result <- poa$calculation$calcProofOfAbsence(myParams, rawdata()$survey,
                                                  rawdata()$RelRiskExtent, rawdata()$zoneArray, rawdata()$zoneCodes,
                                                  rawdata()$match_geotrans, rawdata()$wkt, outputDataPath,
                                                  rawdata()$RR_zone, rawdata()$Pu_zone, rawdata()$Name_zone)
