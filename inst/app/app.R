@@ -1048,9 +1048,6 @@ server <- function(input, output, session) {
   myParams <- reactive({
     
     
-    message("runpoa press detected")
-    
-    # proofofabsence::poa_paks(modules = "minimal", delay_load = FALSE)
     
     
     myParams <- proofofabsence::makeParams(setMultipleZones = input$useMultiZone %in% "Multiple zones",
