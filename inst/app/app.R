@@ -801,6 +801,7 @@ server <- function(input, output, session) {
     if(!is.null(paths$zonesShapeFName)){
       message(paste("loading .shp file:", paths$zonesShapeFName))
       zonesShape.sf <- st_sf(st_read(paths$zonesShapeFName))
+      zonesShape.sf <- st_zm(zonesShape.sf)   # drop any Z dimensions
       zonesShape(zonesShape.sf)
     }
   })
