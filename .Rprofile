@@ -28,4 +28,11 @@ if (Sys.info()[['user']] == 'shiny'){
   Sys.setenv(PYTHON_PATH = 'python3')
   Sys.setenv(VIRTUALENV_NAME = VIRTUALENV_NAME) # exclude '/' => installs into ~/.virtualenvs/
   # RETICULATE_PYTHON is not required locally, RStudio infers it based on the ~/.virtualenvs path
+  
+  # add RETICULATE_CONDA env variable if user is 'HowardS'
+  if (Sys.info()[['user']] == 'HowardS'){
+    Sys.setenv(RETICULATE_CONDA = 
+                 file.path("C:", "Users", "HowardS", "AppData", "Local",
+                           "miniforge3", "Scripts", "conda.exe"))
+  }
 }
