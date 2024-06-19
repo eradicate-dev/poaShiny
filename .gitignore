@@ -10,6 +10,8 @@ rsconnect
 # folders
 man
 tests
+inst/example_data
+__pycache__
 # filetypes
 *.pkl
 *.zip
