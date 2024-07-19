@@ -1,7 +1,7 @@
 Package: proofofabsence
 Type: Package
 Title: Python wrappers and R-equivalent functions for Proof of Absence utility
-Version: 0.3.1
+Version: 0.3.2
 Author: Simon Howard
 Maintainer: Simon Howard <howards@landcareresearch.co.nz>
 Description: Package to support running Proof of Absence models using R. Replaces some pre-processing steps from the original Python code with equivalent R functions.
