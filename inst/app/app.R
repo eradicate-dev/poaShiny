@@ -38,6 +38,8 @@ library(DT)
 
 library(proofofabsence)
 
+library(markdown)   # see: https://forum.posit.co/t/warning-error-in-loadnamespace-there-is-no-package-called-markdown/121671/3
+
 # install proofofabsence package from source before deploying to shinyapps.io
 # devtools::install_github(repo = "eradicate-dev/poaShiny", ref = "master")
 
